@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# OpenCode Fleet - Automatic Model Failover Runner
+# Rotates across free models when rate-limited or quota-exceeded.
+set -eo pipefail
+
+FLEET=(
+  "opencode/nemotron-3.5-lightning-free"
+  "opencode/mimo-v2.6-flash-free"
+  "opencode/flint-40b-free"
+  "opencode/beam-free"
+  "opencode/crouton-alpha-free"
+)
+
+PROMPT="$*"
+
+for MODEL in "${FLEET[@]}"; do
+  echo "[Fleet] Attempting execution with model: $MODEL"
+  
+  # Run opencode with timeout; catch 'Free usage exceeded'
+  OUTPUT=$(opencode run "$PROMPT" -m "$MODEL" --auto 2>&1 || true)
+  
+  if echo "$OUTPUT" | grep -qiE "(Free usage exceeded|rate limit|quota exceeded|retrying in)"; then
+    echo "[-] Model $MODEL quota exceeded. Failing over to next fleet model..."
+    continue
+  fi
+  
+  echo "$OUTPUT"
+  exit 0
+done
+
+echo "[-] All free fleet models exhausted."
+exit 1
