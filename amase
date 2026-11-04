@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TARGET_DIR="${1:-$(pwd)}"
+cd "$TARGET_DIR"
+
+if [ ! -d ".git" ]; then
+  echo "[-] Error: $TARGET_DIR is not a git repository."
+  exit 1
+fi
+
+BACKLOG_FILE="$TARGET_DIR/BACKLOG.md"
+
+if [ ! -f "$BACKLOG_FILE" ]; then
+  echo "[-] No BACKLOG.md found in $TARGET_DIR."
+  echo "[-] Please create a BACKLOG.md with items like: - [ ] Task name"
+  exit 1
+fi
+
+# Find the first uncompleted task line
+NEXT_TASK_LINE=$(grep -E "^- \[ \]" "$BACKLOG_FILE" | head -n 1 || true)
+
+# 1. Autonomous Backlog Expansion (if empty or all [x])
+if [ -z "$NEXT_TASK_LINE" ]; then
+  echo "[!] Backlog empty or all tasks complete. Triggering Scout discovery..."
+  /home/joao/dev/orchestrator/scripts/scout.py --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE"
+  NEXT_TASK_LINE=$(grep -E "^- \[ \]" "$BACKLOG_FILE" | head -n 1 || true)
+  if [ -z "$NEXT_TASK_LINE" ]; then
+    echo "[-] Scout could not find further tasks. Halting."
+    exit 0
+  fi
+fi
+
+# Extract task name
+TASK_DESC=$(echo "$NEXT_TASK_LINE" | sed -E 's/^- \[ \] (TASK-[0-9]+: )?//')
+TASK_SLUG=$(echo "$TASK_DESC" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//' | cut -c1-30)
+
+echo "=========================================================="
+echo " AMASE Global Autonomous Engine"
+echo " Project:   $TARGET_DIR"
+echo " Next Task: $TASK_DESC"
+echo " Slug:      $TASK_SLUG"
+echo "=========================================================="
+
+# 2. Execution Routing: Orca native if available, else local worktree with OpenCode free fleet
+if which orca >/dev/null 2>&1 && orca status >/dev/null 2>&1; then
+  echo "[+] Orca runtime detected. Dispatching worker via Orca with free DeepSeek model..."
+  orca orchestration worker-start \
+    --task-title "$TASK_SLUG" \
+    --spec "Read BACKLOG.md. Implement task: '$TASK_DESC'. Follow AGENTS.md rules (Ponytail, Caveman, Chisle). Verify all tests pass with exit code 0. Send worker_done when done." \
+    --worktree new-child \
+    --agent opencode \
+    --name "task-$TASK_SLUG"
+else
+  # Fallback to local git worktree
+  /home/joao/dev/orchestrator/scripts/run-task.sh --repo "$TARGET_DIR" --task "$TASK_SLUG"
+  WORKTREE_DIR="$TARGET_DIR/.worktrees/$TASK_SLUG"
+  echo "[+] Spawning OpenCode Free Worker in: $WORKTREE_DIR..."
+  (cd "$WORKTREE_DIR" && opencode run "Implement task: '$TASK_DESC'. Run tests until exit code 0, then report." -m opencode/deepseek-v4.1-flash-free --auto)
+fi

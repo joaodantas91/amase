@@ -1,44 +1,41 @@
 model_list:
-  # 1. Primary: Google Gemini 2.0 Flash (Generous Free Tier: 15 RPM / 1,500 RPD)
+  # 1. Primary: Groq GPT-OSS 120B (Verified Active, Ultra-fast, $0 Free)
   - model_name: coding-fleet
     litellm_params:
-      model: gemini/gemini-2.0-flash
-      api_key: os.environ/GEMINI_API_KEY
-      rpm: 15
-
-  # 2. Fallback 1: Google Gemini 2.0 Flash Lite (Secondary Free Tier)
-  - model_name: coding-fleet
-    litellm_params:
-      model: gemini/gemini-2.0-flash-lite
-      api_key: os.environ/GEMINI_API_KEY
-      rpm: 30
-
-  # 3. Fallback 2: NVIDIA NIM (1,000 Free Credits - Qwen 2.5 Coder 32B Instruct)
-  - model_name: coding-fleet
-    litellm_params:
-      model: openai/qwen/qwen2.5-coder-32b-instruct
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
-
-  # 4. Fallback 3: Groq (Free Tier, Fast Llama 3.3 70B)
-  - model_name: coding-fleet
-    litellm_params:
-      model: groq/llama-3.3-70b-versatile
+      model: groq/openai/gpt-oss-120b
       api_key: os.environ/GROQ_API_KEY
+      drop_params: true
 
-  # 5. Fallback 4: Local Ollama (Zero Cost / Offline Safety Net)
+  # 2. Fallback 1: Groq Qwen 3.8 27B (Verified Active, Code Specialist, $0 Free)
   - model_name: coding-fleet
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
-      api_base: http://localhost:11434
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
+      drop_params: true
+
+  # 3. Fallback 2: Google Gemini 3.5 Flash Lite (Verified Active, $0 Free Tier)
+  - model_name: coding-fleet
+    litellm_params:
+      model: gemini/gemini-3.5-flash-lite
+      api_key: os.environ/GEMINI_API_KEY
+      drop_params: true
 
 router_settings:
   routing_strategy: "least-busy"
   fallbacks:
     - coding-fleet: ["coding-fleet"]
+  model_group_alias:
+    "gpt-5.6-terra": "coding-fleet"
+    "gpt-4o": "coding-fleet"
+    "gpt-4": "coding-fleet"
+    "gpt-3.5-turbo": "coding-fleet"
+    "claude-3-5-sonnet-20241022": "coding-fleet"
   num_retries: 3
   cooldown_time: 60
   allowed_fails: 1
 
 general_settings:
   master_key: "sk-amase-master-key"
+
+litellm_settings:
+  drop_params: true
