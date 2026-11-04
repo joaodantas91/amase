@@ -13,7 +13,7 @@ LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completion
 API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
 MODEL = os.getenv("SCOUT_MODEL", "coding-fleet")
 
-def discover_tasks(project_roadmap_path, backlog_path):
+def discover_tasks(project_roadmap_path, backlog_path, designer_review=""):
     with open("/home/joao/dev/orchestrator/personas/scout.md", "r") as f:
         scout_prompt = f.read()
 
@@ -27,12 +27,17 @@ def discover_tasks(project_roadmap_path, backlog_path):
         with open(backlog_path, "r") as f:
             backlog = f.read()
 
-    user_prompt = f"""You are the Scout persona. Analyze this project's roadmap and current backlog.
-Discover the next 2 logical, minimal vertical slice tasks needed for this web extension to advance towards real-world usability on job platforms (e.g., Lever, Greenhouse, Workday, LinkedIn).
+    designer_section = ""
+    if designer_review:
+        designer_section = f"\nDESIGNER UX/UI AUDIT FINDINGS:\n{designer_review}\n"
+
+    user_prompt = f"""You are the Scout persona. Analyze this project's roadmap, current backlog, and UX/UI Designer findings.
+Discover the next 2 logical, minimal vertical slice tasks needed for this web extension to advance towards real-world usability and ergonomic UI.
+If UX/UI findings are provided, prioritize translating them into concrete, testable UI engineering slices.
 
 ROADMAP:
 {roadmap[:3000]}
-
+{designer_section}
 CURRENT BACKLOG:
 {backlog}
 
@@ -78,6 +83,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Scout Persona Discovery")
     parser.add_argument("--roadmap", help="Path to project roadmap document")
     parser.add_argument("--backlog", default=os.path.join(os.getcwd(), "BACKLOG.md"), help="Path to BACKLOG.md")
+    parser.add_argument("--designer-review", help="Path to designer review text or direct string")
     args = parser.parse_args()
 
     roadmap_file = args.roadmap
@@ -90,11 +96,19 @@ if __name__ == "__main__":
         else:
             roadmap_file = os.path.join(os.getcwd(), "ROADMAP.md")
 
+    designer_text = ""
+    if args.designer_review:
+        if os.path.exists(args.designer_review):
+            with open(args.designer_review, "r") as f:
+                designer_text = f.read()
+        else:
+            designer_text = args.designer_review
+
     print(f"Scout: Querying free model fleet for project '{os.path.basename(os.getcwd())}'...")
     print(f"  Roadmap: {roadmap_file if os.path.exists(roadmap_file) else 'None (auto-inferring)'}")
     print(f"  Backlog: {args.backlog}")
 
-    tasks = discover_tasks(roadmap_file, args.backlog)
+    tasks = discover_tasks(roadmap_file, args.backlog, designer_text)
     if tasks:
         print("\nDiscovered Tasks from Free Fleet:")
         print(tasks)
