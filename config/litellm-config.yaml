@@ -1,0 +1,44 @@
+model_list:
+  # 1. Primary: Google Gemini 2.0 Flash (Generous Free Tier: 15 RPM / 1,500 RPD)
+  - model_name: coding-fleet
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+      rpm: 15
+
+  # 2. Fallback 1: Google Gemini 2.0 Flash Lite (Secondary Free Tier)
+  - model_name: coding-fleet
+    litellm_params:
+      model: gemini/gemini-2.0-flash-lite
+      api_key: os.environ/GEMINI_API_KEY
+      rpm: 30
+
+  # 3. Fallback 2: NVIDIA NIM (1,000 Free Credits - Qwen 2.5 Coder 32B Instruct)
+  - model_name: coding-fleet
+    litellm_params:
+      model: openai/qwen/qwen2.5-coder-32b-instruct
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+
+  # 4. Fallback 3: Groq (Free Tier, Fast Llama 3.3 70B)
+  - model_name: coding-fleet
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY
+
+  # 5. Fallback 4: Local Ollama (Zero Cost / Offline Safety Net)
+  - model_name: coding-fleet
+    litellm_params:
+      model: ollama/qwen2.5-coder:7b
+      api_base: http://localhost:11434
+
+router_settings:
+  routing_strategy: "least-busy"
+  fallbacks:
+    - coding-fleet: ["coding-fleet"]
+  num_retries: 3
+  cooldown_time: 60
+  allowed_fails: 1
+
+general_settings:
+  master_key: "sk-amase-master-key"
