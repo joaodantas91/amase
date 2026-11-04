@@ -10,6 +10,7 @@ if [ ! -d ".git" ]; then
 fi
 
 BACKLOG_FILE="$TARGET_DIR/BACKLOG.md"
+AUDIT_FILE="$TARGET_DIR/AUDIT.md"
 
 if [ ! -f "$BACKLOG_FILE" ]; then
   echo "[-] No BACKLOG.md found in $TARGET_DIR."
@@ -17,37 +18,60 @@ if [ ! -f "$BACKLOG_FILE" ]; then
   exit 1
 fi
 
-# Find the first uncompleted task line
-NEXT_TASK_LINE=$(grep -E "^- \[ \]" "$BACKLOG_FILE" | head -n 1 || true)
-
-# 1. Autonomous Backlog Expansion (if empty or all [x])
-if [ -z "$NEXT_TASK_LINE" ]; then
-  echo "[!] Backlog empty or all tasks complete. Triggering Scout discovery..."
-  /home/joao/dev/orchestrator/scripts/scout.py --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE"
-  NEXT_TASK_LINE=$(grep -E "^- \[ \]" "$BACKLOG_FILE" | head -n 1 || true)
-  if [ -z "$NEXT_TASK_LINE" ]; then
-    echo "[-] Scout could not find further tasks. Halting."
-    exit 0
+# 1. Audit Ingestion Gate: Check for unaddressed CRITICAL / HIGH vulnerabilities
+if [ -f "$AUDIT_FILE" ]; then
+  UNRESOLVED_CRITICAL=$(grep -E "^- \[ \] \[(CRITICAL|HIGH)\]" "$AUDIT_FILE" || true)
+  if [ -n "$UNRESOLVED_CRITICAL" ]; then
+    echo "[!] CRITICAL/HIGH issue detected in $AUDIT_FILE:"
+    echo "$UNRESOLVED_CRITICAL"
+    echo "[!] Halting feature pipeline to prioritize security remediation."
+    # Check if remediation task is already at the top of BACKLOG.md
+    if ! grep -q "TASK-SEC-" "$BACKLOG_FILE"; then
+      SEC_TASK="- [ ] **TASK-SEC-02: Remediate Sentinel Audit Findings**\n  - **Goal:** Fix critical/high security issues flagged in AUDIT.md.\n  - **Files:** AUDIT.md and target modules.\n  - **Criteria:** Tests pass, Sentinel marks clean."
+      sed -i "8i $SEC_TASK\n" "$BACKLOG_FILE"
+      echo "[+] Auto-prepended TASK-SEC-02 to top of BACKLOG.md."
+    fi
   fi
 fi
 
+# 2. Autonomous Backlog Lookahead (Top up if fewer than 3 tasks remain)
+PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
+if [ "$PENDING_COUNT" -lt 3 ]; then
+  echo "[!] Backlog running low ($PENDING_COUNT pending). Triggering Scout expansion..."
+  /home/joao/dev/orchestrator/scripts/scout.py --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE" || true
+fi
+
+# Find the first uncompleted task line
+NEXT_TASK_LINE=$(grep -E "^- \[ \]" "$BACKLOG_FILE" | head -n 1 || true)
+if [ -z "$NEXT_TASK_LINE" ]; then
+  echo "[-] No tasks available to execute. Halting."
+  exit 0
+fi
+
 # Extract task name
-TASK_DESC=$(echo "$NEXT_TASK_LINE" | sed -E 's/^- \[ \] (TASK-[0-9]+: )?//')
+TASK_DESC=$(echo "$NEXT_TASK_LINE" | sed -E 's/^- \[ \] (TASK-[0-9A-Z-]+: )?//')
 TASK_SLUG=$(echo "$TASK_DESC" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//' | cut -c1-30)
 
 echo "=========================================================="
 echo " AMASE Global Autonomous Engine"
-echo " Project:   $TARGET_DIR"
-echo " Next Task: $TASK_DESC"
-echo " Slug:      $TASK_SLUG"
+echo " Project:       $TARGET_DIR"
+echo " Pending Tasks: $PENDING_COUNT"
+echo " Next Task:     $TASK_DESC"
+echo " Slug:          $TASK_SLUG"
 echo "=========================================================="
 
-# 2. Execution Routing: Orca native if available, else local worktree with OpenCode free fleet
+SPEC_PROMPT="Read BACKLOG.md. Implement task: '$TASK_DESC'. Follow AGENTS.md rules strictly:
+- PONYTAIL: Reuse existing helpers in src/core/ before writing new ones. Zero code duplication.
+- CAVEMAN: Terse output, no filler.
+- CHISLE: Concise tests, minimal diff.
+Verify all tests pass with exit code 0. Send worker_done when done."
+
+# 3. Execution Routing: Orca native if available, else local worktree with OpenCode free fleet
 if which orca >/dev/null 2>&1 && orca status >/dev/null 2>&1; then
   echo "[+] Orca runtime detected. Dispatching worker via Orca with free DeepSeek model..."
   orca orchestration worker-start \
     --task-title "$TASK_SLUG" \
-    --spec "Read BACKLOG.md. Implement task: '$TASK_DESC'. Follow AGENTS.md rules (Ponytail, Caveman, Chisle). Verify all tests pass with exit code 0. Send worker_done when done." \
+    --spec "$SPEC_PROMPT" \
     --worktree new-child \
     --agent opencode \
     --name "task-$TASK_SLUG"
@@ -56,5 +80,5 @@ else
   /home/joao/dev/orchestrator/scripts/run-task.sh --repo "$TARGET_DIR" --task "$TASK_SLUG"
   WORKTREE_DIR="$TARGET_DIR/.worktrees/$TASK_SLUG"
   echo "[+] Spawning OpenCode Free Worker in: $WORKTREE_DIR..."
-  (cd "$WORKTREE_DIR" && opencode run "Implement task: '$TASK_DESC'. Run tests until exit code 0, then report." -m opencode/deepseek-v4.1-flash-free --auto)
+  (cd "$WORKTREE_DIR" && opencode run "$SPEC_PROMPT" -m opencode/deepseek-v4.1-flash-free --auto)
 fi
