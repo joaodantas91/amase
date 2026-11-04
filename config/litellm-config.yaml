@@ -1,23 +1,67 @@
 model_list:
-  # 1. Primary: Groq GPT-OSS 120B (Verified Active, Ultra-fast, $0 Free)
+  # ============================================================================
+  # 1. CODING FLEET (Exclusive for Builder / Code Generation)
+  # ============================================================================
   - model_name: coding-fleet
     litellm_params:
-      model: groq/openai/gpt-oss-120b
-      api_key: os.environ/GROQ_API_KEY
+      model: openai/nvidia/nemotron-3.5-bolt-e4b # ACTIVE_CODING_MODEL
+      api_key: os.environ/NVIDIA_API_KEY
+      api_base: https://integrate.api.nvidia.com/v1
       drop_params: true
 
-  # 2. Fallback 1: Groq Qwen 3.8 27B (Verified Active, Code Specialist, $0 Free)
   - model_name: coding-fleet
     litellm_params:
       model: groq/qwen/qwen3.8-27b
       api_key: os.environ/GROQ_API_KEY
       drop_params: true
 
-  # 3. Fallback 2: Google Gemini 3.5 Flash Lite (Verified Active, $0 Free Tier)
-  - model_name: coding-fleet
+  # ============================================================================
+  # 2. SCOUT FLEET (Product Discovery & Backlog Formulation)
+  # Uses Groq GPT-OSS 120B -> High architectural reasoning, 0 Google tokens used
+  # ============================================================================
+  - model_name: scout-fleet
     litellm_params:
-      model: gemini/gemini-3.5-flash-lite
-      api_key: os.environ/GEMINI_API_KEY
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
+      drop_params: true
+
+  # ============================================================================
+  # 3. SENTINEL FLEET (Security Audit & Diff Inspection)
+  # Uses Groq Qwen 3.8 27B -> Code security specialist, 0 Google tokens used
+  # ============================================================================
+  - model_name: sentinel-fleet
+    litellm_params:
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
+      drop_params: true
+
+  # ============================================================================
+  # 4. DESIGNER FLEET (UX/UI Review & Ergonomics)
+  # Uses Groq GPT-OSS 120B -> 0 Google tokens used
+  # ============================================================================
+  - model_name: designer-fleet
+    litellm_params:
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
+      drop_params: true
+
+  # ============================================================================
+  # 5. NVIDIA FLEET (NVIDIA NIM - Nemotron 3.5 Bolt)
+  # ============================================================================
+  - model_name: nvidia-fleet
+    litellm_params:
+      model: openai/nvidia/nemotron-3.5-bolt-e4b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
+      drop_params: true
+
+  # ============================================================================
+  # 6. OPENROUTER FLEET (OpenRouter Free Router - $0 Free Tier)
+  # ============================================================================
+  - model_name: openrouter-fleet
+    litellm_params:
+      model: openrouter/openrouter/free
+      api_key: os.environ/OPEN_ROUTER_API_KEY
       drop_params: true
 
 router_settings:

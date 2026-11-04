@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TARGET="${1:-status}"
+CONFIG="/home/joao/dev/orchestrator/config/litellm-config.yaml"
+
+case "$TARGET" in
+  nvidia|bolt)
+    echo "[Switchboard] Setting primary coding model to: NVIDIA NIM (Nemotron 3.5 Bolt)"
+    sed -i 's|model: .* # ACTIVE_CODING_MODEL|model: openai/nvidia/nemotron-3.5-bolt-e4b # ACTIVE_CODING_MODEL|' "$CONFIG"
+    ;;
+  openrouter|or)
+    echo "[Switchboard] Setting primary coding model to: OpenRouter Free Router"
+    sed -i 's|model: .* # ACTIVE_CODING_MODEL|model: openrouter/openrouter/free # ACTIVE_CODING_MODEL|' "$CONFIG"
+    ;;
+  gemini|google)
+    echo "[Switchboard] Setting primary coding model to: Google Gemini Flash Lite"
+    sed -i 's|model: .* # ACTIVE_CODING_MODEL|model: gemini/gemini-flash-lite-latest # ACTIVE_CODING_MODEL|' "$CONFIG"
+    ;;
+  groq|qwen)
+    echo "[Switchboard] Setting primary coding model to: Groq Qwen 3.8 27B"
+    sed -i 's|model: .* # ACTIVE_CODING_MODEL|model: groq/qwen/qwen3.8-27b # ACTIVE_CODING_MODEL|' "$CONFIG"
+    ;;
+  status)
+    echo "[Switchboard] Current primary model in coding-fleet:"
+    grep -E "model: .* # ACTIVE_CODING_MODEL" "$CONFIG" || grep -E "model:" "$CONFIG" | head -n 1
+    exit 0
+    ;;
+  *)
+    echo "Usage: $0 [nvidia|openrouter|gemini|groq|status]"
+    exit 1
+    ;;
+esac
+
+# Trigger litellm reload
+pkill -f "litellm.*--port 4000" 2>/dev/null || true
+nohup /home/joao/dev/orchestrator/.venv/bin/litellm --config "$CONFIG" --port 4000 --host 0.0.0.0 --drop_params > /dev/null 2>&1 &
+sleep 1
+echo "[+] Switched and reloaded LiteLLM successfully."

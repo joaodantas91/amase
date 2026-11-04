@@ -3,15 +3,42 @@
 Designer Persona Runner
 Audits extension UI/UX components (popup, options, floating buttons, Svelte components),
 identifies ergonomic bottlenecks, and formats UX improvement specs for Scout discovery.
+Powered by UI/UX Pro Max design intelligence skill.
 """
 import os
 import sys
 import json
+import subprocess
 import urllib.request
 
 LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completions")
 API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
-MODEL = os.getenv("DESIGNER_MODEL", "coding-fleet")
+MODEL = os.getenv("DESIGNER_MODEL", "designer-fleet")
+SKILL_SEARCH = "/home/joao/dev/orchestrator/skills/ui-ux-pro-max/scripts/search.py"
+
+def get_design_intelligence(query="browser extension developer tool dark mode dashboard"):
+    """Query UI/UX Pro Max skill for design system, color tokens, and UX guidelines."""
+    intel = []
+    if os.path.exists(SKILL_SEARCH):
+        try:
+            ds_output = subprocess.check_output(
+                ["python3", SKILL_SEARCH, query, "--design-system"],
+                text=True, timeout=10
+            )
+            intel.append(f"--- UI/UX PRO MAX RECOMMENDED DESIGN SYSTEM ---\n{ds_output}\n")
+        except Exception as e:
+            sys.stderr.write(f"UI/UX Pro Max design-system query failed: {e}\n")
+
+        try:
+            ux_output = subprocess.check_output(
+                ["python3", SKILL_SEARCH, "form inputs buttons dark mode", "--domain", "ux"],
+                text=True, timeout=10
+            )
+            intel.append(f"--- UI/UX PRO MAX FORM & INTERACTION GUIDELINES ---\n{ux_output}\n")
+        except Exception as e:
+            sys.stderr.write(f"UI/UX Pro Max UX query failed: {e}\n")
+
+    return "\n".join(intel)
 
 def run_ux_review(target_dir):
     with open("/home/joao/dev/orchestrator/personas/designer.md", "r") as f:
@@ -21,12 +48,11 @@ def run_ux_review(target_dir):
     ui_files = [
         "wxt.config.ts",
         "src/entrypoints/popup/App.svelte",
-        "src/entrypoints/popup/index.html",
+        "src/entrypoints/popup/app.css",
         "src/entrypoints/options/Options.svelte",
-        "src/entrypoints/options/index.html",
+        "src/entrypoints/options/ProfileManager.svelte",
         "src/entrypoints/floating.content.ts",
-        "src/lib/applications.svelte",
-        "src/lib/components/tabs.svelte"
+        "src/lib/applications.svelte"
     ]
 
     context = []
@@ -35,19 +61,29 @@ def run_ux_review(target_dir):
         if os.path.exists(full_path):
             with open(full_path, "r") as f:
                 content = f.read()
-                context.append(f"--- File: {rel_path} ---\n{content}\n")
+                # Cap file length to prevent bloated context
+                lines = content.splitlines()
+                if len(lines) > 80:
+                    truncated = "\n".join(lines[:80]) + f"\n... [truncated {len(lines) - 80} lines] ..."
+                    context.append(f"--- File: {rel_path} (preview) ---\n{truncated}\n")
+                else:
+                    context.append(f"--- File: {rel_path} ---\n{content}\n")
 
     combined_context = "\n".join(context)
+    design_intel = get_design_intelligence()
 
-    user_prompt = f"""You are Designer. Perform a comprehensive UX/UI review of the Kandidat browser extension based on these component source files:
+    user_prompt = f"""You are Designer, backed by the UI/UX Pro Max design intelligence skill.
+Perform a comprehensive UX/UI review of the Kandidat browser extension based on these component source files:
 
 {combined_context}
 
-Evaluate:
-1. Navigation & Access: Why did user see Options embedded in chrome://extensions/?id=... instead of a standalone tab? How do users jump to Options from Popup?
-2. Surface Role Separation: Why is having a 'Fill' button in the toolbar popup redundant when we have in-page floating buttons on job applications? How should the Popup be redesigned as an Application Tracker Hub?
-3. Visual Hierarchy & Svelte 5 Modernization: Are we using deprecated syntax in tabs/components? Is feedback (copied, submitted, filled) evident?
-4. Concrete Recommendations for Scout (Discovery): Provide clear UX specs that Scout can translate directly into engineering backlog tasks.
+{design_intel}
+
+Evaluate & Specify:
+1. Design System Tokens: Define standardized CSS variables (--color-bg-*, --color-border-*, --color-text-*, --color-primary-*, --space-*, --font-*, --radius-*) to eliminate all scattered raw hex values.
+2. Form & Control Uniformity: Specify unified styling for all inputs, textareas, selects, and buttons across both Popup and Options so they share identical height, padding, font-size, background, and focus glow.
+3. Card & Layout Hierarchy: Clean responsive 2-column grid for dense form sections, full-width textareas, card containers with subtle borders.
+4. Actionable Task Specs: Provide concrete specifications for engineering backlog tasks (e.g. TASK-DS-01).
 """
 
     payload = {

@@ -13,7 +13,7 @@ import urllib.request
 
 LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completions")
 API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
-MODEL = os.getenv("SENTINEL_MODEL", "coding-fleet")
+MODEL = os.getenv("SENTINEL_MODEL", "sentinel-fleet")
 
 def run_audit(target_dir, base_ref="HEAD~1"):
     os.chdir(target_dir)

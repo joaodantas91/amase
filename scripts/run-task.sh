@@ -70,9 +70,16 @@ echo "[+] Creating Git worktree on branch $BRANCH_NAME..."
 git -C "$TARGET_REPO" branch -D "$BRANCH_NAME" 2>/dev/null || true
 git -C "$TARGET_REPO" worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"
 
-# 4. Inject AMASE Prompt Directives into Worktree root
-cat "$ORCHESTRATOR_DIR/prompts/caveman.md" "$ORCHESTRATOR_DIR/prompts/ponytail.md" > "$WORKTREE_PATH/.amase-rules.md"
-echo "[+] Injected CAVEMAN & PONYTAIL directives into worktree."
+# 4. Inject AMASE Prompt Directives & Skills into Worktree root
+cat "$ORCHESTRATOR_DIR/prompts/swarm_invariants.md" \
+    "$ORCHESTRATOR_DIR/prompts/design.md" \
+    "$ORCHESTRATOR_DIR/prompts/ponytail.md" \
+    "$ORCHESTRATOR_DIR/prompts/caveman.md" > "$WORKTREE_PATH/.amase-rules.md"
+
+# Link or copy skills so child agents can access them directly
+mkdir -p "$WORKTREE_PATH/.agents/skills"
+cp -rn "$ORCHESTRATOR_DIR/skills/"* "$WORKTREE_PATH/.agents/skills/" 2>/dev/null || true
+echo "[+] Injected SWARM INVARIANTS, DESIGN SYSTEM, PONYTAIL, & CAVEMAN directives and skills into worktree."
 
 # 5. Export LiteLLM Gateway Endpoint for worker agents
 export OPENAI_BASE_URL="http://localhost:4000/v1"

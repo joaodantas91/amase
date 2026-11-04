@@ -61,9 +61,11 @@ echo " Slug:          $TASK_SLUG"
 echo "=========================================================="
 
 SPEC_PROMPT="Read BACKLOG.md. Implement task: '$TASK_DESC'. Follow AGENTS.md rules strictly:
+- UI/UX DESIGN (ui-ux-pro-max): Use centralized CSS tokens (tokens.css / components.css). Zero raw hex colors. Standard reusable inputs, buttons, and cards. Explicit labels, SVG icons.
 - PONYTAIL: Reuse existing helpers in src/core/ before writing new ones. Zero code duplication.
 - CAVEMAN: Terse output, no filler.
 - CHISLE: Concise tests, minimal diff.
+- STRICT TYPES: Zero 'as any' or '@ts-ignore'.
 Verify all tests pass with exit code 0. Send worker_done when done."
 
 # 3. Execution Routing: Orca native if available, else local worktree with OpenCode free fleet

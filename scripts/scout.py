@@ -11,7 +11,7 @@ import urllib.request
 
 LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completions")
 API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
-MODEL = os.getenv("SCOUT_MODEL", "coding-fleet")
+MODEL = os.getenv("SCOUT_MODEL", "scout-fleet")
 
 def discover_tasks(project_roadmap_path, backlog_path, designer_review=""):
     with open("/home/joao/dev/orchestrator/personas/scout.md", "r") as f:
