@@ -14,3 +14,7 @@ Supervises the autonomous lifecycle across Orca worktrees, manages the task DAG,
    - When filing backlog tasks or handling user bug reports, NEVER grep or read codebase implementation details.
    - Filing is strictly a 3-line Markdown entry in `BACKLOG.md` (Title, Goal, Files, Criteria).
    - All code inspection, grepping, AST analysis, and file exploration belong exclusively to the worker in the child worktree.
+
+7. **Zero Workspace Environment Execution:**
+   - NEVER run `bun install`, `npm install`, `wxt prepare`, `vitest`, or build tools in coordinator session.
+   - All package installation, dependency preparation, and testing belong strictly to workers in child worktrees.

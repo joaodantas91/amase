@@ -31,6 +31,9 @@ def discover_tasks(project_roadmap_path, backlog_path, designer_review=""):
     if designer_review:
         designer_section = f"\nDESIGNER UX/UI AUDIT FINDINGS:\n{designer_review}\n"
 
+    # CHISLE: send recent backlog tasks instead of 4000-word whole history
+    backlog_slice = backlog[-3500:] if len(backlog) > 3500 else backlog
+
     user_prompt = f"""You are the Scout persona. Analyze this project's roadmap, current backlog, and UX/UI Designer findings.
 Discover the next 2 logical, minimal vertical slice tasks needed for this web extension to advance towards real-world usability and ergonomic UI.
 If UX/UI findings are provided, prioritize translating them into concrete, testable UI engineering slices.
@@ -38,8 +41,8 @@ If UX/UI findings are provided, prioritize translating them into concrete, testa
 ROADMAP:
 {roadmap[:3000]}
 {designer_section}
-CURRENT BACKLOG:
-{backlog}
+RECENT BACKLOG:
+{backlog_slice}
 
 Respond ONLY with the markdown tasks ready to append to BACKLOG.md, following the exact format:
 - [ ] **TASK-XX: <Title>**
@@ -54,8 +57,8 @@ Respond ONLY with the markdown tasks ready to append to BACKLOG.md, following th
             {"role": "system", "content": scout_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        "temperature": 0.2,
-        "max_tokens": 800
+        "temperature": 0.1,
+        "max_tokens": 2048
     }
 
     req = urllib.request.Request(
@@ -68,9 +71,10 @@ Respond ONLY with the markdown tasks ready to append to BACKLOG.md, following th
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            content = data["choices"][0]["message"]["content"]
+            msg = data["choices"][0]["message"]
+            content = msg.get("content") or msg.get("reasoning_content") or ""
             return content.strip()
     except Exception as e:
         sys.stderr.write(f"Scout discovery failed: {e}\n")

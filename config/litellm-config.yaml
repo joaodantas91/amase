@@ -9,20 +9,16 @@ model_list:
       api_base: https://integrate.api.nvidia.com/v1
       drop_params: true
 
-  - model_name: coding-fleet
-    litellm_params:
-      model: groq/qwen/qwen3.8-27b
-      api_key: os.environ/GROQ_API_KEY
-      drop_params: true
 
   # ============================================================================
   # 2. SCOUT FLEET (Product Discovery & Backlog Formulation)
-  # Uses Groq GPT-OSS 120B -> High architectural reasoning, 0 Google tokens used
+  # Uses Nemotron 3.5 Super 120B on NVIDIA NIM -> High architectural reasoning, 0 Google tokens used
   # ============================================================================
   - model_name: scout-fleet
     litellm_params:
-      model: groq/openai/gpt-oss-120b
-      api_key: os.environ/GROQ_API_KEY
+      model: openai/nvidia/nemotron-3.5-super-vl-120b-a12b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
       drop_params: true
 
   # ============================================================================
