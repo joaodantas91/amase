@@ -18,3 +18,6 @@ Supervises the autonomous lifecycle across Orca worktrees, manages the task DAG,
 7. **Zero Workspace Environment Execution:**
    - NEVER run `bun install`, `npm install`, `wxt prepare`, `vitest`, or build tools in coordinator session.
    - All package installation, dependency preparation, and testing belong strictly to workers in child worktrees.
+
+8. **No Trivial Negative Cosmetic Tests:**
+   - Never write or prompt workers to write trivial negative tests (e.g. asserting text does not contain a specific emoji). Tests must verify functional behavior, state transitions, storage persistence, DOM events, and accessibility contracts.

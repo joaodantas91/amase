@@ -25,8 +25,9 @@ Every UI component across Popup, Options, and Content Scripts must consume centr
   - Focus: border-color to `var(--color-border-focus, #eaeaea)` with zero default browser outline.
   - Text: `var(--color-text-primary, #eaeaea)`.
 - **Buttons (`.btn-primary`, `.btn-secondary`, `.btn-destructive`, `.btn-sm`, `.reset-btn`):**
-  - Secondary/Reset: `padding: 3px 8px` or `6px 12px`, `font-size: 11px`/`12px`, `background: transparent`, `border: 1px solid #444`, hover `#888` / `#eaeaea`.
-  - Primary: `padding: 6px 12px`, `font-size: 12px`, solid white/accent text.
+  - Primary: `padding: 6px 12px`, `font-size: 12px`, solid white/accent text (`background: var(--color-accent, #eaeaea); color: #111`).
+    - **RULE:** ZERO blue hovers. Primary hover must stay monochrome (`opacity: 0.9` or `filter: brightness(1.08)` or `#ffffff`).
+  - Secondary/Reset: `padding: 3px 8px` or `6px 12px`, `font-size: 11px`/`12px`, `background: transparent`, `border: 1px solid var(--color-border-default)`, hover `border-color: var(--color-border-hover); background: var(--color-bg-elevated)`.
   - Destructive: hover `color: var(--color-destructive, #ff6b6b)`.
 - **Tags & Cards (`.tag`, `.card`):**
   - Tags match `.keyword-tag`: `background: #1c1c1c`, `border: 1px solid #333`, `border-radius: 4px`, `padding: 4px 8px`, `font-size: 12px`.
