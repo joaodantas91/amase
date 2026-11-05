@@ -53,6 +53,14 @@ echo " Branch:      $BRANCH_NAME"
 echo " Worktree:    $WORKTREE_PATH"
 echo "========================================================"
 
+# 0. Check writable filesystem in TARGET_REPO
+if ! touch "$TARGET_REPO/.amase_write_test" 2>/dev/null; then
+  echo "[-] ERROR: $TARGET_REPO is read-only in this session."
+  echo "[-] Ensure AGY / CLI was started with write permissions on $TARGET_REPO (e.g. 'agy $TARGET_REPO')."
+  exit 1
+fi
+rm -f "$TARGET_REPO/.amase_write_test"
+
 # 1. Ensure .worktrees is ignored in the target repo
 if ! grep -q "^\.worktrees" "$TARGET_REPO/.gitignore" 2>/dev/null; then
   echo -e "\n.worktrees/" >> "$TARGET_REPO/.gitignore"
@@ -68,6 +76,7 @@ fi
 # 3. Create isolated ephemeral worktree
 echo "[+] Creating Git worktree on branch $BRANCH_NAME..."
 git -C "$TARGET_REPO" branch -D "$BRANCH_NAME" 2>/dev/null || true
+mkdir -p "$(dirname "$WORKTREE_PATH")"
 git -C "$TARGET_REPO" worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"
 
 # 4. Inject AMASE Prompt Directives & Skills into Worktree root

@@ -4,7 +4,12 @@
 Supervises the autonomous lifecycle across Orca worktrees, manages the task DAG, and triggers discovery cycles.
 
 ## Responsibilities
-1. **Never Code Directly:** All implementation is delegated to Builder workers in child worktrees via Orca CLI using the free model fleet (`opencode/deepseek-v4.1-flash-free` or LiteLLM `:4000`).
+1. **Never Code Directly (HARD BARRIER):**
+   - The coordinator session NEVER edits files in `src/`, `tests/`, or any project code.
+   - `write_file` and `edit_file` in the coordinator are STRICTLY limited to `BACKLOG.md` (marking `[x]` or expanding tasks) and orchestrator configuration.
+   - ALL task execution MUST run via OpenCode fleet in child worktrees (`run-task.sh` & `dispatch-worker.sh`) so each worker opens as a distinct visible tab in Orca.
+   - ZERO PERMISSION PROMPTS: Never invoke commands with `BypassSandbox: true`. All commands must run silently in standard sandbox mode.
+   - READ-ONLY GUARD: If target repository is read-only in sandbox, halt and report to user rather than falling back to ad-hoc edits.
 2. **Mandatory Post-Merge Sentinel Gate:** Immediately upon merging any completed task into `main`, dispatch Sentinel to audit the merged diff (`git diff HEAD~1..HEAD`). If `[CRITICAL]` or `[HIGH]` findings appear in `AUDIT.md`, halt feature tasks and prepend `TASK-SEC-<ID>` to the backlog.
 3. **Autonomous Scout Queue Top-Up:** Whenever uncompleted `[ ]` tasks in `BACKLOG.md` drop below 3, autonomously dispatch Scout to discover and append the next 2–3 vertical slices.
 4. **Orca Run Management:** Binds and monitors Orca orchestration Runs (`orca orchestration run-create`, `worker-start`, `inbox`, `worker-read`).
