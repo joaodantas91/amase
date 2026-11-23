@@ -42,3 +42,13 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Add `amase stats [dir]` command to the CLI that reads `.amase/telemetry.jsonl` and renders a clean summary table of completed tasks, models used, durations, and $0 cost.
   - **Files:** `amase`, `scripts/stats.py`.
   - **Criteria:** Running `amase stats` outputs formatted ledger table; passes `.amase/test-gate.sh`.
+
+- [ ] **TASK-08: Automatic Linter & Shellcheck Gate in test-gate.sh**
+  - **Goal:** Enhance `.amase/test-gate.sh` to run `shellcheck` on bash scripts and syntax formatting checks on Python scripts, catching bash pitfalls automatically before settlement.
+  - **Files:** `.amase/test-gate.sh`.
+  - **Criteria:** Linter runs during test gate; clean exit code 0.
+
+- [ ] **TASK-09: Pipeline Dry-Run Simulator (amase test-wiring)**
+  - **Goal:** Add `amase test-wiring` subcommand that tests worktree creation, agent directive generation, git hooks, and settlement cleanup end-to-end without spending model calls.
+  - **Files:** `amase`, `scripts/test-wiring.sh`.
+  - **Criteria:** Verifies complete orchestrator mechanics in <2 seconds.
