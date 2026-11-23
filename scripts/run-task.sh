@@ -79,6 +79,13 @@ git -C "$TARGET_REPO" branch -D "$BRANCH_NAME" 2>/dev/null || true
 mkdir -p "$(dirname "$WORKTREE_PATH")"
 git -C "$TARGET_REPO" worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"
 
+# Ensure Orca knows this repo and exposes its worktrees
+ORCA_SHIM="/home/joao/.config/orca/linux-orca-cli-shim/orca"
+if [[ -x "$ORCA_SHIM" ]] && "$ORCA_SHIM" status >/dev/null 2>&1; then
+  "$ORCA_SHIM" repo add --path "$TARGET_REPO" >/dev/null 2>&1 || true
+  "$ORCA_SHIM" repo set --repo "path:$TARGET_REPO" --external-worktree-visibility show >/dev/null 2>&1 || true
+fi
+
 # 4. Inject Scoped Agent Directives & Boundaries into Worktree root
 if [[ -x "$ORCHESTRATOR_DIR/scripts/generate-agent.sh" ]]; then
   "$ORCHESTRATOR_DIR/scripts/generate-agent.sh" --repo "$TARGET_REPO" --role builder --task "$TASK_ID" > "$WORKTREE_PATH/.amase-rules.md"

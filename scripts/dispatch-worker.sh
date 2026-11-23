@@ -1,109 +1,116 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AMASE Worker Dispatcher (Active Polling, Watchdog & Auto-Failover)
-# - Strips ANSI codes & spinners to detect real stalls (>60s with no text change).
-# - Auto-confirms interactive CLI prompts (Y/n, permissions).
-# - Detects completion: instant auto-settlement on commit or screen markers.
-# - Emits heartbeats every 15s to keep coordinator informed.
+# AMASE Worker Dispatcher (Native Desktop Terminal / Ptyxis & Watchdog)
+# - Opens a dedicated tab in your native terminal (Ptyxis / GNOME Terminal).
+# - Tab stays open after completion with logs visible (never vanishes).
+# - Active polling detects fresh git commit and settles automatically.
+# - Auto-failover across $0 Free Fleet if model hangs (>60s).
 # ==============================================================================
 set -euo pipefail
 
-ORCA_BIN="/home/joao/.config/orca/linux-orca-cli-shim/orca"
 WORKTREE="${1:-}"
 TASK_PROMPT="${2:-}"
-REQUESTED_MODEL="${3:-mimo-v2.6-flash-free}"
+REQUESTED_MODEL="${3:-opencode/mimo-v2.6-flash-free}"
 
-# Ordered failover fleet for Orca
+if [[ -z "$WORKTREE" || -z "$TASK_PROMPT" ]]; then
+  echo "Usage: $0 <worktree-path> <prompt> [model]"
+  exit 1
+fi
+
+OPENCODE_BIN="/home/joao/.bun/bin/opencode"
+PTYXIS_BIN="/usr/bin/ptyxis"
+
+# Ordered $0 Free Fleet
 FLEET_MODELS=(
   "$REQUESTED_MODEL"
-  "mimo-v2.6-flash-free"
-  "flint-40b-free"
-  "beam-free"
-  "crouton-alpha-free"
+  "opencode/mimo-v2.6-flash-free"
+  "opencode/flint-40b-free"
+  "opencode/beam-free"
+  "opencode/deepseek-v4.1-flash-free"
+  "opencode/nemotron-3.5-lightning-free"
 )
 
 # Remove duplicates while preserving order
 UNIQUE_FLEET=()
 for m in "${FLEET_MODELS[@]}"; do
+  # Normalize model name if prefix missing
+  [[ "$m" != opencode/* && "$m" != */* ]] && m="opencode/$m"
   [[ " ${UNIQUE_FLEET[*]} " =~ " ${m} " ]] || UNIQUE_FLEET+=("$m")
 done
 
-FULL_PROMPT="$TASK_PROMPT. When finished, commit changes with git, then immediately exit the session."
+FULL_PROMPT="$TASK_PROMPT. When finished, commit changes with git."
+
+TASK_NAME=$(basename "$WORKTREE")
+LOG_FILE="$WORKTREE/.amase-worker.log"
+rm -f "$LOG_FILE"
 
 for MODEL in "${UNIQUE_FLEET[@]}"; do
   echo "========================================================"
-  echo "[+] AMASE Worker Dispatch (Orca UI Native)"
+  echo "[+] AMASE Worker Dispatch (Native Terminal Tab)"
   echo "[+] Worktree: $WORKTREE"
   echo "[+] Model:    $MODEL"
   echo "[+] Timestamp: $(date -Iseconds)"
   echo "========================================================"
 
-  OUTPUT=$("$ORCA_BIN" agent launch --worktree "path:$WORKTREE" --agent opencode --model "$MODEL" --prompt "$FULL_PROMPT" 2>&1 || true)
-  HANDLE=$(echo "$OUTPUT" | grep "^handle:" | awk '{print $2}')
+  INITIAL_COMMIT_TIME=$(git -C "$WORKTREE" log -1 --format="%ct" 2>/dev/null || echo 0)
 
-  if [[ -z "$HANDLE" ]]; then
-    echo "[-] Failed to launch model $MODEL in Orca. Falling over to next model..."
-    continue
+  # Check if desktop terminal (Ptyxis) is available
+  if [[ -x "$PTYXIS_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
+    echo "[+] Launching worker in a new tab in Terminal (Ptyxis)..."
+    "$PTYXIS_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- \
+      bash -c "cd '$WORKTREE' && echo '[+] Starting AMASE Worker on $MODEL...' && '$OPENCODE_BIN' run --model '$MODEL' --auto '$FULL_PROMPT' 2>&1 | tee '$LOG_FILE'; echo ''; echo '[AMASE] Worker finished. Review output above. Press Enter to close tab.'; read" &
+  else
+    echo "[+] Launching worker in background process (headless)..."
+    (cd "$WORKTREE" && "$OPENCODE_BIN" run --model "$MODEL" --auto "$FULL_PROMPT" > "$LOG_FILE" 2>&1) &
   fi
 
-  echo "[+] Worker tab opened in Orca with handle: $HANDLE"
-  echo "[+] Watchdog active (60s stall limit, 240s total)..."
+  echo "[+] Watchdog active (polling every 5s, 60s stall limit, 240s total)..."
 
   MAX_SECONDS=240
   ELAPSED=0
   STALL_SECONDS=0
-  LAST_SCREEN_HASH=""
+  LAST_LOG_SIZE=0
 
   while [ $ELAPSED -lt $MAX_SECONDS ]; do
     sleep 5
     ELAPSED=$((ELAPSED + 5))
     STALL_SECONDS=$((STALL_SECONDS + 5))
 
-    # 1. Check for fresh git commit
+    # 1. Check for fresh git commit in worktree
     LAST_COMMIT_TIME=$(git -C "$WORKTREE" log -1 --format="%ct" 2>/dev/null || echo 0)
-    CURRENT_TIME=$(date +%s)
-    if [ "$LAST_COMMIT_TIME" -gt 0 ] && [ $((CURRENT_TIME - LAST_COMMIT_TIME)) -le 20 ]; then
+    if [ "$LAST_COMMIT_TIME" -gt "$INITIAL_COMMIT_TIME" ]; then
+      CURRENT_TIME=$(date +%s)
       echo "[+] Detected fresh commit in worktree ($((CURRENT_TIME - LAST_COMMIT_TIME))s ago). Worker task completed!"
-      "$ORCA_BIN" terminal close --terminal "$HANDLE" 2>/dev/null || true
       exit 0
     fi
 
-    # 2. Check terminal screen content
-    OUTPUT_TEXT=$("$ORCA_BIN" terminal read --terminal "$HANDLE" 2>/dev/null || true)
-    
-    # Strip ANSI escape sequences and spinner characters for accurate stall detection
-    CLEAN_TEXT=$(echo "$OUTPUT_TEXT" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" | tr -d '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⣾⣽⣻⢿⡿⣟⣯⣷ \t\r\n' 2>/dev/null || echo "")
-    CURRENT_HASH=$(echo "$CLEAN_TEXT" | md5sum | awk '{print $1}')
+    # 2. Check worker log activity
+    if [[ -f "$LOG_FILE" ]]; then
+      CURRENT_LOG_SIZE=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
+      if [ "$CURRENT_LOG_SIZE" -gt "$LAST_LOG_SIZE" ]; then
+        LAST_LOG_SIZE="$CURRENT_LOG_SIZE"
+        STALL_SECONDS=0
+      fi
 
-    # Reset stall counter if substantive screen content changed
-    if [ "$CURRENT_HASH" != "$LAST_SCREEN_HASH" ]; then
-      LAST_SCREEN_HASH="$CURRENT_HASH"
-      STALL_SECONDS=0
+      # Check completion markers in log
+      if grep -qE "(Committed as [a-f0-9]+|Done\. All|Worker task completed)" "$LOG_FILE" 2>/dev/null; then
+        echo "[+] Detected completion markers in log. Worker task completed!"
+        exit 0
+      fi
     fi
 
     # Heartbeat output every 15s
     if [ $((ELAPSED % 15)) -eq 0 ]; then
-      LAST_LINE=$(echo "$OUTPUT_TEXT" | grep -v "^$" | tail -n 1 | head -c 80 || echo "...")
-      echo "[Heartbeat] ${ELAPSED}s elapsed | Stall: ${STALL_SECONDS}s | Status: $LAST_LINE"
+      LAST_LINE="..."
+      if [[ -f "$LOG_FILE" ]]; then
+        LAST_LINE=$(grep -v "^$" "$LOG_FILE" 2>/dev/null | tail -n 1 | head -c 80 || echo "...")
+      fi
+      echo "[Heartbeat] ${ELAPSED}s elapsed | Stall: ${STALL_SECONDS}s | Activity: $LAST_LINE"
     fi
 
-    # Check for interactive prompt waiting for user input
-    if echo "$OUTPUT_TEXT" | grep -qiE "(\(y\/n\)|\(Y\/n\)|allow\?|approve\?|press enter)"; then
-      echo "[!] Interactive prompt detected in worker terminal. Sending 'y' to unblock..."
-      "$ORCA_BIN" terminal send --terminal "$HANDLE" --text "y" --enter 2>/dev/null || true
-    fi
-
-    # Check completion markers
-    if echo "$OUTPUT_TEXT" | grep -qE "(Committed as [a-f0-9]+|Done\. All|Per system prompt, I did not commit|No new errors or failures introduced)"; then
-      echo "[+] Detected completion markers in terminal output. Worker task completed!"
-      "$ORCA_BIN" terminal close --terminal "$HANDLE" 2>/dev/null || true
-      exit 0
-    fi
-
-    # 3. Watchdog: if stalled (no substantive text change for 60s)
+    # 3. Watchdog: if stalled (no new output in log for 60s)
     if [ $STALL_SECONDS -ge 60 ]; then
-      echo "[-] Watchdog: Terminal $HANDLE stalled with no meaningful output for 60s. Killing and failing over..."
-      "$ORCA_BIN" terminal close --terminal "$HANDLE" 2>/dev/null || true
+      echo "[-] Watchdog: Worker stalled with no output for 60s on model $MODEL. Failing over..."
       break
     fi
   done
