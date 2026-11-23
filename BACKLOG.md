@@ -27,7 +27,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`.
   - **Criteria:** Telemetry is written automatically upon task settlement.
 
-- [ ] **TASK-05: Open-Source Tool Ingestion for Token Reduction & AST Symbol Indexing**
+- [x] **TASK-05: Open-Source Tool Ingestion for Token Reduction & AST Symbol Indexing**
   - **Goal:** Scout, benchmark, and integrate open-source CLI utilities to drastically cut LLM token consumption in worker tasks.
   - **Candidates:** AST outline extractors (`tree-sitter`, `ctags`), token-minified packing (`repomix`), and prompt compression wrappers (`llm-compressor`, `selective-context`).
   - **Files:** `scripts/scout-tools.py`, `scripts/run-task.sh`, `docs/OPEN_SOURCE_TOOL_REGISTRY.md`.
