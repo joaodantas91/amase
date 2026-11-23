@@ -16,6 +16,11 @@ if [[ "${1:-}" == "init" ]]; then
   exec "$SCRIPT_DIR/scripts/init-project.sh" "$INIT_DIR"
 fi
 
+if [[ "${1:-}" == "stats" ]]; then
+  shift
+  exec "$SCRIPT_DIR/scripts/stats.py" "${1:-.}"
+fi
+
 TARGET_DIR="${1:-$(pwd)}"
 cd "$TARGET_DIR"
 
