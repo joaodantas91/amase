@@ -7,7 +7,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
 
 ## Active Queue
 
-- [ ] **TASK-01: Deterministic One-Click Settlement Script (scripts/settle-task.sh)**
+- [x] **TASK-01: Deterministic One-Click Settlement Script (scripts/settle-task.sh)**
   - **Goal:** Create `scripts/settle-task.sh` that automates task verification (`.amase/test-gate.sh`), forbidden file auditing (`git diff`), fast-forward/clean merge into `main`, marking `[x]` in `BACKLOG.md`, and pruning the worktree.
   - **Files:** `scripts/settle-task.sh`, `amase`.
   - **Criteria:** Script runs with `--repo <path> --task <task-id>`, verifies exit code 0, merges cleanly, deletes worktree, and passes `.amase/test-gate.sh`.
