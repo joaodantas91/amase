@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # AMASE Worker Dispatcher (Active Polling, Watchdog & Auto-Failover)
-# - Detects model hang/stall: if no terminal output changes for 90s, auto-kills and fails over.
-# - Detects completion: instant auto-settlement on commit or screen completion markers.
+# - Strips ANSI codes & spinners to detect real stalls (>60s with no text change).
+# - Auto-confirms interactive CLI prompts (Y/n, permissions).
+# - Detects completion: instant auto-settlement on commit or screen markers.
+# - Emits heartbeats every 15s to keep coordinator informed.
 # ==============================================================================
 set -euo pipefail
 
@@ -45,9 +47,9 @@ for MODEL in "${UNIQUE_FLEET[@]}"; do
   fi
 
   echo "[+] Worker tab opened in Orca with handle: $HANDLE"
-  echo "[+] Watchdog active (90s stall limit, 600s total)..."
+  echo "[+] Watchdog active (60s stall limit, 240s total)..."
 
-  MAX_SECONDS=600
+  MAX_SECONDS=240
   ELAPSED=0
   STALL_SECONDS=0
   LAST_SCREEN_HASH=""
@@ -68,12 +70,27 @@ for MODEL in "${UNIQUE_FLEET[@]}"; do
 
     # 2. Check terminal screen content
     OUTPUT_TEXT=$("$ORCA_BIN" terminal read --terminal "$HANDLE" 2>/dev/null || true)
-    CURRENT_HASH=$(echo "$OUTPUT_TEXT" | md5sum | awk '{print $1}')
+    
+    # Strip ANSI escape sequences and spinner characters for accurate stall detection
+    CLEAN_TEXT=$(echo "$OUTPUT_TEXT" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" | tr -d '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⣾⣽⣻⢿⡿⣟⣯⣷ \t\r\n' 2>/dev/null || echo "")
+    CURRENT_HASH=$(echo "$CLEAN_TEXT" | md5sum | awk '{print $1}')
 
-    # Reset stall counter if screen changed
+    # Reset stall counter if substantive screen content changed
     if [ "$CURRENT_HASH" != "$LAST_SCREEN_HASH" ]; then
       LAST_SCREEN_HASH="$CURRENT_HASH"
       STALL_SECONDS=0
+    fi
+
+    # Heartbeat output every 15s
+    if [ $((ELAPSED % 15)) -eq 0 ]; then
+      LAST_LINE=$(echo "$OUTPUT_TEXT" | grep -v "^$" | tail -n 1 | head -c 80 || echo "...")
+      echo "[Heartbeat] ${ELAPSED}s elapsed | Stall: ${STALL_SECONDS}s | Status: $LAST_LINE"
+    fi
+
+    # Check for interactive prompt waiting for user input
+    if echo "$OUTPUT_TEXT" | grep -qiE "(\(y\/n\)|\(Y\/n\)|allow\?|approve\?|press enter)"; then
+      echo "[!] Interactive prompt detected in worker terminal. Sending 'y' to unblock..."
+      "$ORCA_BIN" terminal send --terminal "$HANDLE" --text "y" --enter 2>/dev/null || true
     fi
 
     # Check completion markers
@@ -83,9 +100,9 @@ for MODEL in "${UNIQUE_FLEET[@]}"; do
       exit 0
     fi
 
-    # 3. Watchdog: if stalled (no output change for 90s)
-    if [ $STALL_SECONDS -ge 90 ]; then
-      echo "[-] Watchdog: Terminal $HANDLE stalled with no output for 90s. Killing and failing over..."
+    # 3. Watchdog: if stalled (no substantive text change for 60s)
+    if [ $STALL_SECONDS -ge 60 ]; then
+      echo "[-] Watchdog: Terminal $HANDLE stalled with no meaningful output for 60s. Killing and failing over..."
       "$ORCA_BIN" terminal close --terminal "$HANDLE" 2>/dev/null || true
       break
     fi

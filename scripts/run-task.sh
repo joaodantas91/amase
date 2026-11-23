@@ -79,16 +79,21 @@ git -C "$TARGET_REPO" branch -D "$BRANCH_NAME" 2>/dev/null || true
 mkdir -p "$(dirname "$WORKTREE_PATH")"
 git -C "$TARGET_REPO" worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"
 
-# 4. Inject AMASE Prompt Directives & Skills into Worktree root
-cat "$ORCHESTRATOR_DIR/prompts/swarm_invariants.md" \
-    "$ORCHESTRATOR_DIR/prompts/design.md" \
-    "$ORCHESTRATOR_DIR/prompts/ponytail.md" \
-    "$ORCHESTRATOR_DIR/prompts/caveman.md" > "$WORKTREE_PATH/.amase-rules.md"
+# 4. Inject Scoped Agent Directives & Boundaries into Worktree root
+if [[ -x "$ORCHESTRATOR_DIR/scripts/generate-agent.sh" ]]; then
+  "$ORCHESTRATOR_DIR/scripts/generate-agent.sh" --repo "$TARGET_REPO" --role builder --task "$TASK_ID" > "$WORKTREE_PATH/.amase-rules.md"
+  echo "[+] Generated role-bounded builder directives with scope enforcement in .amase-rules.md"
+else
+  cat "$ORCHESTRATOR_DIR/prompts/swarm_invariants.md" \
+      "$ORCHESTRATOR_DIR/prompts/design.md" \
+      "$ORCHESTRATOR_DIR/prompts/ponytail.md" \
+      "$ORCHESTRATOR_DIR/prompts/caveman.md" > "$WORKTREE_PATH/.amase-rules.md"
+fi
 
 # Link or copy skills so child agents can access them directly
 mkdir -p "$WORKTREE_PATH/.agents/skills"
 cp -rn "$ORCHESTRATOR_DIR/skills/"* "$WORKTREE_PATH/.agents/skills/" 2>/dev/null || true
-echo "[+] Injected SWARM INVARIANTS, DESIGN SYSTEM, PONYTAIL, & CAVEMAN directives and skills into worktree."
+echo "[+] Injected skills into worktree."
 
 # 5. Export LiteLLM Gateway Endpoint for worker agents
 export OPENAI_BASE_URL="http://localhost:4000/v1"
@@ -98,9 +103,13 @@ export OPENAI_MODEL_NAME="coding-fleet"
 echo "[+] Environment configured to route through LiteLLM Proxy (:4000 -> coding-fleet)."
 echo "[+] Worktree is ready for autonomous execution at: $WORKTREE_PATH"
 
-# 6. If test command provided, provide quick validator
+# 6. If test gate exists or test command provided, validate baseline
+if [[ -z "$TEST_CMD" && -f "$WORKTREE_PATH/.amase/test-gate.sh" ]]; then
+  TEST_CMD="$WORKTREE_PATH/.amase/test-gate.sh"
+fi
+
 if [[ -n "$TEST_CMD" ]]; then
-  echo "[+] Validating baseline tests in worktree..."
+  echo "[+] Validating baseline tests in worktree using: $TEST_CMD"
   (cd "$WORKTREE_PATH" && eval "$TEST_CMD") || {
     echo "[!] Baseline tests currently failing or unconfigured. Ready for agent to fix/implement."
   }
