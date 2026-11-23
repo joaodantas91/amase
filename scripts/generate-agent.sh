@@ -70,6 +70,17 @@ $PERSONA_CONTENT
 
 EOF
 
+# Inject AST symbol outline into the agent prompt
+AST_SCRIPT="$ORCHESTRATOR_DIR/scripts/outline-ast.py"
+if [[ -f "$AST_SCRIPT" ]]; then
+  AST_OUTPUT=$(python3 "$AST_SCRIPT" "$REPO_PATH" 2>/dev/null) || true
+  if [[ -n "$AST_OUTPUT" ]]; then
+    echo ""
+    echo "## CODEBASE AST SYMBOL MAP"
+    printf '%s\n' "$AST_OUTPUT"
+  fi
+fi
+
 if [[ "$ROLE" == "builder" ]]; then
   cat <<EOF
 ## BUILDER BOUNDARIES & FORBIDDEN ACTIONS:
