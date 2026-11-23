@@ -22,7 +22,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/init-project.sh`.
   - **Criteria:** Running `amase init` on a new project creates standard boundaries and passes test gate.
 
-- [ ] **TASK-04: Token Diet Telemetry & Model Performance Ledger**
+- [x] **TASK-04: Token Diet Telemetry & Model Performance Ledger**
   - **Goal:** Add execution telemetry logging in `dispatch-worker.sh` and `settle-task.sh` writing to `.amase/telemetry.jsonl` (records task_id, model, duration_seconds, attempts, commit_hash, cost: 0.00).
   - **Files:** `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`.
   - **Criteria:** Telemetry is written automatically upon task settlement.
