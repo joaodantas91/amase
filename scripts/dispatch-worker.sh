@@ -52,6 +52,9 @@ for MODEL in "${UNIQUE_FLEET[@]}"; do
   echo "[+] Timestamp: $(date -Iseconds)"
   echo "========================================================"
 
+  # Write task metadata for telemetry ledger
+  printf '{"task_id": "%s", "model": "%s", "start_time": %s}\n' "$TASK_NAME" "$MODEL" "$(date +%s)" > "$WORKTREE/.amase-task-meta.json"
+
   INITIAL_COMMIT_TIME=$(git -C "$WORKTREE" log -1 --format="%ct" 2>/dev/null || echo 0)
   CURRENT_PID=""
 

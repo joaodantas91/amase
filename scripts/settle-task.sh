@@ -54,6 +54,28 @@ echo " Branch:      $BRANCH_NAME"
 echo " Worktree:    $WORKTREE_PATH"
 echo "========================================================"
 
+# Read task metadata for telemetry ledger (before worktree is pruned).
+META_FILE="$WORKTREE_PATH/.amase-task-meta.json"
+META_MODEL="unknown"
+META_START="$(date +%s)"
+if [[ -f "$META_FILE" ]]; then
+  META_READ=$(python3 - "$META_FILE" <<'PY'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(d.get("model", "unknown"), d.get("start_time", 0))
+except Exception:
+    print("unknown", 0)
+PY
+)
+  META_MODEL="${META_READ%% *}"
+  META_START="${META_READ##* }"
+fi
+[[ -z "$META_MODEL" || "$META_MODEL" == "null" ]] && META_MODEL="unknown"
+if ! [[ "$META_START" =~ ^[0-9]+$ ]] || [[ "$META_START" == "0" ]]; then
+  META_START="$(date +%s)"
+fi
+
 # 1. Run .amase/test-gate.sh in the worktree. Exit 1 on failure.
 if [[ ! -x "$WORKTREE_PATH/.amase/test-gate.sh" ]]; then
   echo "[-] Error: .amase/test-gate.sh not found or not executable in $WORKTREE_PATH"
@@ -118,6 +140,29 @@ echo "[+] Pruning worktree $WORKTREE_PATH..."
 git -C "$TARGET_REPO" worktree remove --force "$WORKTREE_PATH" 2>/dev/null || rm -rf "$WORKTREE_PATH"
 git -C "$TARGET_REPO" worktree prune >/dev/null 2>&1 || true
 echo "[+] Worktree pruned."
+
+# Record telemetry ledger entry.
+echo "[+] Recording telemetry..."
+CURRENT_TIME="$(date +%s)"
+DURATION_SECONDS=$((CURRENT_TIME - META_START))
+COMMIT_HASH="$(git -C "$TARGET_REPO" rev-parse HEAD)"
+mkdir -p "$TARGET_REPO/.amase"
+python3 - "$TARGET_REPO/.amase/telemetry.jsonl" "$(date -Iseconds)" "$TASK_ID" "$META_MODEL" "$DURATION_SECONDS" "$COMMIT_HASH" <<'PY'
+import json, sys
+path, ts, task_id, model, duration, commit_hash = sys.argv[1:7]
+entry = {
+    "timestamp": ts,
+    "task_id": task_id,
+    "model": model,
+    "duration_seconds": int(duration),
+    "commit_hash": commit_hash,
+    "cost_usd": 0.00,
+    "status": "settled",
+}
+with open(path, "a") as f:
+    f.write(json.dumps(entry) + "\n")
+PY
+echo "[+] Telemetry recorded."
 
 echo "========================================================"
 echo "[+] Settlement complete for $TASK_ID."
