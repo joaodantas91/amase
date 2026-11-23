@@ -53,15 +53,18 @@ for MODEL in "${UNIQUE_FLEET[@]}"; do
   echo "========================================================"
 
   INITIAL_COMMIT_TIME=$(git -C "$WORKTREE" log -1 --format="%ct" 2>/dev/null || echo 0)
+  CURRENT_PID=""
 
   # Check if desktop terminal (Ptyxis) is available
   if [[ -x "$PTYXIS_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
     echo "[+] Launching worker in a new tab in Terminal (Ptyxis)..."
-    "$PTYXIS_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- \
-      bash -c "cd '$WORKTREE' && echo '[+] Starting AMASE Worker on $MODEL...' && '$OPENCODE_BIN' run --model '$MODEL' --auto '$FULL_PROMPT' 2>&1 | tee '$LOG_FILE'; echo ''; echo '[AMASE] Worker finished. Review output above. Press Enter to close tab.'; read" &
+    "$PTYXIS_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME ($MODEL)" -- \
+      bash -c "cd '$WORKTREE' && echo '[+] Starting AMASE Worker on $MODEL...' && '$OPENCODE_BIN' run --model '$MODEL' --auto '$FULL_PROMPT' 2>&1 | tee '$LOG_FILE'; echo '[+] Task complete. Closing tab in 3s...'; sleep 3" &
+    CURRENT_PID=$!
   else
     echo "[+] Launching worker in background process (headless)..."
     (cd "$WORKTREE" && "$OPENCODE_BIN" run --model "$MODEL" --auto "$FULL_PROMPT" > "$LOG_FILE" 2>&1) &
+    CURRENT_PID=$!
   fi
 
   echo "[+] Watchdog active (polling every 5s, 60s stall limit, 240s total)..."
@@ -110,7 +113,11 @@ for MODEL in "${UNIQUE_FLEET[@]}"; do
 
     # 3. Watchdog: if stalled (no new output in log for 60s)
     if [ $STALL_SECONDS -ge 60 ]; then
-      echo "[-] Watchdog: Worker stalled with no output for 60s on model $MODEL. Failing over..."
+      echo "[-] Watchdog: Worker stalled with no output for 60s on model $MODEL. Killing and failing over..."
+      if [[ -n "$CURRENT_PID" ]]; then
+        kill -9 "$CURRENT_PID" 2>/dev/null || true
+      fi
+      pkill -9 -f "opencode.*$MODEL" 2>/dev/null || true
       break
     fi
   done
