@@ -20,6 +20,24 @@ echo "[+] Validating Python scripts compilation..."
 python3 -m py_compile scripts/*.py
 echo "  ✓ Python scripts compiled cleanly"
 
+if command -v shellcheck >/dev/null 2>&1; then
+  echo "[+] Running shellcheck on amase and scripts/*.sh..."
+  shellcheck amase scripts/*.sh
+  echo "  ✓ shellcheck passed"
+else
+  echo "  ! shellcheck not installed, skipping shellcheck"
+fi
+
+if command -v ruff >/dev/null 2>&1; then
+  echo "[+] Running ruff check on scripts/*.py..."
+  ruff check scripts/*.py
+  echo "  ✓ ruff check passed"
+elif command -v flake8 >/dev/null 2>&1; then
+  echo "[+] Running flake8 check on scripts/*.py..."
+  flake8 scripts/*.py
+  echo "  ✓ flake8 check passed"
+fi
+
 # 3. Verify executable permissions
 for script in amase scripts/*.sh scripts/*.py; do
   if [[ -f "$script" && ! -x "$script" ]]; then
