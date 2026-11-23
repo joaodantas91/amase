@@ -1,0 +1,28 @@
+# AMASE Orchestrator Backlog
+
+Autonomous task queue for improving the orchestrator itself.
+The builder implements the first uncompleted task `[ ]`, verifies that `.amase/test-gate.sh` passes with exit code 0, and marks it `[x]`.
+
+---
+
+## Active Queue
+
+- [ ] **TASK-01: Deterministic One-Click Settlement Script (scripts/settle-task.sh)**
+  - **Goal:** Create `scripts/settle-task.sh` that automates task verification (`.amase/test-gate.sh`), forbidden file auditing (`git diff`), fast-forward/clean merge into `main`, marking `[x]` in `BACKLOG.md`, and pruning the worktree.
+  - **Files:** `scripts/settle-task.sh`, `amase`.
+  - **Criteria:** Script runs with `--repo <path> --task <task-id>`, verifies exit code 0, merges cleanly, deletes worktree, and passes `.amase/test-gate.sh`.
+
+- [ ] **TASK-02: Pre-Commit Sandboxing Hook for Worker Worktrees**
+  - **Goal:** In `scripts/run-task.sh`, inject an executable `.git/hooks/pre-commit` into the created worktree that rejects any commit touching forbidden files (`package.json`, `.amase/scope.md`) or adding `as any` / `@ts-ignore`.
+  - **Files:** `scripts/run-task.sh`.
+  - **Criteria:** Prevents workers from committing forbidden files, saving tokens and round-trips.
+
+- [ ] **TASK-03: Universal 'amase init' Project Scaffolder**
+  - **Goal:** Add an `init` subcommand to the `amase` CLI (`amase init [dir]`) that auto-detects project type (Node, Python, Rust, Go) and generates `.amase/scope.md`, `.amase/discovery.md`, and `.amase/test-gate.sh` automatically.
+  - **Files:** `amase`, `scripts/init-project.sh`.
+  - **Criteria:** Running `amase init` on a new project creates standard boundaries and passes test gate.
+
+- [ ] **TASK-04: Token Diet Telemetry & Model Performance Ledger**
+  - **Goal:** Add execution telemetry logging in `dispatch-worker.sh` and `settle-task.sh` writing to `.amase/telemetry.jsonl` (records task_id, model, duration_seconds, attempts, commit_hash, cost: 0.00).
+  - **Files:** `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`.
+  - **Criteria:** Telemetry is written automatically upon task settlement.
