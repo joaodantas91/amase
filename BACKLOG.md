@@ -38,7 +38,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/generate-agent.sh`.
   - **Criteria:** Child workers receive an accurate AST outline map, cutting read requests by >60%; passes `.amase/test-gate.sh`.
 
-- [ ] **TASK-07: Real-Time Telemetry CLI Summary (amase stats)**
+- [x] **TASK-07: Real-Time Telemetry CLI Summary (amase stats)**
   - **Goal:** Add `amase stats [dir]` command to the CLI that reads `.amase/telemetry.jsonl` and renders a clean summary table of completed tasks, models used, durations, and $0 cost.
   - **Files:** `amase`, `scripts/stats.py`.
   - **Criteria:** Running `amase stats` outputs formatted ledger table; passes `.amase/test-gate.sh`.
