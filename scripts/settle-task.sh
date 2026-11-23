@@ -66,11 +66,15 @@ echo "[+] Running .amase/test-gate.sh in worktree..."
 }
 echo "[+] Test gate passed."
 
-# 2. Audit git diff between main and HEAD (worktree branch) for forbidden
-#    files (.amase/scope.md) and forbidden patterns ('as any', '@ts-ignore').
-echo "[+] Auditing git diff main..HEAD for forbidden files/patterns..."
-CHANGED_FILES=$(git -C "$TARGET_REPO" diff --name-only main HEAD 2>/dev/null || true)
-DIFF_CONTENT=$(git -C "$TARGET_REPO" diff main HEAD 2>/dev/null || true)
+# 2. Audit git diff between main and HEAD (worktree branch) for changes and forbidden files.
+echo "[+] Auditing git diff main..$BRANCH_NAME for changes and forbidden files/patterns..."
+CHANGED_FILES=$(git -C "$TARGET_REPO" diff --name-only "main..$BRANCH_NAME" 2>/dev/null || true)
+DIFF_CONTENT=$(git -C "$TARGET_REPO" diff "main..$BRANCH_NAME" 2>/dev/null || true)
+
+if [[ -z "$CHANGED_FILES" ]]; then
+  echo "[-] Settlement Error: No commits or changes found on $BRANCH_NAME. Nothing to settle."
+  exit 1
+fi
 
 if echo "$CHANGED_FILES" | grep -qE '^\.amase/scope\.md$'; then
   echo "[-] Forbidden file changed: .amase/scope.md"
@@ -82,7 +86,7 @@ if echo "$DIFF_CONTENT" | grep -qE "as any|@ts-ignore"; then
   exit 1
 fi
 
-echo "[+] Diff audit clean."
+echo "[+] Diff audit clean ($CHANGED_FILES)."
 
 # 3. Merge feature/<task_id> into main.
 echo "[+] Merging $BRANCH_NAME into main..."

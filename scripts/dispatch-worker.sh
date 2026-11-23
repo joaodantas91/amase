@@ -79,7 +79,7 @@ for MODEL in "${UNIQUE_FLEET[@]}"; do
     ELAPSED=$((ELAPSED + 5))
     STALL_SECONDS=$((STALL_SECONDS + 5))
 
-    # 1. Check for fresh git commit in worktree
+    # 1. Check for fresh git commit in worktree (The only true proof of completion)
     LAST_COMMIT_TIME=$(git -C "$WORKTREE" log -1 --format="%ct" 2>/dev/null || echo 0)
     if [ "$LAST_COMMIT_TIME" -gt "$INITIAL_COMMIT_TIME" ]; then
       CURRENT_TIME=$(date +%s)
@@ -87,18 +87,12 @@ for MODEL in "${UNIQUE_FLEET[@]}"; do
       exit 0
     fi
 
-    # 2. Check worker log activity
+    # 2. Check worker log activity to reset stall timer
     if [[ -f "$LOG_FILE" ]]; then
       CURRENT_LOG_SIZE=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
       if [ "$CURRENT_LOG_SIZE" -gt "$LAST_LOG_SIZE" ]; then
         LAST_LOG_SIZE="$CURRENT_LOG_SIZE"
         STALL_SECONDS=0
-      fi
-
-      # Check completion markers in log
-      if grep -qE "(Committed as [a-f0-9]+|Done\. All|Worker task completed)" "$LOG_FILE" 2>/dev/null; then
-        echo "[+] Detected completion markers in log. Worker task completed!"
-        exit 0
       fi
     fi
 
