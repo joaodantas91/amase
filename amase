@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==============================================================================
+# AMASE Global Autonomous Swarm Orchestrator
+# Executes tasks continuously in a loop until BACKLOG.md is exhausted.
+# Usage:
+#   amase init [dir]       - Initialize a project with .amase governance
+#   amase [dir]            - Run continuous autonomous loop on target repository
+# ==============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,73 +29,88 @@ AUDIT_FILE="$TARGET_DIR/AUDIT.md"
 
 if [ ! -f "$BACKLOG_FILE" ]; then
   echo "[-] No BACKLOG.md found in $TARGET_DIR."
-  echo "[-] Please create a BACKLOG.md with items like: - [ ] Task name"
+  echo "[-] Run 'amase init' first or create BACKLOG.md."
   exit 1
 fi
 
-# 1. Audit Ingestion Gate: Check for unaddressed CRITICAL / HIGH vulnerabilities
-if [ -f "$AUDIT_FILE" ]; then
-  UNRESOLVED_CRITICAL=$(grep -E "^- \[ \] \[(CRITICAL|HIGH)\]" "$AUDIT_FILE" || true)
-  if [ -n "$UNRESOLVED_CRITICAL" ]; then
-    echo "[!] CRITICAL/HIGH issue detected in $AUDIT_FILE:"
-    echo "$UNRESOLVED_CRITICAL"
-    echo "[!] Halting feature pipeline to prioritize security remediation."
-    # Check if remediation task is already at the top of BACKLOG.md
-    if ! grep -q "TASK-SEC-" "$BACKLOG_FILE"; then
-      SEC_TASK="- [ ] **TASK-SEC-02: Remediate Sentinel Audit Findings**\n  - **Goal:** Fix critical/high security issues flagged in AUDIT.md.\n  - **Files:** AUDIT.md and target modules.\n  - **Criteria:** Tests pass, Sentinel marks clean."
-      sed -i "8i $SEC_TASK\n" "$BACKLOG_FILE"
-      echo "[+] Auto-prepended TASK-SEC-02 to top of BACKLOG.md."
+echo "=========================================================="
+echo " AMASE Autonomous Orchestration Loop Started"
+echo " Target Project: $TARGET_DIR"
+echo " Mode:           Continuous Unattended Execution"
+echo " Timestamp:      $(date -Iseconds)"
+echo "=========================================================="
+
+while true; do
+  # 1. Audit Ingestion Gate: Check for unaddressed CRITICAL / HIGH vulnerabilities
+  if [ -f "$AUDIT_FILE" ]; then
+    UNRESOLVED_CRITICAL=$(grep -E "^- \[ \] \[(CRITICAL|HIGH)\]" "$AUDIT_FILE" || true)
+    if [ -n "$UNRESOLVED_CRITICAL" ]; then
+      echo "[!] CRITICAL/HIGH issue detected in $AUDIT_FILE:"
+      echo "$UNRESOLVED_CRITICAL"
+      echo "[!] Halting feature pipeline to prioritize security remediation."
+      if ! grep -q "TASK-SEC-" "$BACKLOG_FILE"; then
+        SEC_TASK="- [ ] **TASK-SEC-01: Remediate Sentinel Audit Findings**\n  - **Goal:** Fix critical/high security issues flagged in AUDIT.md.\n  - **Files:** AUDIT.md and target modules.\n  - **Criteria:** Tests pass, Sentinel marks clean."
+        sed -i "8i $SEC_TASK\n" "$BACKLOG_FILE"
+        echo "[+] Auto-prepended TASK-SEC-01 to top of BACKLOG.md."
+      fi
     fi
   fi
-fi
 
-# 2. Autonomous Backlog Lookahead (Top up if fewer than 3 tasks remain)
-PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
-if [ "$PENDING_COUNT" -lt 3 ]; then
-  echo "[!] Backlog running low ($PENDING_COUNT pending). Triggering Scout expansion..."
-  /home/joao/dev/orchestrator/scripts/scout.py --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE" || true
-fi
+  # 2. Autonomous Backlog Lookahead (Top up if fewer than 3 tasks remain)
+  PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
+  if [ "$PENDING_COUNT" -lt 3 ]; then
+    echo "[!] Backlog running low ($PENDING_COUNT pending). Triggering Scout expansion..."
+    "$SCRIPT_DIR/scripts/scout.py" --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE" || true
+    PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
+  fi
 
-# Find the first uncompleted task line
-NEXT_TASK_LINE=$(grep -E "^- \[ \]" "$BACKLOG_FILE" | head -n 1 || true)
-if [ -z "$NEXT_TASK_LINE" ]; then
-  echo "[-] No tasks available to execute. Halting."
-  exit 0
-fi
+  # 3. Find the first uncompleted task line
+  NEXT_TASK_LINE=$(grep -E "^- \[ \]" "$BACKLOG_FILE" | head -n 1 || true)
+  if [ -z "$NEXT_TASK_LINE" ]; then
+    echo "[+] All tasks in BACKLOG.md are completed [x]. Swarm loop finished!"
+    exit 0
+  fi
 
-# Extract task name
-TASK_DESC=$(echo "$NEXT_TASK_LINE" | sed -E 's/^- \[ \] (TASK-[0-9A-Z-]+: )?//')
-TASK_SLUG=$(echo "$TASK_DESC" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//' | cut -c1-30)
+  # Extract task ID (e.g. TASK-01) and description
+  TASK_ID=$(echo "$NEXT_TASK_LINE" | grep -oE "TASK-[0-9A-Z-]+" | head -n 1 || echo "")
+  TASK_DESC=$(echo "$NEXT_TASK_LINE" | sed -E 's/^- \[ \] (\*\*TASK-[0-9A-Z-]+:?\*\* )?//')
 
-echo "=========================================================="
-echo " AMASE Global Autonomous Engine"
-echo " Project:       $TARGET_DIR"
-echo " Pending Tasks: $PENDING_COUNT"
-echo " Next Task:     $TASK_DESC"
-echo " Slug:          $TASK_SLUG"
-echo "=========================================================="
+  if [[ -z "$TASK_ID" ]]; then
+    TASK_ID=$(echo "$TASK_DESC" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | cut -c1-20)
+  fi
 
-SPEC_PROMPT="Read BACKLOG.md. Implement task: '$TASK_DESC'. Follow AGENTS.md rules strictly:
-- UI/UX DESIGN (ui-ux-pro-max): Use centralized CSS tokens (tokens.css / components.css). Zero raw hex colors. Standard reusable inputs, buttons, and cards. Explicit labels, SVG icons.
-- PONYTAIL: Reuse existing helpers in src/core/ before writing new ones. Zero code duplication.
-- CAVEMAN: Terse output, no filler.
-- CHISLE: Concise tests, minimal diff.
-- STRICT TYPES: Zero 'as any' or '@ts-ignore'.
-Verify all tests pass with exit code 0. Send worker_done when done."
+  echo ""
+  echo "----------------------------------------------------------"
+  echo "[+] Next Task:   $TASK_ID"
+  echo "[+] Description: $TASK_DESC"
+  echo "[+] Pending:     $PENDING_COUNT remaining"
+  echo "----------------------------------------------------------"
 
-# 3. Execution Routing: Orca native if available, else local worktree with OpenCode free fleet
-if which orca >/dev/null 2>&1 && orca status >/dev/null 2>&1; then
-  echo "[+] Orca runtime detected. Dispatching worker via Orca with free DeepSeek model..."
-  orca orchestration worker-start \
-    --task-title "$TASK_SLUG" \
-    --spec "$SPEC_PROMPT" \
-    --worktree new-child \
-    --agent opencode \
-    --name "task-$TASK_SLUG"
-else
-  # Fallback to local git worktree
-  /home/joao/dev/orchestrator/scripts/run-task.sh --repo "$TARGET_DIR" --task "$TASK_SLUG"
-  WORKTREE_DIR="$TARGET_DIR/.worktrees/$TASK_SLUG"
-  echo "[+] Spawning OpenCode Free Worker in: $WORKTREE_DIR..."
-  (cd "$WORKTREE_DIR" && opencode run "$SPEC_PROMPT" -m opencode/deepseek-v4.1-flash-free --auto)
-fi
+  # 4. Create ephemeral worktree
+  echo "[+] Preparing worktree for $TASK_ID..."
+  "$SCRIPT_DIR/scripts/run-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"
+
+  WORKTREE_PATH="$TARGET_DIR/.worktrees/$TASK_ID"
+
+  # 5. Dispatch Worker to implement the task
+  echo "[+] Dispatching worker on $TASK_ID..."
+  PROMPT="Read .amase-rules.md and implement task $TASK_ID: $TASK_DESC. Verify all tests pass with exit code 0. When finished, commit your changes with git."
+  
+  if "$SCRIPT_DIR/scripts/dispatch-worker.sh" "$WORKTREE_PATH" "$PROMPT"; then
+    echo "[+] Worker reported completion for $TASK_ID. Settling..."
+    
+    # 6. Settle task (tests gate -> diff audit -> merge -> backlog update -> worktree prune)
+    "$SCRIPT_DIR/scripts/settle-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"
+    
+    # 7. Post-merge Sentinel Audit Gate
+    if [[ -x "$SCRIPT_DIR/scripts/sentinel.py" ]]; then
+      echo "[+] Running Sentinel security audit on merged commit..."
+      python3 "$SCRIPT_DIR/scripts/sentinel.py" --repo "$TARGET_DIR" 2>/dev/null || true
+    fi
+
+    echo "[+] Task $TASK_ID successfully completed and settled. Proceeding immediately to next task..."
+  else
+    echo "[-] Worker failed or timed out on $TASK_ID. Halting autonomous loop for inspection."
+    exit 1
+  fi
+done
