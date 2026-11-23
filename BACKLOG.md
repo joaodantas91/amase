@@ -12,7 +12,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/settle-task.sh`, `amase`.
   - **Criteria:** Script runs with `--repo <path> --task <task-id>`, verifies exit code 0, merges cleanly, deletes worktree, and passes `.amase/test-gate.sh`.
 
-- [ ] **TASK-02: Pre-Commit Sandboxing Hook for Worker Worktrees**
+- [x] **TASK-02: Pre-Commit Sandboxing Hook for Worker Worktrees**
   - **Goal:** In `scripts/run-task.sh`, inject an executable `.git/hooks/pre-commit` into the created worktree that rejects any commit touching forbidden files (`package.json`, `.amase/scope.md`) or adding `as any` / `@ts-ignore`.
   - **Files:** `scripts/run-task.sh`.
   - **Criteria:** Prevents workers from committing forbidden files, saving tokens and round-trips.
