@@ -12,6 +12,12 @@ Staging area for discovered orchestrator improvements, features, and token-savin
   - **Goal:** Strip non-essential comments and whitespace from injected prompt rules to save 30-40% context window per worker invocation.
   - **Status:** Approved for Backlog
 
+- [PROPOSED] **Open-Source Token Reduction Tool Ingestion (Tree-sitter, Repomix, Selective-Context)**
+  - **Source:** User Request
+  - **Scope Check:** ALLOWED (`scripts/`, `docs/`)
+  - **Goal:** Integrate open-source tools to compress context windows, extract AST symbol maps, and prune prompts before worker dispatch.
+  - **Status:** Promoted to Active Backlog (TASK-05)
+
 - [PROPOSED] **Pre-Commit Sandboxing Hook for Worker Worktrees**
   - **Source:** Architecture Review
   - **Scope Check:** ALLOWED (`scripts/run-task.sh`)
