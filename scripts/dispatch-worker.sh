@@ -56,7 +56,8 @@ WORKTREE="$1"
 OPENCODE_BIN="$2"
 LOG_FILE="$3"
 DONE_FILE="$4"
-shift 4
+INIT_COMMIT="$5"
+shift 5
 MODELS=("$@")
 
 cd "$WORKTREE"
@@ -73,7 +74,6 @@ for MODEL in "${MODELS[@]}"; do
 
   # If git commit made, we are done
   LAST_COMMIT=$(git log -1 --format="%ct" 2>/dev/null || echo 0)
-  INIT_COMMIT=$(cat "$WORKTREE/.amase-init-commit.txt" 2>/dev/null || echo 0)
 
   if [ "$LAST_COMMIT" -gt "$INIT_COMMIT" ]; then
     echo ""
@@ -94,7 +94,6 @@ exit 1
 EOF
 
 chmod +x "$RUNNER_SCRIPT"
-echo "$INITIAL_COMMIT_TIME" > "$WORKTREE/.amase-init-commit.txt"
 echo "$TASK_PROMPT. When finished, commit changes with git." > "$WORKTREE/.amase-task-prompt.txt"
 
 echo "========================================================"
@@ -108,10 +107,10 @@ echo "========================================================"
 if [[ -x "$PTYXIS_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
   echo "[+] Opening single worker tab in Terminal (Ptyxis)..."
   "$PTYXIS_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- \
-    "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "${UNIQUE_FLEET[@]}" &
+    "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "${UNIQUE_FLEET[@]}" &
 else
   echo "[+] Running single worker in background (headless)..."
-  "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "${UNIQUE_FLEET[@]}" > "$LOG_FILE" 2>&1 &
+  "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "${UNIQUE_FLEET[@]}" > "$LOG_FILE" 2>&1 &
 fi
 
 # Watchdog in coordinator session
@@ -130,14 +129,22 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
   if [ "$LAST_COMMIT_TIME" -gt "$INITIAL_COMMIT_TIME" ]; then
     CURRENT_TIME=$(date +%s)
     echo "[+] Detected fresh commit in worktree ($((CURRENT_TIME - LAST_COMMIT_TIME))s ago). Worker task completed!"
-    rm -f "$RUNNER_SCRIPT" "$WORKTREE/.amase-init-commit.txt" "$WORKTREE/.amase-task-prompt.txt"
+    # Wait up to 5s for runner to cleanly exit and close the tab
+    for _ in {1..5}; do
+      if [[ -f "$DONE_FILE" ]] || ! pgrep -f "$WORKTREE/.amase-run.sh" >/dev/null 2>&1; then
+        break
+      fi
+      sleep 1
+    done
     exit 0
   fi
 
   # 2. Check done flag
   if [[ -f "$DONE_FILE" ]]; then
     echo "[+] Worker reported completion. Settling..."
-    rm -f "$RUNNER_SCRIPT" "$WORKTREE/.amase-init-commit.txt" "$WORKTREE/.amase-task-prompt.txt"
+    sleep 1
+    exit 0
+  fi
     exit 0
   fi
 
