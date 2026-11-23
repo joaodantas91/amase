@@ -145,8 +145,6 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
     sleep 1
     exit 0
   fi
-    exit 0
-  fi
 
   if [[ -f "$WORKTREE/.amase-failed" ]]; then
     echo "[-] Worker reported all fleet models failed."
