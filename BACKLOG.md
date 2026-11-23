@@ -32,3 +32,13 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Candidates:** AST outline extractors (`tree-sitter`, `ctags`), token-minified packing (`repomix`), and prompt compression wrappers (`llm-compressor`, `selective-context`).
   - **Files:** `scripts/scout-tools.py`, `scripts/run-task.sh`, `docs/OPEN_SOURCE_TOOL_REGISTRY.md`.
   - **Criteria:** Produces a verified registry of $0/open-source tools that can reduce input context by at least 40% before dispatching child workers.
+
+- [ ] **TASK-06: Inject AST Symbol Outlines into generate-agent.sh Prompt Envelope**
+  - **Goal:** Update `scripts/generate-agent.sh` to call `scripts/outline-ast.py` on the target repository and embed a compact symbol map into `.amase-rules.md`.
+  - **Files:** `scripts/generate-agent.sh`.
+  - **Criteria:** Child workers receive an accurate AST outline map, cutting read requests by >60%; passes `.amase/test-gate.sh`.
+
+- [ ] **TASK-07: Real-Time Telemetry CLI Summary (amase stats)**
+  - **Goal:** Add `amase stats [dir]` command to the CLI that reads `.amase/telemetry.jsonl` and renders a clean summary table of completed tasks, models used, durations, and $0 cost.
+  - **Files:** `amase`, `scripts/stats.py`.
+  - **Criteria:** Running `amase stats` outputs formatted ledger table; passes `.amase/test-gate.sh`.
