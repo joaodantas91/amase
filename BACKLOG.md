@@ -17,7 +17,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/run-task.sh`.
   - **Criteria:** Prevents workers from committing forbidden files, saving tokens and round-trips.
 
-- [ ] **TASK-03: Universal 'amase init' Project Scaffolder**
+- [x] **TASK-03: Universal 'amase init' Project Scaffolder**
   - **Goal:** Add an `init` subcommand to the `amase` CLI (`amase init [dir]`) that auto-detects project type (Node, Python, Rust, Go) and generates `.amase/scope.md`, `.amase/discovery.md`, and `.amase/test-gate.sh` automatically.
   - **Files:** `amase`, `scripts/init-project.sh`.
   - **Criteria:** Running `amase init` on a new project creates standard boundaries and passes test gate.
