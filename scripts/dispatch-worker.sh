@@ -103,8 +103,8 @@ echo "[+] Models:   ${UNIQUE_FLEET[*]}"
 echo "[+] Timestamp: $(date -Iseconds)"
 echo "========================================================"
 
-# Launch worker in clean headless background by default (prevents terminal tab clutter)
-USE_GUI_TAB="${AMASE_GUI_TAB:-0}"
+# Launch worker in dedicated visible Ptyxis tab by default
+USE_GUI_TAB="${AMASE_GUI_TAB:-1}"
 if [[ "$USE_GUI_TAB" == "1" && -x "$PTYXIS_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
   echo "[+] Opening single worker tab in Terminal (Ptyxis)..."
   "$PTYXIS_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- \
