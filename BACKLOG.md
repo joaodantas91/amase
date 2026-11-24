@@ -82,3 +82,13 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Add the executable pre-commit hook (blocking forbidden files and `as any`/`@ts-ignore`) to `scripts/run-task.sh`, matching the mechanical enforcement already verified in `scripts/test-wiring.sh`.
   - **Files:** `scripts/run-task.sh`.
   - **Criteria:** `bash scripts/test-wiring.sh` passes end-to-end; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-16: Context Pruner & Diff-Only Prompt Minifier**
+  - **Goal:** Add a stdlib minifier that strips comments and blank lines from injected prompt rules in `generate-agent.sh`, cutting worker context 30-40%.
+  - **Files:** `scripts/prune-prompt.py`, `scripts/generate-agent.sh`.
+  - **Criteria:** `python3 scripts/prune-prompt.py prompts/swarm_invariants.md` exits 0 and outputs fewer bytes than input; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-17: Fix post-merge invariant audit variable scoping in settle-task.sh**
+  - **Goal:** Define `BACKLOG_FILE` and `AUDIT_FILE` before the invariant check so post-merge remediation runs without unset-variable failures and detects violations per changed file type.
+  - **Files:** `scripts/settle-task.sh`.
+  - **Criteria:** `bash -n scripts/settle-task.sh` exits 0 and `.amase/test-gate.sh` passes.
