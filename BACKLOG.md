@@ -367,6 +367,15 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/sentinel.py`, `scripts/settle-task.sh`, `BACKLOG.md`.
   - **Criteria:** Sentinel cleanly accepts `--repo <path>` and positional path; settle-task uses universal terminal; test gate passes.
 
+- [x] **TASK-72: Semantic Backlog De-duplication, Empty Settlement Rejection, Transient Retry Backoff & Auto-Cleanup Traps**
+  - **Goal:** Address orchestrator friction points:
+    1. In `scripts/scout.py`, supply completed task titles to scout prompt and implement token-based Jaccard similarity in `--sanitize` to prevent duplicate slice proposals (e.g. Lever ATS Adapter, QuickFill).
+    2. In `scripts/settle-task.sh`, reject settlements where git diff modifies only governance/metadata files (`.amase-*`, `.md`) without modifying functional source/test code.
+    3. In `amase`, add 2x retry loop with exponential backoff (30s, 60s) on worker failure before halting to absorb transient 429/503 rate limits.
+    4. In `scripts/dispatch-worker.sh` and `amase`, implement `SIGINT`/`SIGTERM` interrupt traps and timeout handlers that cleanly run `abort-task.sh` to prevent orphaned worktrees.
+  - **Files:** `scripts/scout.py`, `scripts/settle-task.sh`, `scripts/dispatch-worker.sh`, `amase`, `BACKLOG.md`.
+  - **Criteria:** Test gate passes with exit code 0; duplicate tasks rejected; empty settlements blocked; worktrees clean on interrupt.
+
 
 
 

@@ -115,6 +115,19 @@ LOG_FILE="$WORKTREE/.amase-worker.log"
 RUNNER_SCRIPT="$WORKTREE/.amase-run.sh"
 DONE_FILE="$WORKTREE/.amase-done"
 
+# Automatic Worktree & Process Cleanup Trap on Interrupt
+cleanup_on_interrupt() {
+  echo ""
+  echo "[!] Worker dispatch interrupted. Cleaning up worker processes and worktree..."
+  pkill -P $$ 2>/dev/null || true
+  pkill -f "$WORKTREE/.amase-run.sh" 2>/dev/null || true
+  local parent_dir
+  parent_dir="$(cd "$WORKTREE/../.." 2>/dev/null && pwd || true)"
+  "$ORCHESTRATOR_DIR/scripts/abort-task.sh" --repo "${parent_dir:-$(pwd)}" --task "$TASK_NAME" 2>/dev/null || true
+  exit 130
+}
+trap cleanup_on_interrupt INT TERM
+
 # Safe Environment Inheritance from parent repo if not already present
 PARENT_REPO="$(cd "$WORKTREE/../.." 2>/dev/null && pwd || true)"
 if [[ -n "$PARENT_REPO" && -f "$PARENT_REPO/.env" && ! -f "$WORKTREE/.env" ]]; then
@@ -440,5 +453,7 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
   fi
 done
 
-echo "[-] Dispatcher timeout (600s reached)."
+echo "[-] Dispatcher timeout (600s reached). Cleaning up worktree..."
+PARENT_REPO="$(cd "$WORKTREE/../.." 2>/dev/null && pwd || true)"
+"$ORCHESTRATOR_DIR/scripts/abort-task.sh" --repo "${PARENT_REPO:-$(pwd)}" --task "$TASK_NAME" 2>/dev/null || true
 exit 1

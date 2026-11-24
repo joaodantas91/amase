@@ -66,6 +66,19 @@ def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope
     if engine_tasks:
         engine_section = f"\nPENDING ORCHESTRATOR TOOL INCIDENTS REPORTED BY PROJECTS:\n{engine_tasks}\nPrioritize addressing these real engine bugs.\n"
 
+    # Extract completed tasks for strict duplicate prevention
+    completed_titles = []
+    if backlog:
+        for line in backlog.splitlines():
+            m = re.match(r'^- \[[xX]\] \*\*TASK-[0-9A-Z-]+:?\s*(.*?)\*\*', line)
+            if m:
+                completed_titles.append(m.group(1).strip())
+
+    completed_section = ""
+    if completed_titles:
+        recent_completed = completed_titles[-25:]
+        completed_section = "\nALREADY COMPLETED FEATURES (STRICTLY FORBIDDEN TO RE-PROPOSE OR DUPLICATE):\n" + "\n".join(f"- {t}" for t in recent_completed) + "\n"
+
     # CHISLE: send compact slice of recent backlog
     backlog_slice = backlog[-1200:] if len(backlog) > 1200 else backlog
 
@@ -76,6 +89,7 @@ Keep tasks minimal, atomic, and deterministic.
 
 {scope_section}
 {engine_section}
+{completed_section}
 RECENT BACKLOG:
 {backlog_slice}
 
@@ -120,17 +134,49 @@ def extract_task_ids(backlog_text):
         ids.add(f"TASK-{match.group(1)}")
     return ids
 
+def extract_all_backlog_titles(backlog_text: str) -> list[str]:
+    """Extract titles of all completed and pending tasks in the backlog."""
+    titles = []
+    for line in backlog_text.splitlines():
+        m = re.match(r'^- \[[ xX]\] \*\*TASK-[0-9A-Z-]+:?\s*(.*?)\*\*', line)
+        if m:
+            titles.append(m.group(1).strip())
+    return titles
+
+def normalize_title_tokens(title: str) -> set[str]:
+    words = re.findall(r'[a-zA-Z0-9]+', title.lower())
+    stop_words = {"and", "or", "for", "with", "the", "in", "on", "at", "to", "a", "an", "of", "from", "task", "by", "implementation", "support"}
+    return {w for w in words if w not in stop_words and len(w) > 2}
+
+def is_duplicate_title(new_title: str, existing_titles: list[str]) -> bool:
+    new_tokens = normalize_title_tokens(new_title)
+    if not new_tokens:
+        return False
+    for ext in existing_titles:
+        ext_tokens = normalize_title_tokens(ext)
+        if not ext_tokens:
+            continue
+        overlap = new_tokens & ext_tokens
+        if len(overlap) >= 3:
+            return True
+        if len(new_tokens) <= 3 and len(overlap) >= 2 and len(overlap) / len(new_tokens) >= 0.66:
+            return True
+        jaccard = len(overlap) / len(new_tokens | ext_tokens)
+        if jaccard >= 0.5:
+            return True
+    return False
+
 def extract_task_blocks(text):
-    """Extract TASK-XX markdown blocks from text. Returns list of {id, text} dicts."""
+    """Extract TASK-XX markdown blocks from text. Returns list of {id, title, text} dicts."""
     blocks = []
     lines = text.split('\n')
     i = 0
     while i < len(lines):
         line = lines[i]
-        match = re.match(r'^- \[ \] \*\*TASK-([0-9A-Z-]+):(.*)$', line)
+        match = re.match(r'^- \[ \] \*\*TASK-([0-9A-Z-]+):?\s*(.*?)\*\*(.*)$', line)
         if match:
             task_id = match.group(1)
-            title = match.group(2).strip()
+            raw_title = match.group(2).strip()
             block_lines = [line]
             i += 1
             # Collect continuation lines (indented with "  - **...**:")
@@ -143,6 +189,7 @@ def extract_task_blocks(text):
                     break
             blocks.append({
                 "id": f"TASK-{task_id}",
+                "title": raw_title,
                 "text": '\n'.join(block_lines)
             })
         else:
@@ -177,13 +224,16 @@ if __name__ == "__main__":
         stdin_data = sys.stdin.read()
         task_blocks = extract_task_blocks(stdin_data)
         existing_ids = set()
+        existing_titles = []
         if args.backlog and os.path.exists(args.backlog):
             with open(args.backlog, "r") as f:
                 backlog_content = f.read()
             existing_ids = extract_task_ids(backlog_content)
+            existing_titles = extract_all_backlog_titles(backlog_content)
         for block in task_blocks:
-            if block["id"] not in existing_ids:
+            if block["id"] not in existing_ids and not is_duplicate_title(block["title"], existing_titles):
                 print(block["text"])
+                existing_titles.append(block["title"])
         sys.exit(0)
 
     roadmap_file = args.roadmap

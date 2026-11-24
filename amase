@@ -354,7 +354,7 @@ while true; do
       echo "[!] Backlog running low ($PENDING_COUNT pending). Scout disabled (mode=manual or discovery.enabled=false)."
     else
       echo "[!] Backlog running low ($PENDING_COUNT pending). Triggering Scout expansion..."
-      "$SCRIPT_DIR/scripts/scout.py" --backlog "$BACKLOG_FILE" | python3 scripts/scout.py --sanitize --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE" || true
+      "$SCRIPT_DIR/scripts/scout.py" --backlog "$BACKLOG_FILE" | python3 "$SCRIPT_DIR/scripts/scout.py" --sanitize --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE" || true
     fi
     PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
   fi
@@ -406,31 +406,53 @@ except Exception:
   echo "[+] Pending:     $PENDING_COUNT remaining"
   echo "----------------------------------------------------------"
 
-  # 5. Create ephemeral worktree
-  echo "[+] Preparing worktree for $TASK_ID..."
-  "$SCRIPT_DIR/scripts/run-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"
+  # 5. Execute task with retry backoff for transient rate limits (429/503)
+  MAX_RETRIES=2
+  ATTEMPT=0
+  TASK_SUCCESS=false
 
-  WORKTREE_PATH="$TARGET_DIR/.worktrees/$TASK_ID"
+  while [[ $ATTEMPT -le $MAX_RETRIES ]]; do
+    ATTEMPT=$((ATTEMPT + 1))
+    echo "[+] Preparing worktree for $TASK_ID (attempt $ATTEMPT/$((MAX_RETRIES + 1)))..."
+    "$SCRIPT_DIR/scripts/run-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"
+    WORKTREE_PATH="$TARGET_DIR/.worktrees/$TASK_ID"
 
-  # 6. Dispatch Worker to implement the task
-  echo "[+] Dispatching worker on $TASK_ID..."
-  PROMPT="Read .amase-rules.md and implement task $TASK_ID: $TASK_DESC. Verify all tests pass with exit code 0. When finished, commit your changes with git."
-  
-  if "$SCRIPT_DIR/scripts/dispatch-worker.sh" "$WORKTREE_PATH" "$PROMPT"; then
-    echo "[+] Worker reported completion for $TASK_ID. Settling..."
-    
-    # 7. Settle task (tests gate -> diff audit -> merge -> backlog update -> worktree prune)
-    "$SCRIPT_DIR/scripts/settle-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"
-    
-    # 8. Post-merge Sentinel Audit Gate
-    if [[ -x "$SCRIPT_DIR/scripts/sentinel.py" ]]; then
-      echo "[+] Running Sentinel security audit on merged commit..."
-      python3 "$SCRIPT_DIR/scripts/sentinel.py" --repo "$TARGET_DIR" 2>/dev/null || true
+    # 6. Dispatch Worker to implement the task
+    echo "[+] Dispatching worker on $TASK_ID..."
+    PROMPT="Read .amase-rules.md and implement task $TASK_ID: $TASK_DESC. Verify all tests pass with exit code 0. When finished, commit your changes with git."
+
+    if "$SCRIPT_DIR/scripts/dispatch-worker.sh" "$WORKTREE_PATH" "$PROMPT"; then
+      echo "[+] Worker reported completion for $TASK_ID. Settling..."
+
+      # 7. Settle task (tests gate -> diff audit -> merge -> backlog update -> worktree prune)
+      if "$SCRIPT_DIR/scripts/settle-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"; then
+        TASK_SUCCESS=true
+
+        # 8. Post-merge Sentinel Audit Gate
+        if [[ -x "$SCRIPT_DIR/scripts/sentinel.py" ]]; then
+          echo "[+] Running Sentinel security audit on merged commit..."
+          python3 "$SCRIPT_DIR/scripts/sentinel.py" --repo "$TARGET_DIR" 2>/dev/null || true
+        fi
+
+        echo "[+] Task $TASK_ID successfully completed and settled. Proceeding immediately to next task..."
+        break
+      else
+        echo "[-] Settlement rejected $TASK_ID (validation failed or empty diff). Cleaning worktree..."
+        "$SCRIPT_DIR/scripts/abort-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID" 2>/dev/null || true
+      fi
+    else
+      echo "[!] Worker attempt $ATTEMPT failed or timed out on $TASK_ID."
+      "$SCRIPT_DIR/scripts/abort-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID" 2>/dev/null || true
+      if [[ $ATTEMPT -le $MAX_RETRIES ]]; then
+        BACKOFF_SECS=$((ATTEMPT * 30))
+        echo "[!] Cooling down ${BACKOFF_SECS}s for provider rate limits before retry attempt $((ATTEMPT + 1))..."
+        sleep "$BACKOFF_SECS"
+      fi
     fi
+  done
 
-    echo "[+] Task $TASK_ID successfully completed and settled. Proceeding immediately to next task..."
-  else
-    echo "[-] Worker failed or timed out on $TASK_ID. Halting autonomous loop for inspection."
+  if [[ "$TASK_SUCCESS" == "false" ]]; then
+    echo "[-] Worker failed all $MAX_RETRIES retries on $TASK_ID. Worktree cleanly pruned. Halting autonomous loop for inspection."
     exit 1
   fi
 done

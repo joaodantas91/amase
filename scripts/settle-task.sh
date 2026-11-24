@@ -106,6 +106,15 @@ if [[ -z "$CHANGED_FILES" ]]; then
   exit 1
 fi
 
+# Reject empty governance-only commits (e.g. only .amase-rules.md, .amase-task-meta.json, etc.)
+SOURCE_CHANGES=$(echo "$CHANGED_FILES" | grep -vE '^\.amase/|^\.amase-|\.amase_|\.md$|telemetry\.jsonl' || true)
+if [[ -z "$SOURCE_CHANGES" ]]; then
+  echo "[-] Settlement Error: No functional source or test code changes found on $BRANCH_NAME."
+  echo "[-] Only internal governance/metadata files were modified: $(echo $CHANGED_FILES | tr '\n' ' ')"
+  echo "[-] Rejecting empty settlement. Worker must implement actual code changes."
+  exit 1
+fi
+
 if echo "$CHANGED_FILES" | grep -qE '^\.amase/scope\.md$'; then
   echo "[-] Forbidden file changed: .amase/scope.md"
   exit 1
