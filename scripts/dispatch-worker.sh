@@ -225,9 +225,9 @@ for MODEL in "${MODELS[@]}"; do
   fi
 
   if command -v stdbuf >/dev/null 2>&1; then
-    timeout --kill-after=5s 120s stdbuf -oL -eL "$OPENCODE_BIN" run --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
+    timeout --kill-after=5s 120s stdbuf -oL -eL "$OPENCODE_BIN" run --log-level WARN --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
   else
-    timeout --kill-after=5s 120s "$OPENCODE_BIN" run --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
+    timeout --kill-after=5s 120s "$OPENCODE_BIN" run --log-level WARN --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
   fi
   WORKER_PID=$!
 
