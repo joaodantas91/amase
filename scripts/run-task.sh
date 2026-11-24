@@ -73,6 +73,14 @@ if [ -d "$WORKTREE_PATH" ]; then
   git -C "$TARGET_REPO" worktree remove --force "$WORKTREE_PATH" 2>/dev/null || rm -rf "$WORKTREE_PATH"
 fi
 
+# 2b. Auto-commit dirty governance state on main before worktree branching
+DIRTY_GOV=$(git -C "$TARGET_REPO" status --porcelain BACKLOG.md .amase 2>/dev/null || true)
+if [[ -n "$DIRTY_GOV" ]]; then
+  echo "[+] Auto-committing uncommitted governance state on $(git -C "$TARGET_REPO" branch --show-current)..."
+  git -C "$TARGET_REPO" add BACKLOG.md .amase/ 2>/dev/null || true
+  git -C "$TARGET_REPO" commit -m "chore(amase): sync governance and backlog state" 2>/dev/null || true
+fi
+
 # 3. Create isolated ephemeral worktree
 echo "[+] Creating Git worktree on branch $BRANCH_NAME..."
 git -C "$TARGET_REPO" branch -D "$BRANCH_NAME" 2>/dev/null || true

@@ -308,6 +308,23 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `BACKLOG.md`.
   - **Criteria:** `amase --help` and `amase -v` exit 0 with formatted usage; test gate passes.
 
+- [x] **TASK-61: Dedicated Instant Pre-Flight Inspection CLI (amase status)**
+  - **Goal:** Add `amase status [dir]` displaying project type, governance schema version, backlog progress (completed/pending/next task), working tree cleanliness, active worktrees, and model fleet readiness in a single clean 1-read screen.
+  - **Files:** `scripts/status.py`, `amase`, `BACKLOG.md`.
+  - **Criteria:** `amase status` and `amase status <dir>` exit 0 with unified telemetry; test gate passes.
+
+- [x] **TASK-62: Auto-Commit Dirty Governance State on Main Before Worktree Branching**
+  - **Goal:** In `amase`, `scripts/run-task.sh`, and `scripts/parallel_dispatcher.py`, automatically stage and commit uncommitted governance files (`BACKLOG.md`, `.amase/*`) on `main` before branching worktrees. Prevents worktrees from missing newly added backlog tasks and eliminates merge conflicts during task settlement.
+  - **Files:** `amase`, `scripts/run-task.sh`, `scripts/parallel_dispatcher.py`, `BACKLOG.md`.
+  - **Criteria:** Uncommitted changes to `BACKLOG.md` on main are auto-synced prior to worktree creation; test gate passes.
+
+- [x] **TASK-63: Autonomous Coordinator Guardrails in Global Protocol (GEMINI.md)**
+  - **Goal:** Update global protocol in `~/.gemini/config/GEMINI.md` to instruct AI coordinators to use `amase status` and `amase` directly instead of manually inspecting internal orchestrator implementation scripts (`run-task.sh`, `settle-task.sh`, `amase` source) or manually managing git branches.
+  - **Files:** `/home/joao/.gemini/config/GEMINI.md`, `README.md`, `BACKLOG.md`.
+  - **Criteria:** Protocol explicitly guides clean agents to run `amase status` / `amase` without token-wasting manual script reads.
+
+
+
 
 
 

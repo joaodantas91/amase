@@ -27,6 +27,7 @@ USAGE:
 
 CORE COMMANDS:
   amase [dir]                     Run continuous autonomous loop on target repository
+  amase status [dir]              Show unified project, backlog, worktree, and fleet status
   amase init [dir]                Initialize project with .amase governance files
   amase doctor [dir] [--heal]     Verify environment, models, and project governance
   amase parallel [dir] [opts]     Dispatch non-conflicting tasks concurrently in parallel worktrees
@@ -66,6 +67,19 @@ if [[ "${1:-}" == "-v" || "${1:-}" == "--version" || "${1:-}" == "version" ]]; t
   echo "AMASE v$AMASE_VERSION"
   exit 0
 fi
+
+sync_dirty_governance() {
+  local repo="${1:-$(pwd)}"
+  if git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    local dirty_gov
+    dirty_gov=$(git -C "$repo" status --porcelain BACKLOG.md .amase 2>/dev/null || true)
+    if [[ -n "$dirty_gov" ]]; then
+      echo "[+] Auto-committing uncommitted governance state on $(git -C "$repo" branch --show-current)..."
+      git -C "$repo" add BACKLOG.md .amase/ 2>/dev/null || true
+      git -C "$repo" commit -m "chore(amase): sync governance and backlog state" 2>/dev/null || true
+    fi
+  fi
+}
 
 auto_heal_governance() {
   local dir="${1:-$(pwd)}"
@@ -114,6 +128,11 @@ if [[ "${1:-}" == "abort" ]]; then
   exec "$SCRIPT_DIR/scripts/abort-task.sh" --repo "$TARGET_REPO" --task "$TASK_ID"
 fi
 
+if [[ "${1:-}" == "status" ]]; then
+  shift
+  exec "$SCRIPT_DIR/scripts/status.py" "${1:-$(pwd)}"
+fi
+
 if [[ "${1:-}" == "stats" ]]; then
   shift
   exec "$SCRIPT_DIR/scripts/stats.py" "${1:-.}"
@@ -127,6 +146,7 @@ fi
 if [[ "${1:-}" == "parallel" ]]; then
   shift
   auto_heal_governance "$TARGET_DIR"
+  sync_dirty_governance "$TARGET_DIR"
   exec "$SCRIPT_DIR/scripts/parallel_dispatcher.py" --repo "$TARGET_DIR" "$@"
 fi
 
@@ -270,6 +290,7 @@ if [[ "$TARGET_DIR" == "--no-inhibit" ]]; then
 fi
 cd "$TARGET_DIR"
 auto_heal_governance "$TARGET_DIR"
+sync_dirty_governance "$TARGET_DIR"
 
 # Sleep & Lid-Close Inhibition: prevent Linux laptop sleep/hibernation while autonomous loop is active
 if command -v systemd-inhibit >/dev/null 2>&1 && [[ -z "${AMASE_INHIBITED:-}" ]]; then
