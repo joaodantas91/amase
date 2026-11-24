@@ -1,15 +1,18 @@
-Looking at the diff, I need to audit this against the 5 Sentinel responsibilities. Let me first explore the codebase to understand existing utilities.
-Let me check the existing AUDIT.md and scripts for any similar utilities.
-Looking at the diff - changes to `scripts/generate-agent.sh` (piping SCOPE_CONTENT and PERSONA_CONTENT through `prune-prompt.py`) and a new `scripts/prune-prompt.py` that removes markdown comments, strips trailing whitespace, and collapses blank lines.
+Looking at this diff to `scripts/settle-task.sh`:
 
-**Audit against 5 Sentinel responsibilities:**
+**Changes analyzed:**
+1. Adds `BACKLOG_FILE` and `AUDIT_FILE` variables (lines 47-48) - benign, references existing project files
+2. Fixes regex patterns for invariant checking:
+   - `'\.svelte|\.vue'` → `'\.(svelte|vue)'` (lines 51, 151, 154) - corrects pattern matching
+   - `'\.ts\/$.|\.tsx'` → `'\.(ts|tsx)'` (lines 55, 154) - fixes escaping issue
 
-1. **DOM injection risks** - [INFO] No innerHTML, outerHTML, or unescaped templates in these shell/Python scripts.
-2. **Prototype pollution / unsafe setters** - [INFO] No JavaScript prototype manipulation; the Python script uses only standard library regex/text processing.
-3. **MV3 permission escalation / `<all_urls>`** - [INFO] Not a WXT project; no manifest changes.
-4. **Code duplication (PONYTAIL Rung 2)** - [INFO] `src/core/` doesn't exist in this orchestrator framework; `prune-prompt.py` is a new utility without an existing counterpart to duplicate.
-5. **Missing input guards on form autofill** - [INFO] No form autofill fields in these scripts.
+**Audit findings:**
+- ❌ No DOM injection risks (no `innerHTML`/ `outerHTML` changes)
+- ❌ No prototype pollution or unsafe setter overrides
+- ❌ No Manifest V3 permission escalation
+- ❌ No code duplication of `src/core/` utilities - this is a script maintenance change
+- ❌ No missing input guards on form autofill fields
 
-The `prune-prompt.py` script is benign - uses only `sys`, `re` from stdlib; regex `<!--.*?-->` with `re.DOTALL` for comment removal; `rstrip()` for whitespace; blank-line collapsing. No unsafe eval/exec, no prototype risks.
+The regex fixes actually *improve* invariant checking accuracy. No security vulnerabilities introduced.
 
-[INFO]
+**Core invariants verified clean**.
