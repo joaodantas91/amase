@@ -1,0 +1,3 @@
+[LOW] DOM injection risk pattern detected in test file (scripts/test-wiring.sh: test-dom-injection.js with element.innerHTML = userInput), but the test is temporary and cleaned up via git reset --hard HEAD after audit simulation. No production code affected.
+
+Core invariants verified clean otherwise: no prototype pollution, no Manifest V3 permission escalation, no code duplication reinventing src/core/ utilities, and no missing input guards on form autofill fields.
