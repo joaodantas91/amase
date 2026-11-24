@@ -343,6 +343,15 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/dispatch-worker.sh`, `scripts/scout.py`, `BACKLOG.md`.
   - **Criteria:** Global log checks use byte offset slices; outer rapid-fire watchdog quota kill removed; scout handles None roadmap cleanly.
 
+- [x] **TASK-68: Worktree Framework Cache Replication, Quota Cache Manager, Local LLM Gating & Cross-Module Type Exhaustiveness**
+  - **Goal:** Resolve worktree build resolution errors, model fallback stall loops, and un-gated slow local model execution.
+    1. Replicate framework typegen caches (`.wxt`, `.svelte-kit`, `.nuxt`, `.next/types`, `.astro`) from parent repo into ephemeral worktrees in `scripts/run-task.sh`.
+    2. Gate local Ollama models behind explicit opt-in (`allow_local_llm: true` or `AMASE_ALLOW_LOCAL_LLM=1`) in `scripts/dispatch-worker.sh` to prevent 120s stalls on slow local models.
+    3. Implement `scripts/quota_manager.py` with 15-minute TTL cooldown caching in `~/.amase/cache/quota.json` to skip exhausted model providers instantly across workers.
+    4. Mandate cross-module type exhaustiveness verification across the full repo in `personas/builder.md` and `scripts/generate-agent.sh`.
+  - **Files:** `scripts/run-task.sh`, `scripts/dispatch-worker.sh`, `scripts/quota_manager.py`, `personas/builder.md`, `scripts/generate-agent.sh`, `.amase/test-gate.sh`, `BACKLOG.md`.
+  - **Criteria:** Test gate passes with exit code 0; worktree cache replicates cleanly; quota cooldown skips dead models instantly.
+
 
 
 

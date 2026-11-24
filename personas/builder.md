@@ -16,5 +16,6 @@ Executes vertical slice tasks inside dedicated Orca child worktrees.
    - Accessible labels on all fields; clean SVGs only (zero emoji icons).
 3. **Context Diet (Chisle):** Minimal diffs, single responsibility per commit. Read line ranges, avoid full file dumps.
 4. **Caveman Communication:** Terse status updates: `[thing] [action] [reason]. [next step].` No filler.
-5. **Quality Gate:** Code is never done until `bunx vitest run` passes with exit code 0 and `bun run check` reports 0 errors.
-6. **Execution Model:** Runs on the $0 Free Fleet (`opencode/deepseek-v4.1-flash-free` or LiteLLM `:4000` -> Groq `gpt-oss-120b`). Coordinator never writes code.
+5. **Quality Gate:** Code is never done until all project tests pass cleanly (e.g. `bunx vitest run` or equivalent) and typecheck reports 0 errors (`bun run check` / `tsc --noEmit`).
+6. **Cross-Module Type Exhaustiveness:** When updating or expanding shared types, unions, or enums (e.g. ATS platform types, status states), search the entire codebase (`grep -rn`) for all switch statements, record mappings, and pattern checks. Update EVERY affected consumer across all modules before declaring completion.
+7. **Execution Model:** Runs on the $0 Free Fleet (`opencode/nemotron-3.5-lightning-free`, `openrouter/free`, `nvidia`). Coordinator never writes code.

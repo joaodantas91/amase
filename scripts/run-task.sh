@@ -97,6 +97,16 @@ if [[ -f "$TARGET_REPO/.env" ]]; then
   fi
 fi
 
+# 3c. Replicate gitignored framework build & typegen caches if present in parent repo
+FRAMEWORK_CACHES=(".wxt" ".svelte-kit" ".nuxt" ".next/types" ".astro")
+for F_CACHE in "${FRAMEWORK_CACHES[@]}"; do
+  if [[ -d "$TARGET_REPO/$F_CACHE" && ! -e "$WORKTREE_PATH/$F_CACHE" ]]; then
+    echo "[+] Parent framework cache ($F_CACHE) detected. Replicating to worktree..."
+    mkdir -p "$(dirname "$WORKTREE_PATH/$F_CACHE")"
+    cp -r "$TARGET_REPO/$F_CACHE" "$WORKTREE_PATH/$F_CACHE" 2>/dev/null || true
+  fi
+done
+
 # Ensure Orca knows this repo and exposes its worktrees
 ORCA_SHIM="/home/joao/.config/orca/linux-orca-cli-shim/orca"
 if [[ -x "$ORCA_SHIM" ]] && "$ORCA_SHIM" status >/dev/null 2>&1; then

@@ -146,6 +146,7 @@ if [[ "$ROLE" == "builder" ]]; then
   cat <<EOF
 ## BUILDER BOUNDARIES & FORBIDDEN ACTIONS:
 - ALLOWED: Edit source and test files relevant to the active task.
+- MANDATORY EXHAUSTIVENESS: If you expand or modify shared types, unions, or enums, search and update ALL files across the repository that use them (switch statements, record mappings, type matches).
 - FORBIDDEN: NEVER modify dependency manifests (${MANIFEST_FILE:-project dependencies}) or add unapproved external packages without instruction.
 - FORBIDDEN: NEVER touch .amase/scope.md.
 - EXIT GATE: All tests in .amase/test-gate.sh must pass with exit code 0 before committing.

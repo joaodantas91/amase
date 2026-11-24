@@ -72,10 +72,19 @@ if [[ "$MODEL_TIER" == "pro" ]]; then
   )
 fi
 
-# Add active local Ollama models to worker candidate fleet if online
-if curl -s -m 1 http://localhost:11434/api/tags >/dev/null 2>&1; then
+# Add active local Ollama models to worker candidate fleet only if explicitly enabled
+ALLOW_LOCAL_LLM="false"
+if [ -f "$CONFIG_FILE" ]; then
+  ALLOW_LOCAL_LLM=$(jq -r '.allow_local_llm // .local_models // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
+fi
+if [[ "${AMASE_ALLOW_LOCAL_LLM:-0}" == "1" ]]; then
+  ALLOW_LOCAL_LLM="true"
+fi
+
+if [[ "$ALLOW_LOCAL_LLM" == "true" ]] && curl -s -m 1 http://localhost:11434/api/tags >/dev/null 2>&1; then
   LOCAL_CODER=$(curl -s http://localhost:11434/api/tags 2>/dev/null | grep -o '"qwen2.5-coder:[^"]*"' | tr -d '"' | head -n 1 || true)
   if [[ -n "$LOCAL_CODER" ]]; then
+    echo "[+] Local Ollama coder model detected ($LOCAL_CODER), appended as opt-in fallback"
     FLEET_MODELS+=("ollama/$LOCAL_CODER")
   fi
 fi
@@ -152,6 +161,15 @@ for MODEL in "${MODELS[@]}"; do
     continue
   fi
 
+  # Check cross-worker persistent quota cooldown cache
+  if [[ -f "$ORCHESTRATOR_DIR/scripts/quota_manager.py" ]]; then
+    if ! python3 "$ORCHESTRATOR_DIR/scripts/quota_manager.py" --check "$MODEL" 2>/dev/null; then
+      Q_MSG=$(python3 "$ORCHESTRATOR_DIR/scripts/quota_manager.py" --check "$MODEL" 2>&1 || true)
+      echo "[-] Skipping $MODEL: $Q_MSG"
+      continue
+    fi
+  fi
+
   echo "=========================================================="
   echo "[+] AMASE Worker starting model: $MODEL"
   echo "=========================================================="
@@ -200,6 +218,9 @@ for MODEL in "${MODELS[@]}"; do
     if [[ "$QUOTA_HIT" -eq 1 ]]; then
       echo ""
       echo "[!] Free usage limit reached in provider log for $MODEL. Failing over..."
+      if [[ -f "$ORCHESTRATOR_DIR/scripts/quota_manager.py" ]]; then
+        python3 "$ORCHESTRATOR_DIR/scripts/quota_manager.py" --record "$MODEL" --reason "Free usage limit reached" 2>/dev/null || true
+      fi
       kill -9 "$WORKER_PID" 2>/dev/null || true
       OPENCODE_FREE_EXHAUSTED=1
       break
@@ -258,6 +279,11 @@ for MODEL in "${MODELS[@]}"; do
   fi
 
   echo "[-] Model $MODEL did not commit. Failing over to next fleet model..."
+  if grep -qi "Free usage limit reached\|rate_limit_exceeded\|insufficient_quota\|exceeded your current quota" "$LOG_FILE" 2>/dev/null; then
+    if [[ -f "$ORCHESTRATOR_DIR/scripts/quota_manager.py" ]]; then
+      python3 "$ORCHESTRATOR_DIR/scripts/quota_manager.py" --record "$MODEL" --reason "rate_limit_exceeded" 2>/dev/null || true
+    fi
+  fi
   python3 "$ORCHESTRATOR_DIR/scripts/diagnose-failure.py" "$WORKTREE" "$(basename "$WORKTREE")" "$MODEL" "$LOG_FILE" "$SUB_ELAPSED" 2>/dev/null || true
 done
 

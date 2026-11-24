@@ -69,6 +69,16 @@ if [[ -f "scripts/ui_mcp_server.py" ]]; then
   echo "  ✓ scripts/ui_mcp_server.py (mock-test passed)"
 fi
 
+if [[ -f "scripts/quota_manager.py" ]]; then
+  TMP_Q=$(mktemp /tmp/amase-q-test.XXXXXX.json)
+  python3 scripts/quota_manager.py --file "$TMP_Q" --record "opencode/beam-free" --ttl 60 >/dev/null 2>&1
+  ! python3 scripts/quota_manager.py --file "$TMP_Q" --check "opencode/beam-free" >/dev/null 2>&1
+  python3 scripts/quota_manager.py --file "$TMP_Q" --clear >/dev/null 2>&1
+  python3 scripts/quota_manager.py --file "$TMP_Q" --check "opencode/beam-free" >/dev/null 2>&1
+  rm -f "$TMP_Q"
+  echo "  ✓ scripts/quota_manager.py (self-test passed)"
+fi
+
 # 2.1 Validate JavaScript syntax and heuristics self-test
 if command -v node >/dev/null 2>&1; then
   echo "[+] Validating JavaScript scripts syntax..."
