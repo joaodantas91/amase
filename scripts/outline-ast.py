@@ -264,8 +264,12 @@ def outline_source(path, src):
 def _matches_target_files(path, patterns):
     if not patterns:
         return True
+    # Normalize path: remove ./ prefix for fnmatch matching
+    norm_path = path.lstrip("./")
     for pattern in patterns:
-        if fnmatch.fnmatch(path, pattern):
+        if fnmatch.fnmatch(norm_path, pattern):
+            return True
+        if fnmatch.fnmatch(os.path.basename(norm_path), pattern):
             return True
     return False
 
@@ -323,6 +327,9 @@ def main(argv=None):
     parser.add_argument("--target-files", default=None,
                         help="Comma-separated glob patterns to filter which files to index (e.g. 'scripts/*.py,*.sh')")
     args = parser.parse_args(argv)
+
+    if args.target_files:
+        args.target_files = [p.strip() for p in args.target_files.split(',')]
 
     if not os.path.exists(args.target):
         sys.stderr.write(f"outline-ast: no such file or directory: {args.target}\n")
