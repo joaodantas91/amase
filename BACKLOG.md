@@ -177,3 +177,13 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Add `amase abort [task-id]` and automatic teardown in `dispatch-worker.sh` when all fleet models fail, cleanly unmounting the worktree (`git worktree remove --force`), pruning the branch, and resetting task state to `[ ]` without leaving dangling worktrees.
   - **Files:** `amase`, `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`.
   - **Criteria:** `amase abort <task-id>` unmounts worktree and deletes branch; git status is 100% clean; .amase/test-gate.sh passes.
+
+- [ ] **TASK-35: Targeted Test Gate for Rapid Vertical Slice Verification**
+  - **Goal:** In `scripts/settle-task.sh` and `.amase/test-gate.sh`, support `--diff-only` targeted testing: inspect modified files in the worktree git diff and execute only the corresponding test files first for fast sub-second gating before full suite verification.
+  - **Files:** `scripts/settle-task.sh`, `.amase/test-gate.sh`.
+  - **Criteria:** `bash .amase/test-gate.sh --diff-only` exits 0; bash -n scripts/settle-task.sh exits 0; .amase/test-gate.sh passes.
+
+- [ ] **TASK-36: AST Symbol Pre-Filter by Task Context Pattern**
+  - **Goal:** In `scripts/generate-agent.sh` and `scripts/outline-ast.py`, parse file paths and symbol keywords from the task prompt and automatically filter the generated AST map so large codebases only inject symbols relevant to the active slice.
+  - **Files:** `scripts/outline-ast.py`, `scripts/generate-agent.sh`.
+  - **Criteria:** `python3 scripts/outline-ast.py . --filter "stats"` emits only symbols from stats-related files; .amase/test-gate.sh passes.
