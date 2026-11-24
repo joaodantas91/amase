@@ -237,7 +237,32 @@ while true; do
     PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
   fi
 
-  # 3. Find the first uncompleted task line
+  # 3. Check Concurrency Mode (sequential vs parallel)
+  CONCURRENCY_MODE=$(python3 -c "
+import json
+try:
+    with open('$CONFIG_FILE') as f:
+        d = json.load(f)
+    c = d.get('concurrency', 'sequential')
+    if isinstance(c, dict):
+        print(c.get('mode', 'sequential'))
+    else:
+        print(c or 'sequential')
+except Exception:
+    print('sequential')
+" 2>/dev/null || echo "sequential")
+
+  if [[ "$CONCURRENCY_MODE" == "parallel" ]]; then
+    echo "[+] Concurrency mode: 'parallel'. Evaluating non-conflicting task batches..."
+    if "$SCRIPT_DIR/scripts/parallel_dispatcher.py" --repo "$TARGET_DIR"; then
+      echo "[+] Parallel execution cycle completed. Refreshing loop..."
+      continue
+    else
+      echo "[-] Parallel dispatcher encountered an issue; falling back to sequential dispatch..."
+    fi
+  fi
+
+  # 4. Find the first uncompleted task line (Sequential fallback or default)
   NEXT_TASK_LINE=$(grep -E "^- \[ \]" "$BACKLOG_FILE" | head -n 1 || true)
   if [ -z "$NEXT_TASK_LINE" ]; then
     echo "[+] All tasks in BACKLOG.md are completed [x]. Swarm loop finished!"
@@ -259,23 +284,23 @@ while true; do
   echo "[+] Pending:     $PENDING_COUNT remaining"
   echo "----------------------------------------------------------"
 
-  # 4. Create ephemeral worktree
+  # 5. Create ephemeral worktree
   echo "[+] Preparing worktree for $TASK_ID..."
   "$SCRIPT_DIR/scripts/run-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"
 
   WORKTREE_PATH="$TARGET_DIR/.worktrees/$TASK_ID"
 
-  # 5. Dispatch Worker to implement the task
+  # 6. Dispatch Worker to implement the task
   echo "[+] Dispatching worker on $TASK_ID..."
   PROMPT="Read .amase-rules.md and implement task $TASK_ID: $TASK_DESC. Verify all tests pass with exit code 0. When finished, commit your changes with git."
   
   if "$SCRIPT_DIR/scripts/dispatch-worker.sh" "$WORKTREE_PATH" "$PROMPT"; then
     echo "[+] Worker reported completion for $TASK_ID. Settling..."
     
-    # 6. Settle task (tests gate -> diff audit -> merge -> backlog update -> worktree prune)
+    # 7. Settle task (tests gate -> diff audit -> merge -> backlog update -> worktree prune)
     "$SCRIPT_DIR/scripts/settle-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"
     
-    # 7. Post-merge Sentinel Audit Gate
+    # 8. Post-merge Sentinel Audit Gate
     if [[ -x "$SCRIPT_DIR/scripts/sentinel.py" ]]; then
       echo "[+] Running Sentinel security audit on merged commit..."
       python3 "$SCRIPT_DIR/scripts/sentinel.py" --repo "$TARGET_DIR" 2>/dev/null || true

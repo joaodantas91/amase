@@ -13,3 +13,8 @@ description: Master autonomous invariants for all child personas (Builder, Senti
    - Scout / Classifiers (Micro-tasks < 2k tokens): Groq (sub-second latency, $0).
    - Sentinel (Code audit & diff review): NVIDIA NIM (large diff context, $0).
    - OpenCode Free Community Pool: Fallback only; kill and auto-skip in <1s if quota limit is reached.
+7. CONCURRENCY & PARALLEL EXECUTION:
+   - Default concurrency is `sequential` (zero-risk, 1 worker at a time).
+   - In `parallel` mode (`amase config --set-concurrency parallel`), only tasks with strictly disjoint target file sets execute concurrently in isolated worktrees (`.worktrees/<TASK_ID>`).
+   - Upstream provider sharding is mandatory across concurrent workers (Worker 1 -> NVIDIA NIM, Worker 2 -> Local Ollama / OpenCode Beam) to eliminate API 429 rate limits.
+   - Settlement is strictly sequential: test-gate -> git merge -> sentinel audit -> prune.
