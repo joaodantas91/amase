@@ -47,6 +47,25 @@ def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope
     if scope:
         scope_section = f"\nPROJECT SCOPE BOUNDARIES (STRICTLY ENFORCE - REJECT FORBIDDEN AREAS):\n{scope}\n"
 
+    # Check for pending global engine incidents if scouting the orchestrator itself
+    engine_tasks = ""
+    is_orchestrator = False
+    try:
+        is_orchestrator = os.path.samefile(os.getcwd(), ORCHESTRATOR_ROOT) or os.path.basename(os.getcwd()) in ("orchestrator", "amase")
+    except Exception:
+        is_orchestrator = os.path.basename(os.getcwd()) in ("orchestrator", "amase")
+
+    if is_orchestrator:
+        try:
+            import engine_incident
+            engine_tasks = engine_incident.format_scout_tasks(limit=2)
+        except Exception:
+            pass
+
+    engine_section = ""
+    if engine_tasks:
+        engine_section = f"\nPENDING ORCHESTRATOR TOOL INCIDENTS REPORTED BY PROJECTS:\n{engine_tasks}\nPrioritize addressing these real engine bugs.\n"
+
     # CHISLE: send compact slice of recent backlog
     backlog_slice = backlog[-1200:] if len(backlog) > 1200 else backlog
 
@@ -56,6 +75,7 @@ Tasks MUST strictly adhere to the ALLOWED areas in the project scope boundaries 
 Keep tasks minimal, atomic, and deterministic.
 
 {scope_section}
+{engine_section}
 RECENT BACKLOG:
 {backlog_slice}
 
@@ -84,10 +104,14 @@ Respond ONLY with the markdown tasks ready for backlog triage, following the exa
             )
         except Exception:
             pass
-        return content.strip() if content else None
+        if content:
+            if engine_tasks and engine_tasks not in content:
+                return f"{engine_tasks}\n\n{content.strip()}"
+            return content.strip()
+        return engine_tasks.strip() if engine_tasks else None
     except Exception as e:
         sys.stderr.write(f"Scout discovery failed: {e}\n")
-        return None
+        return engine_tasks.strip() if engine_tasks else None
 
 def extract_task_ids(backlog_text):
     """Extract existing TASK-XX IDs from backlog text for deduplication."""

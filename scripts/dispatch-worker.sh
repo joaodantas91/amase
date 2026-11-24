@@ -166,6 +166,7 @@ done
 
 echo "[-] All fleet models exhausted."
 python3 "$ORCHESTRATOR_DIR/scripts/diagnose-failure.py" "$WORKTREE" "$(basename "$WORKTREE")" "fleet-exhausted" "$LOG_FILE" 2>/dev/null || true
+python3 "$ORCHESTRATOR_DIR/scripts/engine_incident.py" --record --script "scripts/dispatch-worker.sh" --signature "FLEET_EXHAUSTED" --message "All worker fleet models failed without producing a valid git commit for $(basename "$WORKTREE")" --project "$WORKTREE" 2>/dev/null || true
 touch "$WORKTREE/.amase-failed"
 sleep 5
 exit 1

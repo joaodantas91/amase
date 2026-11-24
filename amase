@@ -41,6 +41,11 @@ if [[ "${1:-}" == "stats" ]]; then
   exec "$SCRIPT_DIR/scripts/stats.py" "${1:-.}"
 fi
 
+if [[ "${1:-}" == "incidents" ]]; then
+  shift
+  exec "$SCRIPT_DIR/scripts/engine_incident.py" --list "$@"
+fi
+
 if [[ "${1:-}" == "test-wiring" ]]; then
   shift
   exec "$SCRIPT_DIR/scripts/test-wiring.sh" "${1:-$(pwd)}"
