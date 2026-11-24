@@ -60,10 +60,22 @@ model_list:
       api_key: os.environ/OPEN_ROUTER_API_KEY
       drop_params: true
 
+  # ============================================================================
+  # 7. GITHUB MODELS FLEET (Zero-Cost Free Tier via GITHUB_TOKEN)
+  # ============================================================================
+  - model_name: github-fleet
+    litellm_params:
+      model: openai/openai/gpt-4o-mini
+      api_base: https://models.github.ai/inference
+      api_key: os.environ/GITHUB_TOKEN
+      drop_params: true
+
 router_settings:
   routing_strategy: "least-busy"
   fallbacks:
-    - coding-fleet: ["coding-fleet"]
+    - coding-fleet: ["coding-fleet", "github-fleet"]
+    - scout-fleet: ["scout-fleet", "github-fleet"]
+    - sentinel-fleet: ["sentinel-fleet", "github-fleet"]
   model_group_alias:
     "gpt-5.6-terra": "coding-fleet"
     "gpt-4o": "coding-fleet"

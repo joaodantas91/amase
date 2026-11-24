@@ -14,6 +14,15 @@ else
   echo "[!] Warning: No .env file found. Copy .env.example to .env and add your API keys."
 fi
 
+# Auto-detect GitHub token from gh CLI if not already set
+if [[ -z "${GITHUB_TOKEN:-}" ]] && command -v gh >/dev/null 2>&1; then
+  DETECTED_GH_TOKEN="$(gh auth token 2>/dev/null || true)"
+  if [[ -n "$DETECTED_GH_TOKEN" ]]; then
+    export GITHUB_TOKEN="$DETECTED_GH_TOKEN"
+    echo "[+] Auto-detected GitHub token via gh CLI."
+  fi
+fi
+
 # 2. Virtual Environment check
 if [ ! -d ".venv" ]; then
   echo "[+] Creating Python virtual environment in .venv..."

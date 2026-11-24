@@ -99,6 +99,21 @@ def check_api_keys(orchestrator_dir):
     return "WARN", "No API keys found in environment or .env. Add keys to enable NVIDIA / Groq free fleet."
 
 
+def check_github_models():
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    source = "environment"
+    if not token:
+        try:
+            token = subprocess.check_output(["gh", "auth", "token"], stderr=subprocess.DEVNULL, text=True).strip()
+            source = "gh CLI"
+        except Exception:
+            token = ""
+
+    if token:
+        return "PASS", f"GitHub token detected ({source}). GitHub Models auto-connector ready."
+    return "WARN", "No GitHub token found. (Run 'gh auth login' or export GITHUB_TOKEN to enable free GitHub Models)."
+
+
 def check_governance(target_dir):
     config_file = os.path.join(target_dir, ".amase", "config.json")
     scope_file = os.path.join(target_dir, ".amase", "scope.md")
@@ -138,6 +153,7 @@ def main():
         ("LiteLLM Proxy (:4000)", check_litellm()),
         ("Terminal Multiplexer", check_terminal_tab()),
         ("Model Fleet API Keys", check_api_keys(orchestrator_dir)),
+        ("GitHub Models Connector", check_github_models()),
         ("Project Governance", check_governance(target_dir)),
     ]
 
