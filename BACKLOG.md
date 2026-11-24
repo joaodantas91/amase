@@ -122,10 +122,6 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Add 'amase task <objective>' subcommand and 'scripts/scout.py --objective <objective>' to decompose a user prompt into 1-2 atomic vertical slice TASK-XX blocks and append them to BACKLOG.md without unprompted auto-discovery loops.
   - **Files:** amase, scripts/scout.py.
   - **Criteria:** python3 scripts/scout.py --objective "Add metrics endpoint" --dry-run outputs formatted task block to stdout and exits 0; bash -n amase exits 0; .amase/test-gate.sh passes.
-- [ ] **TASK-99: Add metrics endpoint**
-  - **Goal:** Add metrics endpoint
-  - **Files:** scripts/scout.py, amase
-  - **Criteria:** python3 scripts/scout.py --objective "Add metrics endpoint" --dry-run exits 0
 
 - [x] **TASK-24: Update README.md to Modern CLI Architecture & Scrub Vault References**
   - **Goal:** Scrub all hardcoded private vault references (`joao-os`, `/home/joao/dev/joao-os`) from `README.md`, `scripts/scout.py`, and `scripts/designer.py` to make the repository fully portable. Rewrite `README.md` with complete documentation for the modern `amase` CLI (`init`, `config`, `task`, `stats`, `test-wiring`, and loop execution), configuration governance (`.amase/config.json`), and $0 fleet execution.
