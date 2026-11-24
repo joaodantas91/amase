@@ -25,6 +25,18 @@ fi
 
 mkdir -p "$TARGET_DIR/.amase"
 
+cat > "$TARGET_DIR/.amase/config.json" <<'CONFIG'
+{
+  "mode": "autonomous",
+  "concurrency": "sequential",
+  "model_tier": "free",
+  "discovery": {
+    "enabled": true,
+    "max_slices": 2
+  }
+}
+CONFIG
+
 cat > "$TARGET_DIR/.amase/scope.md" <<'SCOPE'
 # AMASE Project Scope & Governance Boundaries
 
@@ -138,4 +150,4 @@ chmod +x "$TARGET_DIR/.amase/test-gate.sh"
 
 echo "[+] AMASE initialized in $TARGET_DIR"
 echo "[+] Detected project type: $PROJECT_TYPE"
-echo "[+] Created .amase/scope.md, .amase/discovery.md, .amase/test-gate.sh"
+echo "[+] Created .amase/config.json, .amase/scope.md, .amase/discovery.md, .amase/test-gate.sh"

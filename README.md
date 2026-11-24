@@ -34,22 +34,26 @@ amase init ./my-project       # Initialize in ./my-project
 
 ---
 
-### `amase config [--show|--mode|--model-tier|--discovery]`
+### `amase config [--show|--mode|--concurrency|--set-concurrency <mode>|--set-mode <mode>|--model-tier|--discovery]`
 
 Inspects or toggles project governance settings.
 
-| Flag          | Description                                    |
-|---------------|------------------------------------------------|
-| `--show`      | Display full config.json                       |
-| `--mode`      | Show current mode (`manual` or `autonomous`)   |
-| `--model-tier`| Show model tier (`free` or `pro`)              |
-| `--discovery` | Show discovery enabled status                  |
+| Flag | Description |
+|---|---|
+| `--show` | Display full config.json |
+| `--mode` | Show current mode (`manual`, `autonomous`, or `interactive`) |
+| `--set-mode <mode>` | Set mode (`autonomous` or `interactive`) |
+| `--concurrency` | Show current execution concurrency (`sequential` or `parallel`) |
+| `--set-concurrency <mode>` | Set concurrency mode (`sequential` or `parallel`) |
+| `--model-tier` | Show model tier (`free` or `pro`) |
+| `--discovery` | Show discovery enabled status |
 
 ```bash
 amase config --show
-amase config --mode
-amase config --model-tier
-amase config --discovery
+amase config --concurrency                     # Outputs: sequential (default) or parallel
+amase config --set-concurrency parallel        # Enable parallel non-conflicting execution
+amase config --set-concurrency sequential      # Revert to safe single-worker sequential mode
+amase config --set-mode autonomous             # Set autonomous mode
 ```
 
 ---
