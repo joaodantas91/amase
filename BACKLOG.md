@@ -1,4 +1,3 @@
-- [ ] **TASK-SEC-01: Remediate Sentinel Audit Findings**
 # AMASE Orchestrator Backlog
 
 Autonomous task queue for improving the orchestrator itself.
@@ -114,17 +113,12 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** scripts/sentinel.py.
   - **Criteria:** python3 scripts/sentinel.py . HEAD~1 --dry-run exits 0 and stdout contains 'DIFF TO AUDIT:' with no NameError; python3 -m py_compile scripts/sentinel.py exits 0; .amase/test-gate.sh passes.
 
-- [ ] **TASK-22: Configurable Fleet Timeout and Svelte Pattern Guard in run-task.sh**
-  - **Goal:** Add `FLEET_TIMEOUT` env override (default 120s) to `scripts/fleet.py` to prevent premature aborts on free model queues, and include `*.svelte` in `scripts/run-task.sh` pre-commit pattern check.
-  - **Files:** `scripts/fleet.py`, `scripts/run-task.sh`.
-  - **Criteria:** `python3 -c "import sys; sys.path.insert(0, 'scripts'); import fleet; assert getattr(fleet, 'DEFAULT_TIMEOUT', 120) >= 120"` exits 0; `grep -q '\*\.svelte' scripts/run-task.sh` exits 0; `.amase/test-gate.sh` passes.
+- [ ] **TASK-22: Project-Level Governance Configuration (.amase/config.json) & Manual Mode Gate**
+  - **Goal:** Create default  defining  ('manual' | 'autonomous'),  ('free' | 'pro'),  ('enabled': false), and  ('builder_visible_tab': true). Update [-] Error: /home/joao is not a git repository. and  to read this config. When  is 'manual' or  is false, [-] Error: /home/joao is not a git repository. halts cleanly with exit 0 when no tasks remain. Add  command.
+  - **Files:** , [-] Error: /home/joao is not a git repository., .
+  - **Criteria:**  prints valid JSON; when  is manual, [-] Error: /home/joao is not a git repository. exits 0 on empty queue without invoking Scout;  exits 0;  passes.
 
-- [ ] **TASK-22: Sentinel Automated Post-Commit Hook in Worktree**
-  - **Goal:** Add an optional post-commit advisory check to worktrees created by `scripts/run-task.sh` that runs static invariant validation and logs findings to `.amase-worker.log`.
-  - **Files:** `scripts/run-task.sh`.
-  - **Criteria:** `bash -n scripts/run-task.sh` exits 0; `scripts/test-wiring.sh` passes; `.amase/test-gate.sh` passes.
-
-- [ ] **TASK-23: Telemetry Summary CLI Filter in amase stats**
-  - **Goal:** Add `--task <ID>` and `--json` flags to `./amase stats` so individual task duration, timestamp, and token cost can be programmatically queried.
-  - **Files:** `amase`.
-  - **Criteria:** `./amase stats --task TASK-20` prints metrics for TASK-20 and exits 0; `bash -n amase` exits 0; `.amase/test-gate.sh` passes.
+- [ ] **TASK-23: User-Directed Task Planner (amase task objective)**
+  - **Goal:** Add  and  to decompose a user prompt into 1-2 atomic vertical slice  blocks in  without running unprompted auto-discovery loops.
+  - **Files:** [-] Error: /home/joao is not a git repository., .
+  - **Criteria:**  outputs formatted task block to stdout and exits 0;  exits 0;  passes.
