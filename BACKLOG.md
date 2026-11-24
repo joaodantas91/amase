@@ -78,7 +78,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/outline-ast.py`.
   - **Criteria:** `python3 scripts/outline-ast.py . --target-files 'scripts/*.py'` outputs only `scripts/*.py` files and exits 0; `.amase/test-gate.sh` passes.
 
-- [ ] **TASK-15: Inject pre-commit hook into worktrees created by `scripts/run-task.sh`**
+- [x] **TASK-15: Inject pre-commit hook into worktrees created by `scripts/run-task.sh`**
   - **Goal:** Add the executable pre-commit hook (blocking forbidden files and `as any`/`@ts-ignore`) to `scripts/run-task.sh`, matching the mechanical enforcement already verified in `scripts/test-wiring.sh`.
   - **Files:** `scripts/run-task.sh`.
   - **Criteria:** `bash scripts/test-wiring.sh` passes end-to-end; `.amase/test-gate.sh` passes.
