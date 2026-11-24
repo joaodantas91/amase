@@ -289,5 +289,21 @@ AMASE is powered by specialized host-side scripts that perform deterministic sof
 - **`ui_network_audit.py`**: Captures failed network responses (404/500), broken `<img>` assets, and unhandled browser console errors.
 - **`ui_formatter.py`**: CHISLE token condenser compiling layout and network findings into a strict <150-token markdown diagnostic.
 - **`ui_validator.py`**: Orchestrates headless inspections into the standalone CLI `amase ui-check <url>`.
+- **`ui_mcp_server.py`**: Universal Model Context Protocol (MCP) server exposing `validate_ui` over stdio for external AI orchestrators (Claude Code, Cursor, Windsurf, OpenCode, Antigravity).
+
+#### Universal MCP Server Configuration
+To allow any MCP-compatible AI agent or IDE to validate UI at ultra-low token cost, add to your `mcp.json` / Claude Desktop / Cursor configuration:
+
+```json
+{
+  "mcpServers": {
+    "amase-ui-lens": {
+      "command": "python3",
+      "args": ["/home/joao/dev/orchestrator/scripts/ui_mcp_server.py"]
+    }
+  }
+}
+```
+
 
 
