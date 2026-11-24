@@ -16,6 +16,12 @@ OPENCODE_BIN = os.getenv("OPENCODE_BIN", "/home/joao/.bun/bin/opencode")
 LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completions")
 API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
 
+LAST_USAGE = {"tokens_in": 0, "tokens_out": 0, "model": ""}
+
+def get_last_usage():
+    """Return token usage dictionary from the most recent fleet call."""
+    return dict(LAST_USAGE)
+
 FREE_MODELS = [
     "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b",
     "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b",
@@ -54,6 +60,10 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
         )
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode("utf-8"))
+            usage = data.get("usage", {})
+            LAST_USAGE["tokens_in"] = usage.get("prompt_tokens", 0)
+            LAST_USAGE["tokens_out"] = usage.get("completion_tokens", 0)
+            LAST_USAGE["model"] = model
             msg = data["choices"][0]["message"]
             content = msg.get("content") or msg.get("reasoning_content") or ""
             if content.strip():
@@ -115,6 +125,10 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
+                usage = data.get("usage", {})
+                LAST_USAGE["tokens_in"] = usage.get("prompt_tokens", 0)
+                LAST_USAGE["tokens_out"] = usage.get("completion_tokens", 0)
+                LAST_USAGE["model"] = "openai/gpt-oss-120b"
                 content = data["choices"][0]["message"]["content"]
                 if content.strip():
                     return content.strip()

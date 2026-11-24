@@ -2,9 +2,9 @@
 """
 AMASE Real-Time Telemetry CLI Summary (amase stats)
 
-Reads target_dir/.amase/telemetry.jsonl and prints a formatted terminal table
-showing TIMESTAMP, TASK_ID, MODEL, DURATION, COMMIT, COST ($0.00),
-with summary footer totals.
+Reads target_dir/.amase/telemetry.jsonl and prints formatted terminal tables:
+1. Multi-Persona Activity Log (TIMESTAMP, ROLE, TASK_ID, MODEL, TOKENS, DURATION, COST)
+2. Role Breakdown Summary (Builder, Sentinel, Scout, Coordinator totals)
 """
 
 import json
@@ -13,106 +13,179 @@ import sys
 from pathlib import Path
 
 
+def format_duration(seconds):
+    """Format duration in seconds into human-readable string."""
+    seconds = int(seconds)
+    if seconds < 60:
+        return f"{seconds}s"
+    mins = seconds // 60
+    secs = seconds % 60
+    if mins < 60:
+        return f"{mins}m {secs}s"
+    hours = mins // 60
+    rem_mins = mins % 60
+    return f"{hours}h {rem_mins}m"
+
+
 def format_table_rows(entries):
-    """Format telemetry entries into table rows."""
+    """Format telemetry entries into activity rows."""
     rows = []
     for entry in entries:
         timestamp = entry.get("timestamp", "N/A")
+        # Strip milliseconds or timezone noise if long
+        if "T" in timestamp:
+            timestamp = timestamp.split(".")[0]
+        role = entry.get("role", "builder")
         task_id = entry.get("task_id", "N/A")
         model = entry.get("model", "N/A")
         duration = entry.get("duration_seconds", 0)
-        commit = entry.get("commit_hash", "N/A")[:12] if entry.get("commit_hash") else "N/A"
+        tokens_in = entry.get("tokens_in", 0)
+        tokens_out = entry.get("tokens_out", 0)
+        tokens_str = f"{tokens_in:,} / {tokens_out:,}" if (tokens_in or tokens_out) else "N/A"
+        commit = entry.get("commit_hash", "")[:8] if entry.get("commit_hash") else ""
         cost = entry.get("cost_usd", 0.00)
-        rows.append((timestamp, task_id, model, duration, commit, cost))
+        rows.append((timestamp, role, task_id, model, tokens_str, duration, commit, cost))
     return rows
 
 
-def compute_summary(entries):
-    """Compute summary totals from telemetry entries."""
-    count = len(entries)
-    total_duration = sum(entry.get("duration_seconds", 0) for entry in entries)
-    total_cost = sum(entry.get("cost_usd", 0.00) for entry in entries)
-    return count, total_duration, total_cost
+def compute_role_summary(entries):
+    """Compute aggregated summary grouped by role."""
+    roles = {}
+    for entry in entries:
+        role = entry.get("role", "builder")
+        if role not in roles:
+            roles[role] = {
+                "runs": 0,
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "duration": 0,
+                "cost": 0.0,
+            }
+        roles[role]["runs"] += 1
+        roles[role]["tokens_in"] += entry.get("tokens_in", 0)
+        roles[role]["tokens_out"] += entry.get("tokens_out", 0)
+        roles[role]["duration"] += entry.get("duration_seconds", 0)
+        roles[role]["cost"] += entry.get("cost_usd", 0.0)
+    return roles
 
 
-def print_table(rows, summary):
-    """Print the formatted telemetry table."""
+def print_tables(rows, roles_summary):
+    """Print the formatted activity table and role breakdown table."""
     if not rows:
         print("[-] No telemetry entries found.")
         print("  Run 'amase init' and complete tasks to generate telemetry.")
         return
 
-    # Table header
-    header = (
-        "+" + "-" * 78 + "+"
-        + "| " + "{:<20}".format("TIMESTAMP")
-        + "| " + "{:<15}".format("TASK_ID")
-        + "| " + "{:<20}".format("MODEL")
+    # Table 1: Activity Log
+    width = 112
+    sep = "+" + "-" * width + "+"
+    print(sep)
+    print(
+        "| " + "{:<19}".format("TIMESTAMP")
+        + "| " + "{:<10}".format("ROLE")
+        + "| " + "{:<12}".format("TASK_ID")
+        + "| " + "{:<28}".format("MODEL")
+        + "| " + "{:<18}".format("TOKENS (IN/OUT)")
         + "| " + "{:<10}".format("DURATION")
-        + "| " + "{:<12}".format("COMMIT")
-        + "| " + "{:<10}".format("COST")
+        + "| " + "{:<8}".format("COST")
         + "|"
     )
-    separator = "+" + "-" * 78 + "+"
-    print(header)
-    print(separator)
+    print(sep)
 
     for row in rows:
-        timestamp, task_id, model, duration, commit, cost = row
-        # Format duration as minutes/seconds if >= 60
-        dur_str = f"{duration}s"
-        if duration >= 60:
-            mins = duration // 60
-            secs = duration % 60
-            dur_str = f"{mins}m {secs}s"
-        # Format cost to 2 decimal places
+        timestamp, role, task_id, model, tokens_str, duration, commit, cost = row
+        dur_str = format_duration(duration)
         cost_str = f"${cost:.2f}"
         print(
-            "| " + "{:<20}".format(str(timestamp))
-            + "| " + "{:<15}".format(str(task_id))
-            + "| " + "{:<20}".format(str(model))
-            + "| " + "{:<10}".format(dur_str)
-            + "| " + "{:<12}".format(commit)
-            + "| " + "{:<10}".format(cost_str)
+            "| " + "{:<19}".format(str(timestamp)[:19])
+            + "| " + "{:<10}".format(str(role)[:10])
+            + "| " + "{:<12}".format(str(task_id)[:12])
+            + "| " + "{:<28}".format(str(model)[:28])
+            + "| " + "{:<18}".format(str(tokens_str)[:18])
+            + "| " + "{:<10}".format(str(dur_str)[:10])
+            + "| " + "{:<8}".format(str(cost_str)[:8])
             + "|"
         )
 
-    print(separator)
+    print(sep)
+    print()
 
-    # Summary footer
-    count, total_duration, total_cost = summary
-    if count == 1:
-        print("| " + "{:<76}".format("TOTAL") + "| " + "{:<15}".format("") + "| " + "{:<20}".format("") + "| " + "{:<10}".format("") + "| " + "{:<12}".format("") + "| " + "{:<10}".format(f"${total_cost:.2f}") + "|")
-    else:
-        avg_duration = total_duration / count if count > 0 else 0
+    # Table 2: Role Breakdown Summary
+    summary_width = 88
+    sum_sep = "+" + "-" * summary_width + "+"
+    print(sum_sep)
+    print(
+        "| " + "{:<12}".format("ROLE")
+        + "| " + "{:<6}".format("RUNS")
+        + "| " + "{:<14}".format("TOKENS IN")
+        + "| " + "{:<14}".format("TOKENS OUT")
+        + "| " + "{:<14}".format("TOTAL TOKENS")
+        + "| " + "{:<12}".format("DURATION")
+        + "| " + "{:<8}".format("COST")
+        + "|"
+    )
+    print(sum_sep)
+
+    total_runs = 0
+    total_tin = 0
+    total_tout = 0
+    total_dur = 0
+    total_cost = 0.0
+
+    # Sort roles predictably: builder, sentinel, scout, others
+    ordered_roles = sorted(roles_summary.keys(), key=lambda r: ("builder", "sentinel", "scout").index(r) if r in ("builder", "sentinel", "scout") else 99)
+
+    for role in ordered_roles:
+        st = roles_summary[role]
+        runs = st["runs"]
+        tin = st["tokens_in"]
+        tout = st["tokens_out"]
+        ttot = tin + tout
+        dur = st["duration"]
+        cost = st["cost"]
+
+        total_runs += runs
+        total_tin += tin
+        total_tout += tout
+        total_dur += dur
+        total_cost += cost
+
         print(
-            "| " + "{:<76}".format("TOTAL")
-            + "| " + "{:<15}".format(str(count))
-            + "| " + "{:<20}".format("")
-            + "| " + "{:<10}".format(f"{total_duration}s")
-            + "| " + "{:<12}".format("")
-            + "| " + "{:<10}".format(f"${total_cost:.2f}")
+            "| " + "{:<12}".format(str(role).capitalize()[:12])
+            + "| " + "{:<6}".format(f"{runs}")
+            + "| " + "{:<14}".format(f"{tin:,}")
+            + "| " + "{:<14}".format(f"{tout:,}")
+            + "| " + "{:<14}".format(f"{ttot:,}")
+            + "| " + "{:<12}".format(format_duration(dur))
+            + "| " + "{:<8}".format(f"${cost:.2f}")
             + "|"
         )
+
+    print(sum_sep)
+    # Total Footer
+    print(
+        "| " + "{:<12}".format("TOTAL")
+        + "| " + "{:<6}".format(f"{total_runs}")
+        + "| " + "{:<14}".format(f"{total_tin:,}")
+        + "| " + "{:<14}".format(f"{total_tout:,}")
+        + "| " + "{:<14}".format(f"{total_tin + total_tout:,}")
+        + "| " + "{:<12}".format(format_duration(total_dur))
+        + "| " + "{:<8}".format(f"${total_cost:.2f}")
+        + "|"
+    )
+    print(sum_sep)
 
 
 def main():
-    # Determine target directory (default to current working directory)
     target_dir = sys.argv[1] if len(sys.argv) > 1 else "."
-
-    # Resolve to absolute path
     target_dir = os.path.abspath(target_dir)
 
-    # Path to telemetry file
     telemetry_path = os.path.join(target_dir, ".amase", "telemetry.jsonl")
-
-    # Check if telemetry file exists
     if not os.path.exists(telemetry_path):
         print(f"[-] No telemetry file found at: {telemetry_path}")
         print("  Run 'amase init' and complete tasks to generate telemetry.")
         sys.exit(1)
 
-    # Read and parse telemetry entries
     entries = []
     try:
         with open(telemetry_path, "r") as f:
@@ -123,16 +196,14 @@ def main():
                         entry = json.loads(line)
                         entries.append(entry)
                     except json.JSONDecodeError:
-                        # Skip malformed lines
                         continue
     except OSError as e:
         print(f"[-] Error reading telemetry file: {e}")
         sys.exit(1)
 
-    # Format and print table
     rows = format_table_rows(entries)
-    summary = compute_summary(entries)
-    print_table(rows, summary)
+    roles_summary = compute_role_summary(entries)
+    print_tables(rows, roles_summary)
 
 
 if __name__ == "__main__":

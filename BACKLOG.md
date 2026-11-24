@@ -158,7 +158,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/sentinel.py`, `scripts/scout.py`, `scripts/dispatch-worker.sh`.
   - **Criteria:** `python3 scripts/sentinel.py --dry-run . HEAD~1` exits 0; `python3 scripts/scout.py --objective "Test" --dry-run` exits 0; `bash -n scripts/dispatch-worker.sh` exits 0; `.amase/test-gate.sh` passes.
 
-- [ ] **TASK-31: Unified Multi-Persona Token Telemetry & Ledger Breakdown**
+- [x] **TASK-31: Unified Multi-Persona Token Telemetry & Ledger Breakdown**
   - **Goal:** Update telemetry recording to track role-level tokens (`builder`, `sentinel`, `scout`, `coordinator`). Record `role`, `tokens_in`, `tokens_out`, and `model` in `.amase/telemetry.jsonl`. Update `scripts/stats.py` (`amase stats`) to render a role-based breakdown table summarizing tasks, tokens in/out, duration, and cost per persona.
   - **Files:** `scripts/stats.py`, `scripts/settle-task.sh`, `scripts/scout.py`, `scripts/fleet.py`.
   - **Criteria:** `amase stats` renders a multi-persona breakdown table displaying `ROLE`, `TOKENS IN`, `TOKENS OUT`, and `COST`; python3 -m py_compile scripts/stats.py exits 0; .amase/test-gate.sh passes.

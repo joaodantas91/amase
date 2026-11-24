@@ -8,13 +8,15 @@ import os
 import sys
 import json
 import re
+import time
 import urllib.request
 
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 ORCHESTRATOR_ROOT = os.path.dirname(SCRIPTS_DIR)
 if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
-from fleet import query_fleet
+from fleet import query_fleet, get_last_usage
+from telemetry import record as record_telemetry
 
 MODEL = os.getenv("SCOUT_MODEL", "scout-fleet")
 
@@ -64,8 +66,24 @@ Respond ONLY with the markdown tasks ready for backlog triage, following the exa
   - **Criteria:** <Deterministic verification test or command>
 """
 
+    t0 = time.time()
     try:
         content = query_fleet(user_prompt, system_prompt=scout_prompt, model_hint=MODEL, title="AMASE: Scout")
+        duration = int(time.time() - t0)
+        usage = get_last_usage()
+        try:
+            record_telemetry(
+                os.getcwd(),
+                task_id="PLANNING",
+                role="scout",
+                model=usage.get("model") or MODEL,
+                duration_seconds=duration,
+                tokens_in=usage.get("tokens_in", 0),
+                tokens_out=usage.get("tokens_out", 0),
+                status="planned"
+            )
+        except Exception:
+            pass
         return content.strip() if content else None
     except Exception as e:
         sys.stderr.write(f"Scout discovery failed: {e}\n")

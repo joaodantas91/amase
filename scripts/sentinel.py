@@ -8,6 +8,7 @@ Outputs report to AUDIT.md.
 import os
 import sys
 import json
+import time
 import subprocess
 import urllib.request
 
@@ -15,7 +16,8 @@ SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 ORCHESTRATOR_ROOT = os.path.dirname(SCRIPTS_DIR)
 if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
-from fleet import query_fleet
+from fleet import query_fleet, get_last_usage
+from telemetry import record as record_telemetry
 
 MODEL = os.getenv("SENTINEL_MODEL", "sentinel-fleet")
 
@@ -47,8 +49,24 @@ Format your response following the AUDIT.md contract:
 If clean, report 'Core invariants verified clean'.
 """
 
+    t0 = time.time()
     try:
         result = query_fleet(user_prompt, system_prompt=sentinel_prompt, model_hint=MODEL, title="AMASE: Sentinel")
+        duration = int(time.time() - t0)
+        usage = get_last_usage()
+        try:
+            record_telemetry(
+                target_dir,
+                task_id="AUDIT",
+                role="sentinel",
+                model=usage.get("model") or MODEL,
+                duration_seconds=duration,
+                tokens_in=usage.get("tokens_in", 0),
+                tokens_out=usage.get("tokens_out", 0),
+                status="clean" if "Core invariants verified clean" in (result or "") else "flagged"
+            )
+        except Exception:
+            pass
         if result:
             print(result)
             return result

@@ -231,6 +231,22 @@ else
   echo "[-] Warning: BACKLOG.md not found at $BACKLOG_FILE"
 fi
 
+# Extract token estimates before pruning
+TOKENS_IN=0
+TOKENS_OUT=0
+if [[ -f "$WORKTREE_PATH/.amase-worker.log" ]]; then
+  TI=$(grep -o 'tokens.input=[0-9]*' "$WORKTREE_PATH/.amase-worker.log" 2>/dev/null | tail -n 1 | cut -d= -f2 || true)
+  TO=$(grep -o 'tokens.output=[0-9]*' "$WORKTREE_PATH/.amase-worker.log" 2>/dev/null | tail -n 1 | cut -d= -f2 || true)
+  if [[ -n "$TI" && "$TI" =~ ^[0-9]+$ && "$TI" -gt 0 ]]; then
+    TOKENS_IN="$TI"
+    TOKENS_OUT="${TO:-0}"
+  else
+    LOG_BYTES=$(stat -c%s "$WORKTREE_PATH/.amase-worker.log" 2>/dev/null || echo 0)
+    TOKENS_IN=$((LOG_BYTES / 4))
+    TOKENS_OUT=400
+  fi
+fi
+
 # 5. Prune the worktree.
 echo "[+] Pruning worktree $WORKTREE_PATH..."
 git -C "$TARGET_REPO" worktree remove --force "$WORKTREE_PATH" 2>/dev/null || rm -rf "$WORKTREE_PATH"
@@ -242,22 +258,8 @@ echo "[+] Recording telemetry..."
 CURRENT_TIME="$(date +%s)"
 DURATION_SECONDS=$((CURRENT_TIME - META_START))
 COMMIT_HASH="$(git -C "$TARGET_REPO" rev-parse HEAD)"
-mkdir -p "$TARGET_REPO/.amase"
-python3 - "$TARGET_REPO/.amase/telemetry.jsonl" "$(date -Iseconds)" "$TASK_ID" "$META_MODEL" "$DURATION_SECONDS" "$COMMIT_HASH" <<'PY'
-import json, sys
-path, ts, task_id, model, duration, commit_hash = sys.argv[1:7]
-entry = {
-    "timestamp": ts,
-    "task_id": task_id,
-    "model": model,
-    "duration_seconds": int(duration),
-    "commit_hash": commit_hash,
-    "cost_usd": 0.00,
-    "status": "settled",
-}
-with open(path, "a") as f:
-    f.write(json.dumps(entry) + "\n")
-PY
+
+python3 "$ORCHESTRATOR_DIR/scripts/telemetry.py" "$TARGET_REPO" "$TASK_ID" "builder" "$META_MODEL" "$DURATION_SECONDS" "$TOKENS_IN" "$TOKENS_OUT" "$COMMIT_HASH" "0.00" "settled"
 echo "[+] Telemetry recorded."
 
 echo "========================================================"
