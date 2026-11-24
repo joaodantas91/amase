@@ -43,7 +43,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/stats.py`.
   - **Criteria:** Running `amase stats` outputs formatted ledger table; passes `.amase/test-gate.sh`.
 
-- [ ] **TASK-08: Automatic Linter & Shellcheck Gate in test-gate.sh**
+- [x] **TASK-08: Automatic Linter & Shellcheck Gate in test-gate.sh**
   - **Goal:** Enhance `.amase/test-gate.sh` to run `shellcheck` on bash scripts and syntax formatting checks on Python scripts, catching bash pitfalls automatically before settlement.
   - **Files:** `.amase/test-gate.sh`.
   - **Criteria:** Linter runs during test gate; clean exit code 0.
