@@ -98,7 +98,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/scout.py`, `amase`.
   - **Criteria:** `printf 'Scout: querying...\n- [ ] **TASK-99: Sample**\n  - **Goal:** g\n' | python3 scripts/scout.py --sanitize` prints only the task block and exits 0; re-emitting an existing `TASK-99` writes nothing (no duplicate); `bash -n amase` exits 0; `.amase/test-gate.sh` passes.
 
-- [ ] **TASK-19: Portable Orchestrator Root Resolution in Persona Runners**
+- [x] **TASK-19: Portable Orchestrator Root Resolution in Persona Runners**
   - **Goal:** Replace hardcoded `/home/joao/dev/orchestrator/...` persona, skill, and Litellm paths in the persona runners and model switcher with a root derived from each script's own location so the orchestrator works from any checkout.
   - **Files:** `scripts/scout.py`, `scripts/sentinel.py`, `scripts/designer.py`, `scripts/switch-model`.
   - **Criteria:** `grep -rn '/home/joao/dev/orchestrator' scripts/*.py scripts/switch-model` returns no matches (exit 1); `bash -n scripts/switch-model` exits 0; `python3 -m py_compile scripts/scout.py scripts/sentinel.py scripts/designer.py` exits 0; `.amase/test-gate.sh` passes.
