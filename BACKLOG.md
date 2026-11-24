@@ -248,10 +248,10 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/dispatch-worker.sh`, `scripts/doctor.py`.
   - **Criteria:** `amase doctor` validates SQLite WAL mode for OpenCode DB; `dispatch-worker.sh` avoids SQLite collision; .amase/test-gate.sh passes.
 
-- [ ] **TASK-49: Autonomous Auto-Parallel Loop & Invariant Rule Integration**
-  - **Goal:** In `amase`, `scripts/run-task.sh`, and `.agents/skills/amase-invariants/SKILL.md`, integrate auto-parallel mode into the continuous orchestrator loop. When `concurrency.mode` is `auto_parallel` and multiple pending tasks have disjoint file targets, dispatch batch via `amase parallel`; otherwise fall back safely to sequential dispatch.
+- [ ] **TASK-49: Parallel Concurrency Loop & Invariant Rule Integration**
+  - **Goal:** In `amase`, `scripts/run-task.sh`, and `.agents/skills/amase-invariants/SKILL.md`, integrate parallel concurrency into the continuous orchestrator loop. When `concurrency: "parallel"` is configured and multiple pending tasks have disjoint file targets, dispatch batch via `amase parallel`; otherwise fall back safely to standard sequential dispatch (`concurrency: "sequential"`).
   - **Files:** `amase`, `scripts/run-task.sh`, `.agents/skills/amase-invariants/SKILL.md`.
-  - **Criteria:** `amase` respects `auto_parallel` setting in loop; .amase/test-gate.sh passes.
+  - **Criteria:** `amase` respects `concurrency: parallel` setting in loop; .amase/test-gate.sh passes.
 
 - [ ] **TASK-50: Deterministic Headless UI Layout & Collision Inspector (scripts/ui_heuristics.js)**
   - **Goal:** Create `scripts/ui_heuristics.js`, an in-browser evaluation script executed via headless Playwright/Puppeteer. Deterministically detect horizontal viewport overflows (elements spilling out of 375px mobile or desktop viewports), bounding-box collisions/overlaps between interactive elements, and zero-size click targets without sending any images or DOM dumps to LLMs (0 tokens).
