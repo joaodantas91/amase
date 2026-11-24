@@ -111,6 +111,18 @@ amase incidents --status all   # List all incidents
 
 ---
 
+### `amase parallel [--dry-run] [--max-parallel N] [dir]`
+
+Analyzes pending tasks in `BACKLOG.md` for disjoint file targets and executes non-conflicting tasks concurrently in parallel Git worktrees and visible terminal tabs.
+
+```bash
+amase parallel --dry-run        # Preview non-conflicting execution batches
+amase parallel                  # Run batch in parallel worktrees
+amase parallel --max-parallel 3 # Scale to 3 parallel workers
+```
+
+---
+
 ### `amase test-wiring`
 
 End-to-end simulation of worktree, AST extraction, git hooks, and settlement in `<2s`. Validates the full pipeline: worktree creation, pre-commit hook enforcement, sentinel audit, and clean teardown.
@@ -236,6 +248,7 @@ AMASE is powered by specialized host-side scripts that perform deterministic sof
 - **`dispatch-worker.sh`**: Launches the worker in a visible terminal tab (Ptyxis), monitors execution with a sub-second watchdog (<1s quota failover), and manages multi-model fleet rotation.
 - **`settle-task.sh`**: Executes deterministic one-click settlement: runs targeted fast tests, full test gate, audits git diff for forbidden patterns, merges to `main`, updates `BACKLOG.md`, records telemetry, and cleanly prunes the worktree.
 - **`abort-task.sh`**: Safely tears down failed or stalled tasks, unmounting worktrees (`git worktree remove --force`), pruning branches, and resetting task state.
+- **`parallel_dispatcher.py`**: Identifies disjoint file sets between pending backlog items and orchestrates concurrent worker execution across parallel Git worktrees (`amase parallel`).
 
 ### 2. Context & AST Extraction (Token Diet)
 - **`outline-ast.py`**: Parses codebase AST locally on the host machine to extract class, function, and export signatures without dumping full files into context. Supports `--filter "<keyword>"` for task-targeted symbol pruning.

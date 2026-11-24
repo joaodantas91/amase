@@ -46,6 +46,11 @@ if [[ "${1:-}" == "incidents" ]]; then
   exec "$SCRIPT_DIR/scripts/engine_incident.py" --list "$@"
 fi
 
+if [[ "${1:-}" == "parallel" ]]; then
+  shift
+  exec "$SCRIPT_DIR/scripts/parallel_dispatcher.py" --repo "$TARGET_DIR" "$@"
+fi
+
 if [[ "${1:-}" == "test-wiring" ]]; then
   shift
   exec "$SCRIPT_DIR/scripts/test-wiring.sh" "${1:-$(pwd)}"
