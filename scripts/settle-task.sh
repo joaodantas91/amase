@@ -47,6 +47,7 @@ BRANCH_NAME="feature/$TASK_ID"
 WORKTREE_PATH="$TARGET_REPO/.worktrees/$TASK_ID"
 BACKLOG_FILE="$TARGET_REPO/BACKLOG.md"
 AUDIT_FILE="$TARGET_REPO/AUDIT.md"
+PTYXIS_BIN='/usr/bin/ptyxis'
 
 echo "========================================================"
 echo " AMASE Deterministic One-Click Settlement"
@@ -174,14 +175,36 @@ echo "[+] Running sentinel security audit..."
 SENTINEL_OUTPUT=$(python3 "$ORCHESTRATOR_DIR/scripts/sentinel.py" "$TARGET_REPO" 2>&1) || true
 AUDIT_FILE="$TARGET_REPO/AUDIT.md"
 echo "$SENTINEL_OUTPUT" > "$AUDIT_FILE"
-if echo "$SENTINEL_OUTPUT" | grep -qE '^[*-] \[(CRITICAL|HIGH)\]'; then
-  echo "[!] Sentinel detected [CRITICAL] or [HIGH] vulnerability!"
-  echo "[+] Prepending TASK-SEC-01 to BACKLOG.md for remediation..."
-  if [[ -f "$BACKLOG_FILE" ]]; then
-    sed -i "1s/^/- [ ] **TASK-SEC-01: Remediate Sentinel Audit Findings**\n/" "$BACKLOG_FILE"
-  fi
+
+# Check if sentinel_visible_tab is enabled in config
+SENTINEL_VISIBLE=$(jq -r '.ui.sentinel_visible_tab // false' "$ORCHESTRATOR_DIR/.amase/config.json" 2>/dev/null || echo "false")
+
+if [[ "$SENTINEL_VISIBLE" == "true" ]] && [[ -x "$PTYXIS_BIN" ]]; then
+  COMPLETION_FLAG="$ORCHESTRATOR_DIR/.amase/sentinel_complete"
+  mkdir -p "$(dirname "$COMPLETION_FLAG")"
+  >"$COMPLETION_FLAG"
+
+  # Launch Sentinel in visible Ptyxis tab
+  ptyxis --tab --title="AMASE: Sentinel Audit" -x "python3 $ORCHESTRATOR_DIR/scripts/sentinel.py '$TARGET_REPO' > '$AUDIT_FILE' && touch '$COMPLETION_FLAG'" &
+
+  # Wait for completion flag with 2s timeout
+  TIMEOUT=2
+  ELAPSED=0
+  while [[ $ELAPSED -lt $TIMEOUT ]]; do
+    sleep 0.2
+    ELAPSED=$((ELAPSED + 1))
+    [[ -f "$COMPLETION_FLAG" ]] && break
+  done
+  rm -f "$COMPLETION_FLAG"
 else
   echo "[+] Sentinel audit clean: no critical/high vulnerabilities detected."
+  if echo "$SENTINEL_OUTPUT" | grep -qE '^[*-] \[(CRITICAL|HIGH)\]'; then
+    echo "[!] Sentinel detected [CRITICAL] or [HIGH] vulnerability!"
+    echo "[+] Prepending TASK-SEC-01 to BACKLOG.md for remediation..."
+    if [[ -f "$BACKLOG_FILE" ]]; then
+      sed -i "1s/^/- [ ] **TASK-SEC-01: Remediate Sentinel Audit Findings**\n/" "$BACKLOG_FILE"
+    fi
+  fi
 fi
 
 # Commit AUDIT.md if it was created and contains output
