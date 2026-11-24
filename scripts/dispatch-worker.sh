@@ -39,6 +39,9 @@ fi
 # Ordered $0 Free Fleet (best performers first)
 FLEET_MODELS=(
   "$REQUESTED_MODEL"
+  "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b"
+  "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b"
+  "openrouter/openrouter/free"
   "opencode/nemotron-3.5-lightning-free"
   "opencode/beam-free"
   "opencode/deepseek-v4.1-flash-free"
@@ -87,7 +90,14 @@ MODELS=("$@")
 
 cd "$WORKTREE"
 
+OPENCODE_FREE_EXHAUSTED=0
+
 for MODEL in "${MODELS[@]}"; do
+  if [[ "$MODEL" == opencode/*-free && "$OPENCODE_FREE_EXHAUSTED" -eq 1 ]]; then
+    echo "[-] Skipping $MODEL (OpenCode free pool quota exhausted)"
+    continue
+  fi
+
   echo "=========================================================="
   echo "[+] AMASE Worker starting model: $MODEL"
   echo "=========================================================="
@@ -95,7 +105,24 @@ for MODEL in "${MODELS[@]}"; do
 
   PROMPT=$(cat "$WORKTREE/.amase-task-prompt.txt")
   
-  timeout --kill-after=5s 120s "$OPENCODE_BIN" run --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" || true
+  timeout --kill-after=5s 120s "$OPENCODE_BIN" run --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
+  WORKER_PID=$!
+
+  # Sub-watchdog: checks every 1s for quota error (<1s) or timeout
+  SUB_ELAPSED=0
+  while kill -0 "$WORKER_PID" 2>/dev/null; do
+    if grep -q "Free usage limit reached" "$LOG_FILE" 2>/dev/null || \
+       ( [ -f ~/.local/share/opencode/log/opencode.log ] && tail -n 10 ~/.local/share/opencode/log/opencode.log | grep -q "Free usage limit reached" ); then
+      echo ""
+      echo "[!] Free usage limit reached in provider log (<1s). Killing opencode immediately and failing over..."
+      kill -9 "$WORKER_PID" 2>/dev/null || true
+      OPENCODE_FREE_EXHAUSTED=1
+      break
+    fi
+    sleep 1
+    SUB_ELAPSED=$((SUB_ELAPSED + 1))
+  done
+  wait "$WORKER_PID" 2>/dev/null || true
 
   # If git commit made, we are done
   LAST_COMMIT=$(git log -1 --format="%ct" 2>/dev/null || echo 0)
@@ -190,6 +217,16 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
     echo "[-] Model stall detected (no output for 45s). Forcing failover..."
     pkill -P $(pgrep -f "$WORKTREE/.amase-run.sh") opencode 2>/dev/null || true
     STALL_SECONDS=0
+  fi
+
+  # Real-time quota detection in outer watchdog
+  if grep -q "Free usage limit reached" "$LOG_FILE" 2>/dev/null || \
+     ( [ -f ~/.local/share/opencode/log/opencode.log ] && tail -n 10 ~/.local/share/opencode/log/opencode.log | grep -q "Free usage limit reached" ); then
+    if pgrep -f "$WORKTREE/.amase-run.sh" >/dev/null 2>&1; then
+      echo "[!] Free quota limit detected in provider log. Instant kill to force failover..."
+      pkill -P $(pgrep -f "$WORKTREE/.amase-run.sh") opencode 2>/dev/null || true
+      STALL_SECONDS=0
+    fi
   fi
 
   if [ $((ELAPSED % 15)) -eq 0 ]; then

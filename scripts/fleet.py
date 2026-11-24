@@ -17,6 +17,9 @@ LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completion
 API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
 
 FREE_MODELS = [
+    "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b",
+    "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b",
+    "openrouter/openrouter/free",
     "opencode/nemotron-3.5-lightning-free",
     "opencode/beam-free",
     "opencode/deepseek-v4.1-flash-free",
@@ -77,6 +80,46 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
             except Exception as e:
                 sys.stderr.write(f"[-] Fleet model {m} failed: {e}\n")
                 continue
+
+    # 3. Direct Groq fallback if GROQ_API_KEY is present
+    groq_key = os.getenv("GROQ_API_KEY")
+    if not groq_key:
+        env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+        if os.path.exists(env_path):
+            with open(env_path) as f:
+                for line in f:
+                    if line.startswith("GROQ_API_KEY="):
+                        groq_key = line.strip().split("=", 1)[1].strip('"\'')
+                        break
+    if groq_key:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            payload = {
+                "model": "openai/gpt-oss-120b",
+                "messages": messages,
+                "temperature": 0.1,
+                "max_tokens": 1024,
+            }
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Authorization": f"Bearer {groq_key}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "curl/8.0.0"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                content = data["choices"][0]["message"]["content"]
+                if content.strip():
+                    return content.strip()
+        except Exception as e:
+            sys.stderr.write(f"[-] Direct Groq fallback failed: {e}\n")
 
     sys.stderr.write("[-] All free fleet options exhausted.\n")
     return ""
