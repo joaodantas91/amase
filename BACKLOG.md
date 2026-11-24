@@ -208,7 +208,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/engine_incident.py`, `scripts/scout.py`, `amase`.
   - **Criteria:** `python3 scripts/engine_incident.py --help` exits 0; simulated incident ingested into Scout as TASK-ENG block; .amase/test-gate.sh passes.
 
-- [ ] **TASK-41: Document Token Efficiency & Self-Improvement Architecture in README.md**
+- [x] **TASK-41: Document Token Efficiency & Self-Improvement Architecture in README.md**
   - **Goal:** Update `README.md` with factual architecture sections detailing deterministic mechanical offloading (0-token operations, AST pre-filtering, context hygiene) and the self-improvement feedback loop (passive external incident logging to ~/.amase/engine_issues.jsonl and orchestrator self-healing ingestion).
   - **Files:** `README.md`.
   - **Criteria:** README.md contains Token Efficiency and Self-Improvement sections; .amase/test-gate.sh passes.
