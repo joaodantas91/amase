@@ -7,6 +7,7 @@ and generate next vertical slices for BACKLOG.md.
 import os
 import sys
 import json
+import re
 import urllib.request
 
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -69,9 +70,46 @@ Respond ONLY with the markdown tasks ready for backlog triage, following the exa
         sys.stderr.write(f"Scout discovery failed: {e}\n")
         return None
 
+def extract_task_ids(backlog_text):
+    """Extract existing TASK-XX IDs from backlog text for deduplication."""
+    ids = set()
+    for match in re.finditer(r'TASK-([0-9A-Z-]+):', backlog_text):
+        ids.add(f"TASK-{match.group(1)}")
+    return ids
+
+def extract_task_blocks(text):
+    """Extract TASK-XX markdown blocks from text. Returns list of {id, text} dicts."""
+    blocks = []
+    lines = text.split('\n')
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        match = re.match(r'^- \[ \] \*\*TASK-([0-9A-Z-]+):(.*)$', line)
+        if match:
+            task_id = match.group(1)
+            title = match.group(2).strip()
+            block_lines = [line]
+            i += 1
+            # Collect continuation lines (indented with "  - **...**:")
+            while i < len(lines):
+                next_line = lines[i]
+                if re.match(r'^\s{2}- \*\*', next_line):
+                    block_lines.append(next_line)
+                    i += 1
+                else:
+                    break
+            blocks.append({
+                "id": f"TASK-{task_id}",
+                "text": '\n'.join(block_lines)
+            })
+        else:
+            i += 1
+    return blocks
+
 if __name__ == "__main__":
     import argparse
     import glob
+    import sys
 
     parser = argparse.ArgumentParser(description="Scout Persona Discovery")
     parser.add_argument("--roadmap", help="Path to project roadmap document")
@@ -79,8 +117,22 @@ if __name__ == "__main__":
     parser.add_argument("--scope", default=os.path.join(os.getcwd(), ".amase", "scope.md"), help="Path to scope.md")
     parser.add_argument("--discovery", default=os.path.join(os.getcwd(), ".amase", "discovery.md"), help="Path to discovery.md")
     parser.add_argument("--designer-review", help="Path to designer review text or direct string")
+    parser.add_argument("--sanitize", action="store_true", help="Filter stdin, extract only TASK-XX blocks and deduplicate against --backlog")
     parser.add_argument("--append-discovery", action="store_true", help="Append discovered tasks directly to .amase/discovery.md")
     args = parser.parse_args()
+
+    if args.sanitize:
+        stdin_data = sys.stdin.read()
+        task_blocks = extract_task_blocks(stdin_data)
+        existing_ids = set()
+        if args.backlog and os.path.exists(args.backlog):
+            with open(args.backlog, "r") as f:
+                backlog_content = f.read()
+            existing_ids = extract_task_ids(backlog_content)
+        for block in task_blocks:
+            if block["id"] not in existing_ids:
+                print(block["text"])
+        sys.exit(0)
 
     roadmap_file = args.roadmap
     if not roadmap_file:

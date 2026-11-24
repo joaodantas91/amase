@@ -70,7 +70,7 @@ while true; do
   PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
   if [ "$PENDING_COUNT" -lt 3 ]; then
     echo "[!] Backlog running low ($PENDING_COUNT pending). Triggering Scout expansion..."
-    "$SCRIPT_DIR/scripts/scout.py" --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE" || true
+    "$SCRIPT_DIR/scripts/scout.py" --backlog "$BACKLOG_FILE" | python3 scripts/scout.py --sanitize --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE" || true
     PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
   fi
 
