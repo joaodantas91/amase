@@ -50,12 +50,12 @@ fi
 
 SCOPE_CONTENT=""
 if [[ -f "$SCOPE_FILE" ]]; then
-  SCOPE_CONTENT=$(cat "$SCOPE_FILE")
+  SCOPE_CONTENT=$(cat "$SCOPE_FILE" | python3 "$ORCHESTRATOR_DIR/scripts/prune-prompt.py")
 else
   SCOPE_CONTENT="Standard AMASE Rules: zero dependency creep, zero raw hex colors, zero 'as any'."
 fi
 
-PERSONA_CONTENT=$(cat "$PERSONA_FILE")
+PERSONA_CONTENT=$(cat "$PERSONA_FILE" | python3 "$ORCHESTRATOR_DIR/scripts/prune-prompt.py")
 
 cat <<EOF
 # AMASE Scoped Agent: $ROLE
