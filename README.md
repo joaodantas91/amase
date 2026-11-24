@@ -1,82 +1,172 @@
-# Autonomous Multi-Agent Swarm Engine (AMASE) Orchestrator
+# Autonomous Multi-Agent Swarm Orchestrator (AMASE)
 
-The decoupled control plane for orchestrating autonomous AI fleets with isolated Git worktrees, automatic provider failover, and token-diet prompt directives.
-
----
-
-## Architecture Overview
-
-```
-                      ┌───────────────────────────────────────┐
-                      │   Coding Agent (OpenCode / Aider)     │
-                      └──────────────────┬────────────────────┘
-                                         │ Requests (OpenAI API Format)
-                                         ▼
-                      ┌───────────────────────────────────────┐
-                      │    LiteLLM Proxy (http://localhost:4000)
-                      └───────┬──────────────┬──────────────┬─┘
-                              │              │              │
-           1. Primary (Free)  │              │              │
-      ┌───────────────────────┘              │              │
-      ▼                                      ▼              ▼
-┌──────────────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Google AI Studio         │    │ NVIDIA NIM       │    │ Groq            │
-│ (Gemini 2.0 Flash)       │    │ (Qwen 2.5 Coder) │    │ (Llama 3.3 70B) │
-│ 15 RPM / 1,500 RPD Free  │    │ 1,000 Credits    │    │ Free Tier       │
-└──────────────────────────┘    └──────────────────┘    └─────────────────┘
-      │ (Fails on 429/Quota)                 ▲
-      └──────────────────────────────────────┘
-             Auto-fallback in <100ms
-```
+A unified CLI for orchestrating autonomous AI fleets with isolated Git worktrees, pre-commit sandboxing, and a $0 free model fleet.
 
 ---
 
-## 1. Quick Setup
+## Overview
 
-### Step 1: Configure Free API Keys
-Copy the environment template:
+AMASE is an autonomous multi-agent swarm orchestrator that enables safe, isolated task execution via Git worktrees, enforced token-diet constraints, and a bash-free model fleet that runs entirely on free-tier APIs. Key features:
+
+- **Isolated worktree execution**: Each task runs on an isolated branch/worktree, never polluting `main`
+- **Pre-commit sandboxing**: Executable hooks block forbidden files (`as any`, `@ts-ignore`) and patterns
+- **$0 free model fleet**: All worker tasks use free-tier models via LiteLLM proxy
+- **Token-diet governance**: Strict scope boundaries via `.amase/scope.md`
+- **Automatic settlement**: Test gate → diff audit → merge → backlog update → worktree prune
+
+---
+
+## CLI Command Reference
+
+### `amase init [dir]`
+
+Scaffolds `.amase` governance files in the target directory:
+
+- `.amase/scope.md` — Project scope & governance boundaries
+- `.amase/discovery.md` — Discovery & token optimization inbox
+- `.amase/test-gate.sh` — Project-type-aware test runner (Node/Python/Rust/Go)
+- `.amase/config.json` — Configuration with `mode`, `model_tier`, `discovery`, `ui.builder_visible_tab`
+
 ```bash
+amase init                    # Initialize in current directory
+amase init ./my-project       # Initialize in ./my-project
+```
+
+---
+
+### `amase config [--show|--mode|--model-tier|--discovery]`
+
+Inspects or toggles project governance settings.
+
+| Flag          | Description                                    |
+|---------------|------------------------------------------------|
+| `--show`      | Display full config.json                       |
+| `--mode`      | Show current mode (`manual` or `autonomous`)   |
+| `--model-tier`| Show model tier (`free` or `pro`)              |
+| `--discovery` | Show discovery enabled status                  |
+
+```bash
+amase config --show
+amase config --mode
+amase config --model-tier
+amase config --discovery
+```
+
+---
+
+### `amase task [--dry-run] '<objective>'`
+
+Formulates atomic vertical slice tasks into `BACKLOG.md` from a natural language prompt.
+
+| Flag          | Description                              |
+|---------------|------------------------------------------|
+| `--dry-run`   | Print the formulated task without appending |
+
+```bash
+amase task "Implement popup with settings toggle"
+amase task --dry-run "Fix auth middleware bug"
+```
+
+---
+
+### `amase stats [dir]`
+
+Displays the telemetry ledger showing task timestamps, model usage, durations, commit hashes, and $0 cost.
+
+```bash
+amase stats                    # Stats for current directory
+amase stats ./my-project     # Stats for ./my-project
+```
+
+---
+
+### `amase test-wiring`
+
+End-to-end simulation of worktree, AST extraction, git hooks, and settlement in `<2s`. Validates the full pipeline: worktree creation, pre-commit hook enforcement, sentinel audit, and clean teardown.
+
+```bash
+amase test-wiring
+```
+
+---
+
+### `amase [dir]`
+
+Executes the backlog queue continuously (halts cleanly in manual mode when the queue is empty). In autonomous mode, the loop runs until `BACKLOG.md` is exhausted.
+
+```bash
+amase                           # Run loop in current directory
+amase ./my-project            # Run loop in ./my-project
+```
+
+---
+
+## Configuration (.amase/config.json)
+
+```json
+{
+  "mode": "manual",
+  "model_tier": "free",
+  "discovery": {
+    "enabled": false,
+    "max_slices": 2
+  },
+  "ui": {
+    "builder_visible_tab": true,
+    "headless_analyzers": true
+  }
+}
+```
+
+| Key               | Type                        | Description                                                                 |
+|-------------------|-----------------------------|-----------------------------------------------------------------------------|
+| `mode`            | `string` (`manual`/`autonomous`) | `manual`: halts when BACKLOG.md is empty; `autonomous`: continuous loop     |
+| `model_tier`      | `string` (`free`/`pro`)     | `free`: uses $0 free fleet; `pro`: paid model tier                          |
+| `discovery.enabled` | `boolean`                 | When `true` and mode=autonomous, scout auto-expands backlog when <3 tasks remain |
+| `discovery.max_slices` | `number`                 | Max new tasks to generate per scout expansion                               |
+| `ui.builder_visible_tab` | `boolean`               | Controls which tab is visible in the builder UI                             |
+| `ui.headless_analyzers` | `boolean`               | Enable headless AST analysis for task routing                               |
+
+---
+
+## Verify & Commit Workflow
+
+After running `amase init`, the pre-commit hook and test gate must pass before committing:
+
+```bash
+# 1. Make sure test-gate.sh passes
+.amase/test-gate.sh
+
+# 2. Stage and commit
+git add .
+git commit -m "chore: initialize AMASE governance"
+
+# 3. Verify config is correct
+amase config --show
+```
+
+The pre-commit hook (injected by `amase test-wiring`) blocks:
+- Forbidden files: `package.json`, `.amase/scope.md`
+- Forbidden patterns: `as any`, `@ts-ignore`
+
+---
+
+## Quick Start
+
+```bash
+# 1. Initialize a new project
+amase init ./my-project
+
+# 2. Configure API keys (free fleet only)
 cp .env.example .env
-```
-Fill in at least one free API key:
-* **Google AI Studio:** [aistudio.google.com](https://aistudio.google.com) (Gemini 2.0 Flash free tier)
-* **NVIDIA NIM:** [build.nvidia.com](https://build.nvidia.com) (1,000 free credits for Qwen 2.5 Coder)
-* **Groq:** [console.groq.com](https://console.groq.com) (Fast free inference)
+# Fill in at least one: Google AI Studio, NVIDIA NIM, or Groq
 
-### Step 2: Start the Failover Proxy
-```bash
+# 3. Start the Litellm proxy (if not already running)
 ./scripts/start-proxy.sh
+
+# 4. Add your first task
+amase task "Implement settings page with toggle"
+
+# 5. Run the autonomous loop
+amase ./my-project
 ```
-* Sets up a local Python virtual environment (`.venv`) if missing.
-* Installs `litellm[proxy]`.
-* Starts the gateway on `http://localhost:4000`.
-
----
-
-## 2. Running an Autonomous Worktree Task
-
-To run an autonomous agent task safely on an isolated branch without polluting `main`:
-
-```bash
-./scripts/run-task.sh \
-  --repo <repository-path> \
-  --task autofill-popup-trigger \
-  --test-cmd "bunx vitest run"
-```
-
-### What this does:
-1. **Creates an isolated Git worktree** at `.worktrees/<task-id>` on branch `feature/<task-id>`.
-2. **Injects AMASE Token Directives:**
-   - `CAVEMAN`: Zero conversational pleasantries; terse output only.
-   - `PONYTAIL`: Strict YAGNI; standard libraries preferred over npm bloat.
-3. **Exports Gateway Configuration:**
-   - `OPENAI_BASE_URL="http://localhost:4000/v1"`
-   - `OPENAI_MODEL_NAME="coding-fleet"`
-4. **Validates Test Gate:** Runs the test runner to ensure reproducible evidence before merging.
-
----
-
-## 3. Sub-Agent Specification Directory
-- Single Source of Truth documentation: `.amase/scope.md` (local roadmap)
-- Prompt directives: `prompts/caveman.md`, `prompts/ponytail.md`, `prompts/chisle.md`
-- Configuration: `config/litellm-config.yaml`
