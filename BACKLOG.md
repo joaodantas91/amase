@@ -187,3 +187,13 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** In `scripts/generate-agent.sh` and `scripts/outline-ast.py`, parse file paths and symbol keywords from the task prompt and automatically filter the generated AST map so large codebases only inject symbols relevant to the active slice.
   - **Files:** `scripts/outline-ast.py`, `scripts/generate-agent.sh`.
   - **Criteria:** `python3 scripts/outline-ast.py . --filter "stats"` emits only symbols from stats-related files; .amase/test-gate.sh passes.
+
+- [ ] **TASK-37: System Health & Prerequisite Diagnostic (amase doctor)**
+  - **Goal:** Add `amase doctor` command that runs comprehensive environment diagnostics (Git worktrees, Python 3.10+, Bun/Node runtime, LiteLLM daemon on :4000, OpenCode CLI, Ptyxis terminal, and API key availability) with colorized status report and auto-recovery hints.
+  - **Files:** `amase`, `scripts/doctor.py`.
+  - **Criteria:** `amase doctor` outputs formatted health check report and exits 0; python3 -m py_compile scripts/doctor.py exits 0; .amase/test-gate.sh passes.
+
+- [ ] **TASK-38: Safe Worktree Environment & Secret Isolation**
+  - **Goal:** In `scripts/run-task.sh` and `scripts/dispatch-worker.sh`, safely symlink or replicate parent `.env` into child worker worktrees if present, while verifying `.gitignore` strictly prevents committing `.env` or leaking secrets to git history.
+  - **Files:** `scripts/run-task.sh`, `scripts/dispatch-worker.sh`.
+  - **Criteria:** Child worktree has access to parent environment variables without git tracking .env; bash -n scripts/run-task.sh exits 0; .amase/test-gate.sh passes.
