@@ -110,7 +110,49 @@ export OPENAI_MODEL_NAME="coding-fleet"
 echo "[+] Environment configured to route through LiteLLM Proxy (:4000 -> coding-fleet)."
 echo "[+] Worktree is ready for autonomous execution at: $WORKTREE_PATH"
 
-# 6. If test gate exists or test command provided, validate baseline
+# 6. Inject executable pre-commit hook into worktree
+HOOK_DIR=$(git -C "$WORKTREE_PATH" rev-parse --git-path hooks)
+mkdir -p "$HOOK_DIR"
+MAIN_HOOK="$HOOK_DIR/pre-commit"
+
+if [[ -f "$MAIN_HOOK" ]]; then
+  cp "$MAIN_HOOK" "$MAIN_HOOK.bak"
+  echo "[+] Backed up existing pre-commit hook."
+fi
+
+cat > "$MAIN_HOOK" << 'HOOK'
+#!/usr/bin/env bash
+set -euo pipefail
+FORBIDDEN_FILES="package.json .amase/scope.md"
+FORBIDDEN_PATTERNS=("as any" "@ts-ignore")
+STAGED_FILES=$(git diff --cached --name-only 2>/dev/null || true)
+if [[ -n "$STAGED_FILES" ]]; then
+  for f in $FORBIDDEN_FILES; do
+    if echo "$STAGED_FILES" | grep -qx "$f"; then
+      echo "[-] BLOCKED: Forbidden file '$f' is staged for commit." >&2
+      exit 1
+    fi
+  done
+  TS_DIFF=$(git diff --cached -- '*.ts' '*.tsx' '*.js' '*.jsx' 2>/dev/null || true)
+  if [[ -n "$TS_DIFF" ]]; then
+    for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
+      if echo "$TS_DIFF" | grep -qE "$pattern"; then
+        echo "[-] BLOCKED: Forbidden pattern '$pattern' found in staged changes." >&2
+        exit 1
+      fi
+    done
+  fi
+fi
+exit 0
+HOOK
+
+chmod +x "$MAIN_HOOK"
+echo "[+] Injected executable pre-commit hook blocking forbidden files/patterns."
+
+# Set chmod 444 on .amase/scope.md in the worktree
+chmod 444 "$WORKTREE_PATH/.amase/scope.md" 2>/dev/null || true
+
+# 7. If test gate exists or test command provided, validate baseline
 if [[ -z "$TEST_CMD" && -f "$WORKTREE_PATH/.amase/test-gate.sh" ]]; then
   TEST_CMD="$WORKTREE_PATH/.amase/test-gate.sh"
 fi
