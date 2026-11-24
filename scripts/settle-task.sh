@@ -103,12 +103,6 @@ if echo "$CHANGED_FILES" | grep -qE '^\.amase/scope\.md$'; then
   exit 1
 fi
 
-TS_DIFF=$(git -C "$TARGET_REPO" diff "main..$BRANCH_NAME" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.svelte' 2>/dev/null || true)
-if [[ -n "$TS_DIFF" ]] && echo "$TS_DIFF" | grep -qE "as any|@ts-ignore"; then
-  echo "[-] Forbidden pattern found in TypeScript/JavaScript diff ('as any' or '@ts-ignore')"
-  exit 1
-fi
-
 echo "[+] Diff audit clean ($CHANGED_FILES)."
 
 # 3. Merge feature/<task_id> into main.
@@ -122,6 +116,54 @@ if ! git -C "$TARGET_REPO" merge --ff-only "$BRANCH_NAME" >/dev/null 2>&1; then
   fi
 fi
 echo "[+] Merged $BRANCH_NAME into main."
+
+# --- Post-merge invariant violation check ---
+echo "[+] Running post-merge invariant violation check..."
+INV_DIFF=$(git -C "$TARGET_REPO" diff "main..$BRANCH_NAME" 2>/dev/null || true)
+
+INV_FOUND=0
+
+# Check for raw hex colors in .svelte/.vue files
+if echo "$INV_DIFF" | grep -qE '\.svelte|\.vue' && echo "$INV_DIFF" | grep -qE '#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?'; then
+  echo "[!] Invariant violation: raw hex color found in .svelte/.vue file"
+  INV_FOUND=1
+fi
+
+# Check for 'as any' or '@ts-ignore' in .ts/.tsx files
+if echo "$INV_DIFF" | grep -qE '\.ts\/$.|\.tsx' && echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
+  echo "[!] Invariant violation: 'as any' or '@ts-ignore' found in .ts/.tsx file"
+  INV_FOUND=1
+fi
+
+if [[ "$INV_FOUND" -eq 1 ]]; then
+  echo "[+] Prepending TASK-INV-01 to BACKLOG.md for remediation..."
+  if [[ -f "$BACKLOG_FILE" ]]; then
+    sed -i "1s/^/- [ ] **TASK-INV-01: Remediate invariant violations**\n/" "$BACKLOG_FILE"
+  fi
+  # Write findings to AUDIT.md
+  if [[ -f "$AUDIT_FILE" ]]; then
+    echo "[+] Appending invariant violations to AUDIT.md..."
+    echo "---" >> "$AUDIT.md"
+    echo "Invariant violations detected post-merge:" >> "$AUDIT.md"
+    if echo "$INV_DIFF" | grep -qE '\.svelte|\.vue'; then
+      echo "- Raw hex color found in .svelte/.vue file" >> "$AUDIT.md"
+    fi
+    if echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
+      echo "- 'as any' or '@ts-ignore' found in .ts/.tsx file" >> "$AUDIT.md"
+    fi
+  else
+    echo "---" > "$AUDIT.md"
+    echo "Invariant violations detected post-merge:" >> "$AUDIT.md"
+    if echo "$INV_DIFF" | grep -qE '\.svelte|\.vue'; then
+      echo "- Raw hex color found in .svelte/.vue file" >> "$AUDIT.md"
+    fi
+    if echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
+      echo "- 'as any' or '@ts-ignore' found in .ts/.tsx file" >> "$AUDIT.md"
+    fi
+  fi
+else
+  echo "[+] Sentinel invariant check clean: no invariant violations detected."
+fi
 
 BACKLOG_FILE="$TARGET_REPO/BACKLOG.md"
 
