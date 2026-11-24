@@ -273,7 +273,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/ui_mcp_server.py`.
   - **Criteria:** MCP server initializes and responds to `tools/list` and `tools/call` over stdio; .amase/test-gate.sh passes.
 
-- [ ] **TASK-54: Automatic Sleep & Lid-Close Inhibition via systemd-inhibit in amase**
+- [x] **TASK-54: Automatic Sleep & Lid-Close Inhibition via systemd-inhibit in amase**
   - **Goal:** In `amase`, automatically wrap continuous autonomous execution with `systemd-inhibit --what=idle:sleep:handle-lid-switch --who=AMASE --why="AMASE autonomous execution"` when available on Linux systems. Prevents laptop sleep, screen hibernation, or lid-close suspension from terminating running workers or dropping API sockets during long unattended runs.
   - **Files:** `amase`, `README.md`.
   - **Criteria:** `amase` auto-inhibits sleep when started in autonomous mode; releases cleanly on exit; .amase/test-gate.sh passes.
