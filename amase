@@ -21,6 +21,11 @@ if [[ "${1:-}" == "init" ]]; then
   exec "$SCRIPT_DIR/scripts/init-project.sh" "$INIT_DIR"
 fi
 
+if [[ "${1:-}" == "doctor" ]]; then
+  shift
+  exec "$SCRIPT_DIR/scripts/doctor.py" "${1:-$(pwd)}"
+fi
+
 if [[ "${1:-}" == "abort" ]]; then
   shift
   TASK_ID="${1:-}"

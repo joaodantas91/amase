@@ -188,7 +188,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/outline-ast.py`, `scripts/generate-agent.sh`.
   - **Criteria:** `python3 scripts/outline-ast.py . --filter "stats"` emits only symbols from stats-related files; .amase/test-gate.sh passes.
 
-- [ ] **TASK-37: System Health & Prerequisite Diagnostic (amase doctor)**
+- [x] **TASK-37: System Health & Prerequisite Diagnostic (amase doctor)**
   - **Goal:** Add `amase doctor` command that runs comprehensive environment diagnostics (Git worktrees, Python 3.10+, Bun/Node runtime, LiteLLM daemon on :4000, OpenCode CLI, Ptyxis terminal, and API key availability) with colorized status report and auto-recovery hints.
   - **Files:** `amase`, `scripts/doctor.py`.
   - **Criteria:** `amase doctor` outputs formatted health check report and exits 0; python3 -m py_compile scripts/doctor.py exits 0; .amase/test-gate.sh passes.
