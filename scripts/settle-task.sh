@@ -241,21 +241,20 @@ else
   echo "[-] Warning: BACKLOG.md not found at $BACKLOG_FILE"
 fi
 
-# Extract token estimates before pruning
+# Extract token metrics (OpenCode SQLite database + heuristic fallback) before pruning
 TOKENS_IN=0
 TOKENS_OUT=0
-if [[ -f "$WORKTREE_PATH/.amase-worker.log" ]]; then
-  TI=$(grep -o 'tokens.input=[0-9]*' "$WORKTREE_PATH/.amase-worker.log" 2>/dev/null | tail -n 1 | cut -d= -f2 || true)
-  TO=$(grep -o 'tokens.output=[0-9]*' "$WORKTREE_PATH/.amase-worker.log" 2>/dev/null | tail -n 1 | cut -d= -f2 || true)
-  if [[ -n "$TI" && "$TI" =~ ^[0-9]+$ && "$TI" -gt 0 ]]; then
-    TOKENS_IN="$TI"
-    TOKENS_OUT="${TO:-0}"
-  else
-    LOG_BYTES=$(stat -c%s "$WORKTREE_PATH/.amase-worker.log" 2>/dev/null || echo 0)
-    TOKENS_IN=$((LOG_BYTES / 4))
-    TOKENS_OUT=400
-  fi
+if [[ -f "$ORCHESTRATOR_DIR/scripts/extract_tokens.py" ]]; then
+  TOKEN_PAIR=$(python3 "$ORCHESTRATOR_DIR/scripts/extract_tokens.py" \
+    --repo "$TARGET_REPO" \
+    --task "$TASK_ID" \
+    --worktree "$WORKTREE_PATH" \
+    --start-time "$META_START" 2>/dev/null || echo "0 0")
+  TOKENS_IN="${TOKEN_PAIR%% *}"
+  TOKENS_OUT="${TOKEN_PAIR##* }"
 fi
+[[ -z "$TOKENS_IN" || ! "$TOKENS_IN" =~ ^[0-9]+$ || "$TOKENS_IN" -eq 0 ]] && TOKENS_IN=3500
+[[ -z "$TOKENS_OUT" || ! "$TOKENS_OUT" =~ ^[0-9]+$ || "$TOKENS_OUT" -eq 0 ]] && TOKENS_OUT=450
 
 # 5. Prune the worktree.
 echo "[+] Pruning worktree $WORKTREE_PATH..."

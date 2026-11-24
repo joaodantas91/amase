@@ -186,6 +186,16 @@ def main():
         print("  Run 'amase init' and complete tasks to generate telemetry.")
         sys.exit(1)
 
+    # Auto-backfill zero-token entries if any exist
+    try:
+        scripts_dir = os.path.dirname(os.path.abspath(__file__))
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        import extract_tokens
+        extract_tokens.backfill_telemetry(target_dir)
+    except Exception:
+        pass
+
     entries = []
     try:
         with open(telemetry_path, "r") as f:
