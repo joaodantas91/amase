@@ -326,7 +326,11 @@ def main(argv=None):
         symbols += len(syms)
         if args.include_symbols_only:
             for line in syms:
-                print(f"  {line}")
+                m = re.match(r'(.+)  L(\d+)$', line)
+                if m:
+                    print(f"{rel}: {m.group(1)} (L{m.group(2)})")
+                else:
+                    print(f"{rel}: {line}")
         else:
             print(f"{rel}: {nlines} lines")
             for line in syms:
