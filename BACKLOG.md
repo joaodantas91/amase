@@ -218,7 +218,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `README.md`.
   - **Criteria:** README.md contains Internal Script Reference section with all active scripts; .amase/test-gate.sh passes.
 
-- [ ] **TASK-43: GitHub Models Auto-Connector in fleet.py & start-proxy.sh**
+- [x] **TASK-43: GitHub Models Auto-Connector in fleet.py & start-proxy.sh**
   - **Goal:** In `scripts/fleet.py` and `scripts/start-proxy.sh`, auto-detect `GITHUB_TOKEN` or `gh auth token` and automatically route free requests to GitHub Models (`github/gpt-4o-mini`, `github/meta-llama-3.3-70b-instruct`) as a zero-config, zero-dollar cloud fleet member.
   - **Files:** `scripts/fleet.py`, `scripts/start-proxy.sh`.
   - **Criteria:** `python3 -c "import scripts.fleet; print('fleet imported')"` exits 0; LiteLLM config includes github routing when token present; .amase/test-gate.sh passes.
