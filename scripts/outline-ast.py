@@ -21,7 +21,8 @@ import sys
 SKIP_DIRS = {
     ".git", ".hg", ".svn", ".venv", "venv", "node_modules", "dist", "build",
     "out", "target", "__pycache__", ".mypy_cache", ".pytest_cache", ".tox",
-    ".worktrees", "coverage", ".next", ".nuxt", ".cache", "vendor",
+    ".worktrees", "coverage", ".next", ".nuxt", ".cache", "vendor", "skills",
+    ".agents", "repos",
 }
 
 SKIP_EXTS = {
@@ -304,6 +305,8 @@ def main(argv=None):
                         help="Maximum directory recursion depth")
     parser.add_argument("--include-empty", action="store_true",
                         help="Also list files that yield no symbols")
+    parser.add_argument("--include-symbols-only", action="store_true",
+                        help="Output only function signatures and interface contracts (minified skeleton)")
     args = parser.parse_args(argv)
 
     if not os.path.exists(args.target):
@@ -321,13 +324,20 @@ def main(argv=None):
         rel, nlines, syms = result
         files += 1
         symbols += len(syms)
-        print(f"{rel}: {nlines} lines")
-        for line in syms:
-            print(f"  {line}")
+        if args.include_symbols_only:
+            for line in syms:
+                print(f"  {line}")
+        else:
+            print(f"{rel}: {nlines} lines")
+            for line in syms:
+                print(f"  {line}")
     if files == 0:
         sys.stderr.write("outline-ast: no supported source files found\n")
         return 1
-    print(f"# {files} files, {symbols} symbols")
+    if args.include_symbols_only:
+        print(f"# {symbols} symbols")
+    else:
+        print(f"# {files} files, {symbols} symbols")
     return 0
 
 

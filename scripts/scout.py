@@ -9,9 +9,12 @@ import sys
 import json
 import urllib.request
 
-LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completions")
-API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
-MODEL = os.getenv("SCOUT_MODEL", "scout-fleet")
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, SCRIPTS_DIR)
+from fleet import query_fleet
+
+MODEL = os.getenv("SCOUT_MODEL", "opencode/nemotron-3.5-lightning-free")
 
 def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope_path=""):
     with open("/home/joao/dev/orchestrator/personas/scout.md", "r") as f:
@@ -40,53 +43,28 @@ def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope
     if scope:
         scope_section = f"\nPROJECT SCOPE BOUNDARIES (STRICTLY ENFORCE - REJECT FORBIDDEN AREAS):\n{scope}\n"
 
-    # CHISLE: send recent backlog tasks instead of 4000-word whole history
-    backlog_slice = backlog[-3500:] if len(backlog) > 3500 else backlog
+    # CHISLE: send compact slice of recent backlog
+    backlog_slice = backlog[-1200:] if len(backlog) > 1200 else backlog
 
-    user_prompt = f"""You are the Scout persona. Analyze this project's roadmap, current backlog, scope boundaries, and UX/UI Designer findings.
-Discover the next 2 logical, minimal vertical slice tasks needed for this web extension to advance towards real-world usability and ergonomic UI.
+    user_prompt = f"""You are the Scout persona. Analyze this project's scope boundaries and recent backlog.
+Discover the next 2 logical, minimal vertical slice tasks needed for this repository to advance.
 Tasks MUST strictly adhere to the ALLOWED areas in the project scope boundaries and MUST NOT violate any FORBIDDEN rules.
+Keep tasks minimal, atomic, and deterministic.
 
-ROADMAP:
-{roadmap[:3000]}
 {scope_section}
-{designer_section}
 RECENT BACKLOG:
 {backlog_slice}
 
-Respond ONLY with the markdown tasks ready for discovery triage, following the exact format:
-- [PROPOSAL] **TASK-XX: <Title>**
-  - **Scope Check:** ALLOWED
-  - **Goal:** <Goal>
+Respond ONLY with the markdown tasks ready for backlog triage, following the exact format:
+- [ ] **TASK-XX: <Title>**
+  - **Goal:** <Goal in 1 sentence>
   - **Files:** <Target files>
-  - **Criteria:** <Verification criteria>
+  - **Criteria:** <Deterministic verification test or command>
 """
 
-    payload = {
-        "model": MODEL,
-        "messages": [
-            {"role": "system", "content": scout_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 0.1,
-        "max_tokens": 2048
-    }
-
-    req = urllib.request.Request(
-        LITELLM_URL,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json"
-        }
-    )
-
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            msg = data["choices"][0]["message"]
-            content = msg.get("content") or msg.get("reasoning_content") or ""
-            return content.strip()
+        content = query_fleet(user_prompt, system_prompt=scout_prompt, model_hint=MODEL, title="AMASE: Scout")
+        return content.strip() if content else None
     except Exception as e:
         sys.stderr.write(f"Scout discovery failed: {e}\n")
         return None

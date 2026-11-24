@@ -11,9 +11,12 @@ import json
 import subprocess
 import urllib.request
 
-LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completions")
-API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
-MODEL = os.getenv("SENTINEL_MODEL", "sentinel-fleet")
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, SCRIPTS_DIR)
+from fleet import query_fleet
+
+MODEL = os.getenv("SENTINEL_MODEL", "opencode/nemotron-3.5-lightning-free")
 
 def run_audit(target_dir, base_ref="HEAD~1"):
     os.chdir(target_dir)
@@ -40,30 +43,12 @@ Format your response following the AUDIT.md contract:
 If clean, report 'Core invariants verified clean'.
 """
 
-    payload = {
-        "model": MODEL,
-        "messages": [
-            {"role": "system", "content": sentinel_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 0.1,
-        "max_tokens": 800
-    }
-
     try:
-        req = urllib.request.Request(
-            LITELLM_URL,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {API_KEY}",
-                "Content-Type": "application/json"
-            }
-        )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            result = data["choices"][0]["message"]["content"]
+        result = query_fleet(user_prompt, system_prompt=sentinel_prompt, model_hint=MODEL, title="AMASE: Sentinel")
+        if result:
             print(result)
             return result
+        return None
     except Exception as e:
         print(f"[-] Sentinel audit failed: {e}", file=sys.stderr)
         return None
