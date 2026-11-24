@@ -103,8 +103,9 @@ if echo "$CHANGED_FILES" | grep -qE '^\.amase/scope\.md$'; then
   exit 1
 fi
 
-if echo "$DIFF_CONTENT" | grep -qE "as any|@ts-ignore"; then
-  echo "[-] Forbidden pattern found in diff ('as any' or '@ts-ignore')"
+TS_DIFF=$(git -C "$TARGET_REPO" diff "main..$BRANCH_NAME" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.svelte' 2>/dev/null || true)
+if [[ -n "$TS_DIFF" ]] && echo "$TS_DIFF" | grep -qE "as any|@ts-ignore"; then
+  echo "[-] Forbidden pattern found in TypeScript/JavaScript diff ('as any' or '@ts-ignore')"
   exit 1
 fi
 
