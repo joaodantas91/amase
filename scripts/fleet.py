@@ -40,6 +40,33 @@ FREE_MODELS = [
     "opencode/mimo-v2.6-flash-free",
 ]
 
+# Upstream provider shards: distinct backends to prevent rate-limit (429) collisions during parallel execution
+PROVIDER_SHARDS = [
+    "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b",  # Shard 1: NVIDIA NIM
+    "opencode/beam-free",                            # Shard 2: Beam / OpenCode
+    "openrouter/openrouter/free",                    # Shard 3: OpenRouter Free
+    "opencode/nemotron-3.5-lightning-free",          # Shard 4: Alternative OpenCode pool
+    "opencode/deepseek-v4.1-flash-free",             # Shard 5: DeepSeek flash pool
+]
+
+
+def get_sharded_model(worker_index: int, total_workers: int = 2) -> str:
+    """
+    Return a distinct upstream provider model for a worker in a concurrent batch,
+    ensuring parallel workers do not trigger 429 rate limits against the same API key.
+    """
+    shards = list(PROVIDER_SHARDS)
+    
+    # If local Ollama coder is active, prioritize it as a zero-rate-limit shard
+    ollama_models = get_local_ollama_models()
+    coder_models = [m for m in ollama_models if "coder" in m.lower()]
+    if coder_models:
+        # Insert local Ollama coder into the shard rotation at index 1
+        shards.insert(1, f"ollama/{coder_models[0]}")
+    
+    return shards[worker_index % len(shards)]
+
+
 
 def get_local_ollama_models(host: str = OLLAMA_HOST):
     """Check if local Ollama daemon is reachable and return active model names."""

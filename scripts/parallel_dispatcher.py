@@ -15,6 +15,27 @@ import sys
 import time
 from pathlib import Path
 
+# Add repo root to sys.path so scripts.fleet can be imported
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+try:
+    from scripts.fleet import get_sharded_model
+except ImportError:
+    try:
+        from fleet import get_sharded_model
+    except ImportError:
+        def get_sharded_model(worker_index: int, total_workers: int = 2) -> str:
+            shards = [
+                "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b",
+                "opencode/beam-free",
+                "openrouter/openrouter/free"
+            ]
+            return shards[worker_index % len(shards)]
+
+
 
 def parse_pending_tasks(backlog_path: str):
     """Parse pending [ ] tasks from BACKLOG.md extracting task_id, title, and target files."""
@@ -45,7 +66,7 @@ def parse_pending_tasks(backlog_path: str):
                         raw_files = sub.split("**Files:**", 1)[1].strip()
                         # Extract files by splitting on commas, spaces, or backticks
                         for part in re.split(r'[,;\s]+', raw_files):
-                            clean = part.strip("`'\", ")
+                            clean = part.strip("`'\",. ")
                             if clean and clean not in ("and", "&", "or"):
                                 files.append(clean)
                     elif "**Goal:**" in sub:
@@ -108,9 +129,11 @@ def execute_parallel_batch(repo_dir: str, batch: list):
     print(f"\n[+] Preparing parallel batch with {len(batch)} tasks...")
     worker_pids = []
 
-    for task in batch:
+    for idx, task in enumerate(batch):
         tid = task["task_id"]
         title = task["title"]
+        shard_model = get_sharded_model(idx, len(batch))
+
         print(f"  [+] Provisioning worktree for {tid}...")
         prep_res = subprocess.run([run_task_bin, "--repo", repo_dir, "--task", tid], capture_output=True, text=True)
         if prep_res.returncode != 0:
@@ -120,18 +143,18 @@ def execute_parallel_batch(repo_dir: str, batch: list):
         worktree_path = os.path.join(repo_dir, ".worktrees", tid)
         prompt = f"Implement task {tid}: {title}. Verify all tests pass. When finished, commit changes with git."
 
-        print(f"  [+] Spawning worker for {tid}...")
-        proc = subprocess.Popen([dispatch_worker_bin, worktree_path, prompt])
-        worker_pids.append((tid, worktree_path, proc))
+        print(f"  [+] Spawning worker for {tid} (Provider Shard: {shard_model})...")
+        proc = subprocess.Popen([dispatch_worker_bin, worktree_path, prompt, shard_model])
+        worker_pids.append((tid, worktree_path, proc, shard_model))
 
     print(f"\n[+] Waiting for {len(worker_pids)} parallel workers to finish...")
-    for tid, wt_path, proc in worker_pids:
+    for tid, wt_path, proc, shard_model in worker_pids:
         proc.wait()
         print(f"  [✓] Worker for {tid} finished with exit code {proc.returncode}.")
 
     # Deterministic sequential settlement (disjoint diffs merge cleanly)
     print("\n[+] Settling tasks sequentially...")
-    for tid, wt_path, proc in worker_pids:
+    for tid, wt_path, proc, shard_model in worker_pids:
         print(f"  [+] Settling {tid}...")
         res = subprocess.run([settle_task_bin, "--repo", repo_dir, "--task", tid])
         if res.returncode == 0:
@@ -173,10 +196,12 @@ def main():
     for i, batch in enumerate(batches, 1):
         concurrency = "Concurrent" if len(batch) > 1 else "Sequential"
         print(f"Batch {i} ({concurrency}, {len(batch)} task{'s' if len(batch) > 1 else ''}):")
-        for t in batch:
+        for idx, t in enumerate(batch):
             files_str = ", ".join(t['files']) if t['files'] else "(unspecified / broad scope)"
+            shard_model = get_sharded_model(idx, len(batch))
             print(f"  [+] {t['task_id']}: {t['title']}")
-            print(f"      Target Files: {files_str}")
+            print(f"      Target Files:   {files_str}")
+            print(f"      Provider Shard: {shard_model}")
         print()
 
     if args.dry_run:
