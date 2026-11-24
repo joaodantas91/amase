@@ -139,7 +139,7 @@ if __name__ == "__main__":
         if args.backlog and os.path.exists(args.backlog):
             with open(args.backlog, "r") as f:
                 backlog_content = f.read()
-        existing_ids = extract_task_ids(backlog_content)
+            existing_ids = extract_task_ids(backlog_content)
         for block in task_blocks:
             if block["id"] not in existing_ids:
                 print(block["text"])
