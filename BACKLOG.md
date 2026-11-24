@@ -72,3 +72,13 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Enhance `scripts/settle-task.sh` post-merge sentinel hook to also detect common invariant violations (`as any`, `@ts-ignore`, raw hex colors in Svelte/WXT) and automatically prepend `TASK-INV-01` to `BACKLOG.md` for remediation.
   - **Files:** `scripts/settle-task.sh`.
   - **Criteria:** Post-merge hook detects invariant patterns in git diff and writes `TASK-INV-01` task to BACKLOG.md; passes `.amase/test-gate.sh`.
+
+- [ ] **TASK-14: Fix `--target-files` glob parsing in `scripts/outline-ast.py`**
+  - **Goal:** Split comma-separated glob patterns and match them against file paths in `iter_files()` so `--target-files` filters correctly and reduces worker prompt tokens.
+  - **Files:** `scripts/outline-ast.py`.
+  - **Criteria:** `python3 scripts/outline-ast.py . --target-files 'scripts/*.py'` outputs only `scripts/*.py` files and exits 0; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-15: Inject pre-commit hook into worktrees created by `scripts/run-task.sh`**
+  - **Goal:** Add the executable pre-commit hook (blocking forbidden files and `as any`/`@ts-ignore`) to `scripts/run-task.sh`, matching the mechanical enforcement already verified in `scripts/test-wiring.sh`.
+  - **Files:** `scripts/run-task.sh`.
+  - **Criteria:** `bash scripts/test-wiring.sh` passes end-to-end; `.amase/test-gate.sh` passes.
