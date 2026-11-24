@@ -444,6 +444,12 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/scout.py`, `BACKLOG.md`.
   - **Criteria:** Scout receives real file paths in prompt context; passes test-gate.
 
+- [ ] **TASK-85: Fix Scout NoneType Error when Roadmap File is Not Specified or Missing**
+  - **Goal:** In `scripts/scout.py`, safely handle `project_roadmap_path` / `roadmap_file` when it is `None` or absent in `discover_tasks()` to prevent `TypeError: stat: path should be string, bytes, os.PathLike or integer, not NoneType`.
+  - **Files:** `scripts/scout.py`, `BACKLOG.md`.
+  - **Criteria:** `scout.py` safely handles null roadmap without throwing TypeError; passes `.amase/test-gate.sh`.
+
+
 
 
 
