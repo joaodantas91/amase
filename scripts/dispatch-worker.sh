@@ -179,6 +179,7 @@ shift 6
 MODELS=("$@")
 
 cd "$WORKTREE"
+tty > "$WORKTREE/.amase-tty" 2>/dev/null || true
 
 OPENCODE_FREE_EXHAUSTED=0
 PREV_FAIL_ERROR=""
@@ -294,8 +295,9 @@ for MODEL in "${MODELS[@]}"; do
     exit 0
   fi
 
-  # If worker made uncommitted changes in worktree that pass test-gate cleanly, auto-commit
-  if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+  # If worker made uncommitted changes in worktree that pass test-gate cleanly, verify they are REAL functional code changes
+  REAL_CHANGES=$(git status --porcelain 2>/dev/null | grep -vE '^\?\?\s+\.amase|^\s*M\s+\.amase|\.amase_|telemetry\.jsonl' || true)
+  if [[ -n "$REAL_CHANGES" ]]; then
     GATE_SCRIPT="$WORKTREE/.amase/test-gate.sh"
     if [[ -x "$GATE_SCRIPT" ]] && "$GATE_SCRIPT" >/dev/null 2>&1; then
       echo ""

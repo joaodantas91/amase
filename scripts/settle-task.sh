@@ -112,6 +112,9 @@ if [[ -z "$SOURCE_CHANGES" ]]; then
   echo "[-] Settlement Error: No functional source or test code changes found on $BRANCH_NAME."
   echo "[-] Only internal governance/metadata files were modified: $(echo $CHANGED_FILES | tr '\n' ' ')"
   echo "[-] Rejecting empty settlement. Worker must implement actual code changes."
+  if [[ -f "$ORCHESTRATOR_DIR/scripts/diagnose-failure.py" ]]; then
+    python3 "$ORCHESTRATOR_DIR/scripts/diagnose-failure.py" "$TARGET_REPO" "$TASK_ID" "${META_MODEL:-unknown}" "" 0 "EMPTY_DIFF" 2>/dev/null || true
+  fi
   exit 1
 fi
 

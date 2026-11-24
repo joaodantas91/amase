@@ -98,6 +98,9 @@ fi
 if has_retro_sig "MODEL_ABORT"; then
   ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: ZERO COMMIT DETECTED PREVIOUSLY] You MUST make a git commit before exiting. If the requested feature is already implemented, add or expand a unit test verifying the criteria and commit.")
 fi
+if has_retro_sig "EMPTY_DIFF"; then
+  ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: EMPTY DIFF DETECTED PREVIOUSLY] You MUST modify functional source files (e.g. in src/, lib/) or test files (tests/). Settlement gate strictly rejects commits modifying only governance or metadata files (.amase-*, .md).")
+fi
 
 # Inject AST symbol outline into the agent prompt
 AST_SCRIPT="$ORCHESTRATOR_DIR/scripts/outline-ast.py"
@@ -176,6 +179,7 @@ if [[ "$ROLE" == "builder" ]]; then
   cat <<EOF
 ## BUILDER BOUNDARIES & FORBIDDEN ACTIONS:
 - ALLOWED: Edit source and test files relevant to the active task.
+- MANDATORY FUNCTIONAL EDITS: You MUST edit actual source files or test files to implement the task. Commits modifying only governance/metadata files (.amase-*, .md) are rejected by settlement.
 - MANDATORY EXHAUSTIVENESS: If you expand or modify shared types, unions, or enums, search and update ALL files across the repository that use them (switch statements, record mappings, type matches).
 - FORBIDDEN: NEVER modify dependency manifests (${MANIFEST_FILE:-project dependencies}) or add unapproved external packages without instruction.
 - FORBIDDEN: NEVER touch .amase/scope.md.

@@ -123,8 +123,16 @@ def main():
     except Exception:
         target_repo = worktree
 
-    if status_override == "SUCCESS":
-        record_retrospective(target_repo, task_id, model, "SUCCESS", "Task completed and verified clean.", duration_seconds=duration)
+    if status_override:
+        if status_override == "SUCCESS":
+            reason = "Task completed and verified clean."
+        elif status_override == "EMPTY_DIFF":
+            reason = "Settlement rejected: No functional source or test code changes found on branch."
+        elif status_override == "SETTLEMENT_REJECTED":
+            reason = "Settlement rejected: Worktree failed settlement gate verification."
+        else:
+            reason = f"Settlement rejected: {status_override}"
+        record_retrospective(target_repo, task_id, model, status_override, reason, duration_seconds=duration)
         sys.exit(0)
 
     signature, reason, metrics = diagnose_log(log_path, repo_dir=worktree)

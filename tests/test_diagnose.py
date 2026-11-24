@@ -63,6 +63,20 @@ class TestDiagnose(unittest.TestCase):
         sig, _, _ = diagnose.diagnose_log(log)
         self.assertEqual(sig, "MODEL_ABORT")
 
+    def test_record_retrospective_empty_diff(self):
+        retro_file = os.path.join(self.temp_dir.name, "retrospectives.jsonl")
+        orig_get_path = diagnose.get_global_retro_path
+        diagnose.get_global_retro_path = lambda: retro_file
+        try:
+            diagnose.record_retrospective(self.temp_dir.name, "TASK-INV-01", "builder-model", "EMPTY_DIFF", "No functional changes.")
+            self.assertTrue(os.path.exists(retro_file))
+            with open(retro_file) as f:
+                content = f.read()
+            self.assertIn("TASK-INV-01", content)
+            self.assertIn("EMPTY_DIFF", content)
+        finally:
+            diagnose.get_global_retro_path = orig_get_path
+
 
 if __name__ == "__main__":
     unittest.main()

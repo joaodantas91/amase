@@ -438,6 +438,9 @@ except Exception:
         break
       else
         echo "[-] Settlement rejected $TASK_ID (validation failed or empty diff). Cleaning worktree..."
+        if [[ -f "$SCRIPT_DIR/scripts/diagnose-failure.py" ]]; then
+          python3 "$SCRIPT_DIR/scripts/diagnose-failure.py" "$TARGET_DIR" "$TASK_ID" "settle-rejected" "" 0 "SETTLEMENT_REJECTED" 2>/dev/null || true
+        fi
         "$SCRIPT_DIR/scripts/abort-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID" 2>/dev/null || true
       fi
     else

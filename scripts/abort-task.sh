@@ -45,7 +45,15 @@ BRANCH_NAME="feature/$TASK_ID"
 
 echo "[+] Aborting task: $TASK_ID in $TARGET_REPO..."
 
-# 1. Terminate any running worker processes for this worktree gracefully, then force
+# 1. Close worker terminal tab if registered
+if [[ -f "$WORKTREE_PATH/.amase-tty" ]]; then
+  WORKER_TTY=$(cat "$WORKTREE_PATH/.amase-tty" 2>/dev/null | sed 's|/dev/||' || true)
+  if [[ -n "$WORKER_TTY" && "$WORKER_TTY" != "not a tty" ]]; then
+    pkill -HUP -t "$WORKER_TTY" 2>/dev/null || true
+  fi
+fi
+
+# 2. Terminate any running worker processes for this worktree gracefully, then force
 pkill -TERM -f "$WORKTREE_PATH" 2>/dev/null || true
 sleep 0.5
 pkill -9 -f "$WORKTREE_PATH" 2>/dev/null || true
