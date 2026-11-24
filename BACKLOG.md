@@ -223,7 +223,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/fleet.py`, `scripts/start-proxy.sh`.
   - **Criteria:** `python3 -c "import scripts.fleet; print('fleet imported')"` exits 0; LiteLLM config includes github routing when token present; .amase/test-gate.sh passes.
 
-- [ ] **TASK-44: Local Ollama Fallback Engine in fleet.py & doctor.py**
+- [x] **TASK-44: Local Ollama Fallback Engine in fleet.py & doctor.py**
   - **Goal:** In `scripts/fleet.py`, `scripts/doctor.py`, and `scripts/start-proxy.sh`, detect if local Ollama daemon is reachable on `localhost:11434`. If online, register `ollama/qwen2.5-coder:7b` (or active pulled models) into the fleet as an unlimited, 100% offline fallback tier; if offline, gracefully skip with auto-setup instructions in `amase doctor`.
   - **Files:** `scripts/fleet.py`, `scripts/doctor.py`, `scripts/start-proxy.sh`.
   - **Criteria:** `amase doctor` reports local Ollama status; `fleet.py` detects Ollama when active; .amase/test-gate.sh passes.
