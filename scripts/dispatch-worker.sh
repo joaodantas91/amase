@@ -19,6 +19,7 @@ fi
 
 OPENCODE_BIN="/home/joao/.bun/bin/opencode"
 PTYXIS_BIN="/usr/bin/ptyxis"
+ORCHESTRATOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Read config from worktree
 CONFIG_FILE="$WORKTREE/.amase/config.json"
@@ -98,7 +99,8 @@ OPENCODE_BIN="$2"
 LOG_FILE="$3"
 DONE_FILE="$4"
 INIT_COMMIT="$5"
-shift 5
+ORCHESTRATOR_DIR="$6"
+shift 6
 MODELS=("$@")
 
 cd "$WORKTREE"
@@ -150,9 +152,11 @@ for MODEL in "${MODELS[@]}"; do
   fi
 
   echo "[-] Model $MODEL did not commit. Failing over to next fleet model..."
+  python3 "$ORCHESTRATOR_DIR/scripts/diagnose-failure.py" "$WORKTREE" "$(basename "$WORKTREE")" "$MODEL" "$LOG_FILE" "$SUB_ELAPSED" 2>/dev/null || true
 done
 
 echo "[-] All fleet models exhausted."
+python3 "$ORCHESTRATOR_DIR/scripts/diagnose-failure.py" "$WORKTREE" "$(basename "$WORKTREE")" "fleet-exhausted" "$LOG_FILE" 2>/dev/null || true
 touch "$WORKTREE/.amase-failed"
 sleep 5
 exit 1
@@ -173,10 +177,10 @@ echo "========================================================"
 if [[ "$USE_GUI_TAB" == "1" && -x "$PTYXIS_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
   echo "[+] Opening single worker tab in Terminal (Ptyxis)..."
   "$PTYXIS_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- \
-    "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "${UNIQUE_FLEET[@]}" &
+    "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "$ORCHESTRATOR_DIR" "${UNIQUE_FLEET[@]}" &
 else
   echo "[+] Running worker in clean headless background (zero tab popups)..."
-  "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "${UNIQUE_FLEET[@]}" > "$LOG_FILE" 2>&1 &
+  "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "$ORCHESTRATOR_DIR" "${UNIQUE_FLEET[@]}" > "$LOG_FILE" 2>&1 &
 fi
 
 # Watchdog in coordinator session

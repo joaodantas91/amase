@@ -163,7 +163,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/stats.py`, `scripts/settle-task.sh`, `scripts/scout.py`, `scripts/fleet.py`.
   - **Criteria:** `amase stats` renders a multi-persona breakdown table displaying `ROLE`, `TOKENS IN`, `TOKENS OUT`, and `COST`; python3 -m py_compile scripts/stats.py exits 0; .amase/test-gate.sh passes.
 
-- [ ] **TASK-32: Failure Diagnostic Signatures & Post-Mortem Flight Recorder**
+- [x] **TASK-32: Failure Diagnostic Signatures & Post-Mortem Flight Recorder**
   - **Goal:** In `scripts/dispatch-worker.sh`, when an attempt fails or times out, analyze the run log to categorize the failure signature (`CONTEXT_BLOAT`, `COMPILER_ERROR`, `SOCKET_STALL`, `QUOTA_EXHAUSTED`). Write a structured post-mortem entry to `.amase/retrospectives.jsonl`.
   - **Files:** `scripts/dispatch-worker.sh`.
   - **Criteria:** A failed or timed-out worker run records a valid JSON record with failure signature and metrics to `.amase/retrospectives.jsonl`; bash -n scripts/dispatch-worker.sh exits 0; .amase/test-gate.sh passes.
