@@ -169,7 +169,11 @@ for MODEL in "${MODELS[@]}"; do
     sleep $(( (RANDOM % 15) / 10 ))
   fi
 
-  timeout --kill-after=5s 120s "$OPENCODE_BIN" run --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
+  if command -v stdbuf >/dev/null 2>&1; then
+    timeout --kill-after=5s 120s stdbuf -oL -eL "$OPENCODE_BIN" run --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
+  else
+    timeout --kill-after=5s 120s "$OPENCODE_BIN" run --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
+  fi
   WORKER_PID=$!
 
   # Sub-watchdog: checks every 1s for quota error (<1s) or timeout
@@ -298,17 +302,29 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
     exit 1
   fi
 
-  # Track log activity for heartbeat
+  # Track log activity for heartbeat across worker log and global opencode log
+  ACTIVE_OUTPUT=0
   if [[ -f "$LOG_FILE" ]]; then
     CURRENT_LOG_SIZE=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
     if [ "$CURRENT_LOG_SIZE" -gt "$LAST_LOG_SIZE" ]; then
       LAST_LOG_SIZE="$CURRENT_LOG_SIZE"
-      STALL_SECONDS=0
+      ACTIVE_OUTPUT=1
     fi
   fi
+  GLOBAL_LOG="$HOME/.local/share/opencode/log/opencode.log"
+  if [[ -f "$GLOBAL_LOG" ]]; then
+    CURRENT_GLOBAL_SIZE=$(stat -c%s "$GLOBAL_LOG" 2>/dev/null || echo 0)
+    if [ "$CURRENT_GLOBAL_SIZE" -gt "${LAST_GLOBAL_SIZE:-0}" ]; then
+      LAST_GLOBAL_SIZE="$CURRENT_GLOBAL_SIZE"
+      ACTIVE_OUTPUT=1
+    fi
+  fi
+  if [ "$ACTIVE_OUTPUT" -eq 1 ]; then
+    STALL_SECONDS=0
+  fi
 
-  if [ "$STALL_SECONDS" -ge 45 ]; then
-    echo "[-] Model stall detected (no output for 45s). Forcing failover..."
+  if [ "$STALL_SECONDS" -ge 90 ]; then
+    echo "[-] Model stall detected (no output or progress for 90s). Forcing failover..."
     pkill -P $(pgrep -f "$WORKTREE/.amase-run.sh") opencode 2>/dev/null || true
     STALL_SECONDS=0
   fi

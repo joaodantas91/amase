@@ -333,6 +333,12 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/init-project.sh`, `BACKLOG.md`.
   - **Criteria:** `~/.gemini/config/GEMINI.md` removed; `init-project.sh` scaffolds `AGENTS.md` with coordinator protocol; test gate passes.
 
+- [x] **TASK-66: Resilient Worker Heartbeat & Extended Watchdog Stall Threshold (90s)**
+  - **Goal:** In `scripts/dispatch-worker.sh`, increase stall threshold from 45s to 90s, use `stdbuf -oL -eL` for unbuffered log streaming, and monitor both local worker log and global OpenCode logs so free-fleet models with high queue/thinking latency are not prematurely killed by the watchdog.
+  - **Files:** `scripts/dispatch-worker.sh`, `BACKLOG.md`.
+  - **Criteria:** Watchdog stall threshold extended to 90s; multi-source log delta tracking; test gate passes.
+
+
 
 
 
