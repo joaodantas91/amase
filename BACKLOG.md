@@ -108,7 +108,12 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/scout.py`, `scripts/sentinel.py`, `scripts/designer.py`, `scripts/switch-model`.
   - **Criteria:** `python3 -c "import os, sys; sys.path.insert(0, 'scripts'); from scout import ORCHESTRATOR_ROOT; assert os.path.exists(os.path.join(ORCHESTRATOR_ROOT, 'personas', 'scout.md'))"` exits 0; `.amase/test-gate.sh` passes.
 
-- [ ] **TASK-21: Configurable Fleet Timeout and Svelte Pattern Guard in run-task.sh**
+- [ ] **TASK-21: Fix Sentinel Diff Retrieval & Add Deterministic Dry-Run**
+  - **Goal:** Populate diff in scripts/sentinel.py by running git -C <target> diff <base_ref> and add a --dry-run flag that prints the assembled prompt and exits 0 without calling the fleet, so Sentinel stops crashing with NameError.
+  - **Files:** scripts/sentinel.py.
+  - **Criteria:** python3 scripts/sentinel.py . HEAD~1 --dry-run exits 0 and stdout contains 'DIFF TO AUDIT:' with no NameError; python3 -m py_compile scripts/sentinel.py exits 0; .amase/test-gate.sh passes.
+
+- [ ] **TASK-22: Configurable Fleet Timeout and Svelte Pattern Guard in run-task.sh**
   - **Goal:** Add `FLEET_TIMEOUT` env override (default 120s) to `scripts/fleet.py` to prevent premature aborts on free model queues, and include `*.svelte` in `scripts/run-task.sh` pre-commit pattern check.
   - **Files:** `scripts/fleet.py`, `scripts/run-task.sh`.
   - **Criteria:** `python3 -c "import sys; sys.path.insert(0, 'scripts'); import fleet; assert getattr(fleet, 'DEFAULT_TIMEOUT', 120) >= 120"` exits 0; `grep -q '\*\.svelte' scripts/run-task.sh` exits 0; `.amase/test-gate.sh` passes.
