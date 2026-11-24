@@ -68,7 +68,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/outline-ast.py`.
   - **Criteria:** `--target-files` flag parses glob patterns and filters `iter_files()` output; passes `.amase/test-gate.sh`; generates symbol skeleton for filtered files only.
 
-- [ ] **TASK-13: Extend sentinel invariant detection in settle-task.sh**
+- [x] **TASK-13: Extend sentinel invariant detection in settle-task.sh**
   - **Goal:** Enhance `scripts/settle-task.sh` post-merge sentinel hook to also detect common invariant violations (`as any`, `@ts-ignore`, raw hex colors in Svelte/WXT) and automatically prepend `TASK-INV-01` to `BACKLOG.md` for remediation.
   - **Files:** `scripts/settle-task.sh`.
   - **Criteria:** Post-merge hook detects invariant patterns in git diff and writes `TASK-INV-01` task to BACKLOG.md; passes `.amase/test-gate.sh`.
