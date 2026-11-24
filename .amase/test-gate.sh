@@ -120,4 +120,20 @@ if [[ -z "$OUTPUT" ]] || ! echo "$OUTPUT" | grep -q "PROJECT SCOPE BOUNDARIES"; 
 fi
 echo "  ✓ generate-agent.sh passed dry-run"
 
+# 5. Optional UI Layout Fast-Gate (for frontend / web targets)
+UI_TARGET="${AMASE_UI_URL:-}"
+if [[ -z "$UI_TARGET" && -f ".amase/config.json" ]]; then
+  UI_TARGET=$(jq -r '.ui.target_url // empty' ".amase/config.json" 2>/dev/null || true)
+fi
+
+if [[ -n "$UI_TARGET" ]]; then
+  echo "[+] Running AMASE UI Fast-Gate on $UI_TARGET..."
+  if command -v amase >/dev/null 2>&1; then
+    amase ui-check "$UI_TARGET"
+  elif [[ -f "scripts/ui_validator.py" ]]; then
+    python3 scripts/ui_validator.py "$UI_TARGET"
+  fi
+  echo "  ✓ UI layout check passed"
+fi
+
 echo "[+] AMASE Orchestrator Test Gate passed with exit code 0."

@@ -30,6 +30,10 @@ cat > "$TARGET_DIR/.amase/config.json" <<'CONFIG'
   "mode": "autonomous",
   "concurrency": "sequential",
   "model_tier": "free",
+  "ui": {
+    "builder_visible_tab": true,
+    "target_url": ""
+  },
   "discovery": {
     "enabled": true,
     "max_slices": 2
@@ -88,6 +92,16 @@ if command -v bun >/dev/null 2>&1; then
   fi
 else
   npm test
+fi
+
+# Optional UI Fast-Gate
+UI_TARGET="${AMASE_UI_URL:-}"
+if [[ -z "$UI_TARGET" && -f ".amase/config.json" ]]; then
+  UI_TARGET=$(jq -r '.ui.target_url // empty' ".amase/config.json" 2>/dev/null || true)
+fi
+if [[ -n "$UI_TARGET" ]] && command -v amase >/dev/null 2>&1; then
+  echo "[+] Running AMASE UI Fast-Gate on $UI_TARGET..."
+  amase ui-check "$UI_TARGET"
 fi
 GATE
     ;;
