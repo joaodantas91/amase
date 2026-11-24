@@ -113,7 +113,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** scripts/sentinel.py.
   - **Criteria:** python3 scripts/sentinel.py . HEAD~1 --dry-run exits 0 and stdout contains 'DIFF TO AUDIT:' with no NameError; python3 -m py_compile scripts/sentinel.py exits 0; .amase/test-gate.sh passes.
 
-- [ ] **TASK-22: Project-Level Governance Configuration (.amase/config.json) & Manual Mode Gate**
+- [x] **TASK-22: Project-Level Governance Configuration (.amase/config.json) & Manual Mode Gate**
   - **Goal:** Create default  defining  ('manual' | 'autonomous'),  ('free' | 'pro'),  ('enabled': false), and  ('builder_visible_tab': true). Update [-] Error: /home/joao is not a git repository. and  to read this config. When  is 'manual' or  is false, [-] Error: /home/joao is not a git repository. halts cleanly with exit 0 when no tasks remain. Add  command.
   - **Files:** , [-] Error: /home/joao is not a git repository., .
   - **Criteria:**  prints valid JSON; when  is manual, [-] Error: /home/joao is not a git repository. exits 0 on empty queue without invoking Scout;  exits 0;  passes.
