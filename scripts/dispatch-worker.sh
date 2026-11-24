@@ -288,10 +288,15 @@ for MODEL in "${MODELS[@]}"; do
 
   if [ "$LAST_COMMIT" -gt "$INIT_COMMIT" ]; then
     echo ""
-    echo "[+] Task completed successfully by $MODEL!"
+    echo "=========================================================="
+    echo " [✓] TASK COMPLETED BY $MODEL"
+    echo " [✓] Commit: $(git log -1 --oneline)"
+    echo " [✓] Files changed:"
+    git diff-tree --no-commit-id --name-status -r HEAD | sed 's/^/      /'
+    echo "=========================================================="
     touch "$DONE_FILE"
-    echo "[+] Auto-closing tab in 2s..."
-    sleep 2
+    echo "[+] Auto-closing worker tab in 3s..."
+    sleep 3
     exit 0
   fi
 
@@ -301,12 +306,18 @@ for MODEL in "${MODELS[@]}"; do
     GATE_SCRIPT="$WORKTREE/.amase/test-gate.sh"
     if [[ -x "$GATE_SCRIPT" ]] && "$GATE_SCRIPT" >/dev/null 2>&1; then
       echo ""
-      echo "[+] Worker changes passed test gate cleanly! Auto-committing on behalf of $MODEL..."
+      echo "=========================================================="
+      echo " [+] Worker changes passed test gate cleanly!"
+      echo " [+] Auto-committing on behalf of $MODEL..."
       git add -A
       git commit -m "feat($(basename "$WORKTREE")): completed by $MODEL"
+      echo " [✓] Commit: $(git log -1 --oneline)"
+      echo " [✓] Files changed:"
+      git diff-tree --no-commit-id --name-status -r HEAD | sed 's/^/      /'
+      echo "=========================================================="
       touch "$DONE_FILE"
-      echo "[+] Auto-closing tab in 2s..."
-      sleep 2
+      echo "[+] Auto-closing worker tab in 3s..."
+      sleep 3
       exit 0
     fi
   fi
