@@ -283,7 +283,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `.amase/test-gate.sh`, `scripts/init-project.sh`.
   - **Criteria:** `test-gate.sh` can optionally invoke `amase ui-check` for web targets; .amase/test-gate.sh passes.
 
-- [ ] **TASK-56: OpenCode SQLite Connection Retry & WAL Pragma Auto-Tuner**
+- [x] **TASK-56: OpenCode SQLite Connection Retry & WAL Pragma Auto-Tuner**
   - **Goal:** In `scripts/dispatch-worker.sh` and `scripts/doctor.py`, add automated SQLite retry loops with exponential backoff on `SQLITE_BUSY` errors, ensuring high-concurrency worker execution never drops database commits.
   - **Files:** `scripts/dispatch-worker.sh`, `scripts/doctor.py`.
   - **Criteria:** `dispatch-worker.sh` includes retry logic for busy SQLite state; `amase doctor` verifies busy_timeout setting; .amase/test-gate.sh passes.
