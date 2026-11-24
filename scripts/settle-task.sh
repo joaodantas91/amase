@@ -84,7 +84,12 @@ if [[ ! -x "$WORKTREE_PATH/.amase/test-gate.sh" ]]; then
   echo "[-] Error: .amase/test-gate.sh not found or not executable in $WORKTREE_PATH"
   exit 1
 fi
-echo "[+] Running .amase/test-gate.sh in worktree..."
+echo "[+] Running targeted test gate in worktree..."
+(cd "$WORKTREE_PATH" && ./.amase/test-gate.sh --diff-only) || {
+  echo "[-] Targeted test gate failed in worktree $WORKTREE_PATH"
+  exit 1
+}
+echo "[+] Running full .amase/test-gate.sh in worktree..."
 (cd "$WORKTREE_PATH" && ./.amase/test-gate.sh) || {
   echo "[-] Test gate failed in worktree $WORKTREE_PATH"
   exit 1

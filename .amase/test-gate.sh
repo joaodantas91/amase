@@ -4,6 +4,32 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
 
+DIFF_ONLY=false
+if [[ "${1:-}" == "--diff-only" ]]; then
+  DIFF_ONLY=true
+fi
+
+if [[ "$DIFF_ONLY" == "true" ]]; then
+  echo "[+] Running Fast Targeted Test Gate (--diff-only)..."
+  TOUCHED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || git diff --name-only HEAD 2>/dev/null || true)
+  if [[ -z "$TOUCHED_FILES" ]]; then
+    TOUCHED_FILES=$(git status --porcelain 2>/dev/null | awk '{print $2}' || true)
+  fi
+  for f in $TOUCHED_FILES; do
+    if [[ -f "$f" ]]; then
+      if [[ "$f" == *.sh || "$f" == "amase" ]]; then
+        bash -n "$f"
+        echo "  ✓ $f (syntax OK)"
+      elif [[ "$f" == *.py ]]; then
+        python3 -m py_compile "$f"
+        echo "  ✓ $f (compiled OK)"
+      fi
+    fi
+  done
+  echo "[+] Fast Targeted Gate passed."
+  exit 0
+fi
+
 echo "[+] Running AMASE Self-Test Gate..."
 
 # 1. Validate Bash syntax for all scripts

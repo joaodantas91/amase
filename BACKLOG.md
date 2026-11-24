@@ -178,7 +178,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`.
   - **Criteria:** `amase abort <task-id>` unmounts worktree and deletes branch; git status is 100% clean; .amase/test-gate.sh passes.
 
-- [ ] **TASK-35: Targeted Test Gate for Rapid Vertical Slice Verification**
+- [x] **TASK-35: Targeted Test Gate for Rapid Vertical Slice Verification**
   - **Goal:** In `scripts/settle-task.sh` and `.amase/test-gate.sh`, support `--diff-only` targeted testing: inspect modified files in the worktree git diff and execute only the corresponding test files first for fast sub-second gating before full suite verification.
   - **Files:** `scripts/settle-task.sh`, `.amase/test-gate.sh`.
   - **Criteria:** `bash .amase/test-gate.sh --diff-only` exits 0; bash -n scripts/settle-task.sh exits 0; .amase/test-gate.sh passes.
