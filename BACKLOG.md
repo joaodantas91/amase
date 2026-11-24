@@ -63,7 +63,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/settle-task.sh`.
   - **Criteria:** Post-merge hook catches simulated vulnerability and writes task to backlog; passes test gate.
 
-- [ ] **TASK-12: Enhance outline-ast.py with --target-files pattern filtering**
+- [x] **TASK-12: Enhance outline-ast.py with --target-files pattern filtering**
   - **Goal:** Add a `--target-files` flag to `scripts/outline-ast.py` that accepts comma-separated glob patterns, allowing selective symbol extraction for specific file sets (e.g., only `src/` or only `*.svelte`), reducing worker prompt tokens by targeting only relevant files.
   - **Files:** `scripts/outline-ast.py`.
   - **Criteria:** `--target-files` flag parses glob patterns and filters `iter_files()` output; passes `.amase/test-gate.sh`; generates symbol skeleton for filtered files only.

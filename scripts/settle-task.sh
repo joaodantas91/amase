@@ -142,7 +142,7 @@ fi
 
 # Commit AUDIT.md if it was created and contains output
 if [[ -f "$AUDIT_FILE" ]] && [[ -s "$AUDIT_FILE" ]]; then
-  echo "[+] Committing $AUDIT.md..."
+  echo "[+] Committing AUDIT.md..."
   git -C "$TARGET_REPO" add "$AUDIT_FILE"
   git -C "$TARGET_REPO" -c user.name="AMASE Settle" -c user.email="settle@amase.local" \
     commit -m "chore(settle): add sentinel audit output to AUDIT.md" >/dev/null 2>&1 || true

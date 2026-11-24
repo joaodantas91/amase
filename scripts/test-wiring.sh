@@ -91,7 +91,7 @@ cat > "$MAIN_HOOK" << 'HOOK'
 #!/usr/bin/env bash
 set -euo pipefail
 FORBIDDEN_FILES="package.json .amase/scope.md"
-FORBIDDEN_PATTERNS="as any|@ts-ignore"
+FORBIDDEN_PATTERNS=("as any" "@ts-ignore")
 STAGED_FILES=$(git diff --cached --name-only 2>/dev/null || true)
 if [[ -n "$STAGED_FILES" ]]; then
   for f in $FORBIDDEN_FILES; do
@@ -100,12 +100,15 @@ if [[ -n "$STAGED_FILES" ]]; then
       exit 1
     fi
   done
-  for pattern in $FORBIDDEN_PATTERNS; do
-    if git diff --cached 2>/dev/null | grep -qE "$pattern"; then
-      echo "[-] BLOCKED: Forbidden pattern '$pattern' found in staged changes." >&2
-      exit 1
-    fi
-  done
+  TS_DIFF=$(git diff --cached -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.svelte' 2>/dev/null || true)
+  if [[ -n "$TS_DIFF" ]]; then
+    for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
+      if echo "$TS_DIFF" | grep -qE "$pattern"; then
+        echo "[-] BLOCKED: Forbidden pattern '$pattern' found in staged changes." >&2
+        exit 1
+      fi
+    done
+  fi
 fi
 exit 0
 HOOK
