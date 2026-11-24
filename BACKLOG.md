@@ -253,7 +253,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/run-task.sh`, `.agents/skills/amase-invariants/SKILL.md`.
   - **Criteria:** `amase` respects `concurrency: parallel` setting in loop; .amase/test-gate.sh passes.
 
-- [ ] **TASK-50: Deterministic Headless UI Layout & Collision Inspector (scripts/ui_heuristics.js)**
+- [x] **TASK-50: Deterministic Headless UI Layout & Collision Inspector (scripts/ui_heuristics.js)**
   - **Goal:** Create `scripts/ui_heuristics.js`, an in-browser evaluation script executed via headless Playwright/Puppeteer. Deterministically detect horizontal viewport overflows (elements spilling out of 375px mobile or desktop viewports), bounding-box collisions/overlaps between interactive elements, and zero-size click targets without sending any images or DOM dumps to LLMs (0 tokens).
   - **Files:** `scripts/ui_heuristics.js`.
   - **Criteria:** Node evaluation test detects simulated element collisions and overflow; .amase/test-gate.sh passes.
