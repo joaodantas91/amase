@@ -109,7 +109,6 @@ def extract_task_blocks(text):
 
 if __name__ == "__main__":
     import argparse
-    import glob
     import sys
 
     parser = argparse.ArgumentParser(description="Scout Persona Discovery")
@@ -147,13 +146,14 @@ if __name__ == "__main__":
 
     roadmap_file = args.roadmap
     if not roadmap_file:
-        # Auto-detect from joao-os based on current folder name
-        project_name = os.path.basename(os.getcwd()).lower()
-        candidates = glob.glob(f"/home/joao/dev/joao-os/40 Projetos/*{project_name}*.md")
-        if candidates:
-            roadmap_file = candidates[0]
-        else:
+        # Check SCOUT_ROADMAP_DIR env var first
+        scout_roadmap = os.getenv("SCOUT_ROADMAP_DIR")
+        if scout_roadmap and os.path.exists(scout_roadmap):
+            roadmap_file = scout_roadmap
+        elif os.path.exists(os.path.join(os.getcwd(), "ROADMAP.md")):
             roadmap_file = os.path.join(os.getcwd(), "ROADMAP.md")
+        else:
+            roadmap_file = None
 
     designer_text = ""
     if args.designer_review:

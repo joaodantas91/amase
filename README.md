@@ -59,7 +59,7 @@ To run an autonomous agent task safely on an isolated branch without polluting `
 
 ```bash
 ./scripts/run-task.sh \
-  --repo /home/joao/dev/kandidat \
+  --repo <repository-path> \
   --task autofill-popup-trigger \
   --test-cmd "bunx vitest run"
 ```
@@ -77,6 +77,6 @@ To run an autonomous agent task safely on an isolated branch without polluting `
 ---
 
 ## 3. Sub-Agent Specification Directory
-- Single Source of Truth documentation: `joao-os/40 Projetos/Autonomous Agent Swarm - SSOT.md`
+- Single Source of Truth documentation: `.amase/scope.md` (local roadmap)
 - Prompt directives: `prompts/caveman.md`, `prompts/ponytail.md`, `prompts/chisle.md`
 - Configuration: `config/litellm-config.yaml`
