@@ -238,7 +238,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/init-project.sh`, `.amase/config.json`.
   - **Criteria:** Default concurrency is `"sequential"`; `amase config --concurrency` outputs current setting; `amase config --set-concurrency parallel` toggles properly; .amase/test-gate.sh passes.
 
-- [ ] **TASK-47: Provider-Sharded Fleet Load Balancer for Parallel Workers (Anti-429)**
+- [x] **TASK-47: Provider-Sharded Fleet Load Balancer for Parallel Workers (Anti-429)**
   - **Goal:** In `scripts/parallel_dispatcher.py` and `scripts/fleet.py`, implement upstream provider sharding for concurrent workers. Assign distinct provider endpoints across workers in the same batch (e.g. Worker 1 -> Groq, Worker 2 -> NVIDIA NIM, Worker 3 -> GitHub Models / Ollama) so parallel workers never collide on provider rate limits or trigger 429 errors.
   - **Files:** `scripts/parallel_dispatcher.py`, `scripts/fleet.py`.
   - **Criteria:** `parallel_dispatcher.py` assigns unique provider targets per concurrent worker; .amase/test-gate.sh passes.
