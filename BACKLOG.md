@@ -142,3 +142,8 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** In `scripts/dispatch-worker.sh`, monitor `~/.local/share/opencode/log/opencode.log` to detect `"Free usage limit reached"` instantly (<1s) and SIGKILL opencode without waiting for timeouts. In `scripts/fleet.py`, add automatic stdlib `urllib.request` failover to Groq (`openai/gpt-oss-120b`) using `GROQ_API_KEY` from `.env` so child personas (Sentinel, Scout, Designer) never stall when OpenCode free pool is exhausted.
   - **Files:** `scripts/dispatch-worker.sh`, `scripts/fleet.py`.
   - **Criteria:** `python3 -c "import sys; sys.path.insert(0, 'scripts'); from fleet import query_fleet; res = query_fleet('Say test in one word'); assert len(res) > 0"` exits 0 and returns valid text; `bash -n scripts/dispatch-worker.sh` exits 0; `.amase/test-gate.sh` passes.
+
+- [x] **TASK-28: Symlink Resolution in amase CLI Wrapper for Global PATH Execution**
+  - **Goal:** Update `SCRIPT_DIR` resolution in `amase` using `readlink -f` so invoking `amase` via symlinks in `$PATH` (e.g. `~/.local/bin/amase stats`, `config`, etc.) cleanly finds orchestrator helper scripts without requiring `cd /home/joao/dev/orchestrator`.
+  - **Files:** `amase`.
+  - **Criteria:** `amase stats` and `amase config --show` succeed from any arbitrary directory; `bash -n amase` exits 0; `.amase/test-gate.sh` passes.
