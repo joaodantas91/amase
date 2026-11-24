@@ -29,6 +29,13 @@ if [ -f "$CONFIG_FILE" ]; then
   BUILDER_VISIBLE_TAB=$(jq -r '.ui.builder_visible_tab // true' "$CONFIG_FILE" 2>/dev/null || echo "true")
 fi
 
+# If builder visible tab is disabled, run headless
+if [[ "$BUILDER_VISIBLE_TAB" == "false" ]]; then
+  USE_GUI_TAB=0
+else
+  USE_GUI_TAB="${AMASE_GUI_TAB:-1}"
+fi
+
 # Ordered $0 Free Fleet (best performers first)
 FLEET_MODELS=(
   "$REQUESTED_MODEL"
@@ -38,6 +45,15 @@ FLEET_MODELS=(
   "opencode/flint-40b-free"
   "opencode/mimo-v2.6-flash-free"
 )
+
+# If pro tier, prepend pro models
+if [[ "$MODEL_TIER" == "pro" ]]; then
+  FLEET_MODELS=(
+    "opencode/gemini-2.5-pro"
+    "opencode/claude-3-5-sonnet"
+    "${FLEET_MODELS[@]}"
+  )
+fi
 
 # Deduplicate
 UNIQUE_FLEET=()
@@ -113,7 +129,7 @@ echo "[+] Timestamp: $(date -Iseconds)"
 echo "========================================================"
 
 # Launch worker in dedicated visible Ptyxis tab by default
-USE_GUI_TAB="${AMASE_GUI_TAB:-1}"
+: "${USE_GUI_TAB:=${AMASE_GUI_TAB:-1}}"
 if [[ "$USE_GUI_TAB" == "1" && -x "$PTYXIS_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
   echo "[+] Opening single worker tab in Terminal (Ptyxis)..."
   "$PTYXIS_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- \

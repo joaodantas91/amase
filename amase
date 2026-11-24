@@ -8,6 +8,11 @@
 # ==============================================================================
 set -euo pipefail
 
+# Set TARGET_DIR early if not already set (for subcommands like 'config')
+if [[ -z "${TARGET_DIR:-}" ]]; then
+  TARGET_DIR="$(pwd)"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ "${1:-}" == "init" ]]; then
@@ -28,7 +33,10 @@ fi
 
 if [[ "${1:-}" == "config" ]]; then
   shift
-  CONFIG_FILE="$SCRIPT_DIR/.amase/config.json"
+  CONFIG_FILE="$TARGET_DIR/.amase/config.json"
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    CONFIG_FILE="$SCRIPT_DIR/.amase/config.json"
+  fi
   if [[ "${1:-}" == "--show" ]]; then
     if [ -f "$CONFIG_FILE" ]; then
       cat "$CONFIG_FILE"
@@ -107,7 +115,10 @@ while true; do
 
   # 2. Autonomous Backlog Lookahead (Top up if fewer than 3 tasks remain)
   # Check config.json for mode and discovery settings
-  CONFIG_FILE="$SCRIPT_DIR/../.amase/config.json"
+  CONFIG_FILE="$TARGET_DIR/.amase/config.json"
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    CONFIG_FILE="$SCRIPT_DIR/.amase/config.json"
+  fi
   MODE=$(jq -r '.mode // "manual"' "$CONFIG_FILE" 2>/dev/null || echo "manual")
   DISCOVERY_ENABLED=$(jq -r '.discovery.enabled // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
 
