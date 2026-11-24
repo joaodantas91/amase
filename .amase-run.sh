@@ -5,7 +5,8 @@ WORKTREE="$1"
 OPENCODE_BIN="$2"
 LOG_FILE="$3"
 DONE_FILE="$4"
-shift 4
+INIT_COMMIT="$5"
+shift 5
 MODELS=("$@")
 
 cd "$WORKTREE"
@@ -22,7 +23,6 @@ for MODEL in "${MODELS[@]}"; do
 
   # If git commit made, we are done
   LAST_COMMIT=$(git log -1 --format="%ct" 2>/dev/null || echo 0)
-  INIT_COMMIT=$(cat "$WORKTREE/.amase-init-commit.txt" 2>/dev/null || echo 0)
 
   if [ "$LAST_COMMIT" -gt "$INIT_COMMIT" ]; then
     echo ""

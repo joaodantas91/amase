@@ -1,0 +1,12 @@
+{
+  "mode": "manual",
+  "model_tier": "free",
+  "discovery": {
+    "enabled": false,
+    "max_slices": 2
+  },
+  "ui": {
+    "builder_visible_tab": true,
+    "headless_analyzers": true
+  }
+}

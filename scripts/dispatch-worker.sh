@@ -20,6 +20,15 @@ fi
 OPENCODE_BIN="/home/joao/.bun/bin/opencode"
 PTYXIS_BIN="/usr/bin/ptyxis"
 
+# Read config from worktree
+CONFIG_FILE="$WORKTREE/.amase/config.json"
+MODEL_TIER="free"
+BUILDER_VISIBLE_TAB=true
+if [ -f "$CONFIG_FILE" ]; then
+  MODEL_TIER=$(jq -r '.model_tier // "free"' "$CONFIG_FILE" 2>/dev/null || echo "free")
+  BUILDER_VISIBLE_TAB=$(jq -r '.ui.builder_visible_tab // true' "$CONFIG_FILE" 2>/dev/null || echo "true")
+fi
+
 # Ordered $0 Free Fleet (best performers first)
 FLEET_MODELS=(
   "$REQUESTED_MODEL"

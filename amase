@@ -26,6 +26,45 @@ if [[ "${1:-}" == "test-wiring" ]]; then
   exec "$SCRIPT_DIR/scripts/test-wiring.sh" "${1:-$(pwd)}"
 fi
 
+if [[ "${1:-}" == "config" ]]; then
+  shift
+  CONFIG_FILE="$SCRIPT_DIR/.amase/config.json"
+  if [[ "${1:-}" == "--show" ]]; then
+    if [ -f "$CONFIG_FILE" ]; then
+      cat "$CONFIG_FILE"
+    else
+      echo "[]"
+    fi
+    exit 0
+  fi
+  if [[ "${1:-}" == "--model-tier" ]]; then
+    if [ -f "$CONFIG_FILE" ]; then
+      jq -r '.model_tier // "free"' "$CONFIG_FILE" 2>/dev/null || echo "free"
+    else
+      echo "free"
+    fi
+    exit 0
+  fi
+  if [[ "${1:-}" == "--mode" ]]; then
+    if [ -f "$CONFIG_FILE" ]; then
+      jq -r '.mode // "manual"' "$CONFIG_FILE" 2>/dev/null || echo "manual"
+    else
+      echo "manual"
+    fi
+    exit 0
+  fi
+  if [[ "${1:-}" == "--discovery" ]]; then
+    if [ -f "$CONFIG_FILE" ]; then
+      jq -r '.discovery.enabled // false' "$CONFIG_FILE" 2>/dev/null || echo "false"
+    else
+      echo "false"
+    fi
+    exit 0
+  fi
+  echo "Usage: amase config [--show|--model-tier|--mode|--discovery]"
+  exit 1
+fi
+
 TARGET_DIR="${1:-$(pwd)}"
 cd "$TARGET_DIR"
 
@@ -67,10 +106,19 @@ while true; do
   fi
 
   # 2. Autonomous Backlog Lookahead (Top up if fewer than 3 tasks remain)
+  # Check config.json for mode and discovery settings
+  CONFIG_FILE="$SCRIPT_DIR/../.amase/config.json"
+  MODE=$(jq -r '.mode // "manual"' "$CONFIG_FILE" 2>/dev/null || echo "manual")
+  DISCOVERY_ENABLED=$(jq -r '.discovery.enabled // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
+
   PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
   if [ "$PENDING_COUNT" -lt 3 ]; then
-    echo "[!] Backlog running low ($PENDING_COUNT pending). Triggering Scout expansion..."
-    "$SCRIPT_DIR/scripts/scout.py" --backlog "$BACKLOG_FILE" | python3 scripts/scout.py --sanitize --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE" || true
+    if [[ "$MODE" == "manual" || "$DISCOVERY_ENABLED" == "false" ]]; then
+      echo "[!] Backlog running low ($PENDING_COUNT pending). Scout disabled (mode=manual or discovery.enabled=false)."
+    else
+      echo "[!] Backlog running low ($PENDING_COUNT pending). Triggering Scout expansion..."
+      "$SCRIPT_DIR/scripts/scout.py" --backlog "$BACKLOG_FILE" | python3 scripts/scout.py --sanitize --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE" || true
+    fi
     PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
   fi
 
