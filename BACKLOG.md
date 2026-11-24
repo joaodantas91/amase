@@ -263,7 +263,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/ui_network_audit.py`.
   - **Criteria:** `python3 scripts/ui_network_audit.py --help` exits 0; captures mock network/console errors; .amase/test-gate.sh passes.
 
-- [ ] **TASK-52: Compact CHISLE UI Token Condenser & CLI (amase ui-check)**
+- [x] **TASK-52: Compact CHISLE UI Token Condenser & CLI (amase ui-check)**
   - **Goal:** Create `scripts/ui_formatter.py` and CLI subcommand `amase ui-check <url>` integrating heuristics, network audit, and a strict <150-token markdown condenser. Formats layout overlaps and broken assets into concise, actionable selector coordinates for worker agents.
   - **Files:** `scripts/ui_formatter.py`, `scripts/ui_validator.py`, `amase`.
   - **Criteria:** `amase ui-check --help` exits 0; mock failure output is under 150 tokens; .amase/test-gate.sh passes.
