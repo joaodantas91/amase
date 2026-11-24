@@ -131,3 +131,8 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Scrub all hardcoded private vault references (`joao-os`, `/home/joao/dev/joao-os`) from `README.md`, `scripts/scout.py`, and `scripts/designer.py` to make the repository fully portable. Rewrite `README.md` with complete documentation for the modern `amase` CLI (`init`, `config`, `task`, `stats`, `test-wiring`, and loop execution), configuration governance (`.amase/config.json`), and $0 fleet execution.
   - **Files:** `README.md`, `scripts/scout.py`, `scripts/designer.py`.
   - **Criteria:** `grep -rn 'joao-os' README.md scripts/` returns no matches (exit 1); `python3 -m py_compile scripts/scout.py scripts/designer.py` exits 0; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-25: Dedicated Visible Ptyxis Tab for Sentinel Security Audits**
+  - **Goal:** Update `.amase/config.json` with `"headless_analyzers": false` and `"sentinel_visible_tab": true`. Update `scripts/settle-task.sh` to check this configuration and launch Sentinel in a visible Ptyxis terminal tab (`/usr/bin/ptyxis --tab`) displaying live audit stream to `$AUDIT_FILE`, auto-closing cleanly upon audit completion.
+  - **Files:** `.amase/config.json`, `scripts/settle-task.sh`.
+  - **Criteria:** `bash -n scripts/settle-task.sh` exits 0; `grep -q 'PTYXIS_BIN' scripts/settle-task.sh` exits 0; `scripts/test-wiring.sh` passes; `.amase/test-gate.sh` passes.
