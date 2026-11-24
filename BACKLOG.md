@@ -399,6 +399,52 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `tests/__init__.py`, `tests/test_quota_manager.py`, `tests/test_scout.py`, `tests/test_diagnose.py`, `tests/test_status.py`, `scripts/scout.py`, `scripts/diagnose-failure.py`, `.amase/test-gate.sh`, `BACKLOG.md`.
   - **Criteria:** 16 unit tests pass in ~1.1s; test gate passes cleanly with exit code 0.
 
+- [x] **TASK-76: Suppress OpenCode Info Logs in Visible Worker Tab**
+  - **Goal:** Run OpenCode with `--log-level WARN --print-logs` so stdout only displays essential agent actions, diffs, and warnings rather than noisy framework internals.
+  - **Files:** `scripts/dispatch-worker.sh`, `BACKLOG.md`.
+  - **Criteria:** Visible worker terminal displays only meaningful agent progress.
+
+- [x] **TASK-77: Graceful Abort & Tab Cleanup on Fleet Exhaustion**
+  - **Goal:** Handle full fleet exhaustion cleanly without SIGKILL/Signal 9 crashes; ensure failed worker terminal tabs close cleanly and prevent zombie tabs on retry.
+  - **Files:** `scripts/abort-task.sh`, `scripts/dispatch-worker.sh`, `BACKLOG.md`.
+  - **Criteria:** `abort-task.sh` cleanly terminates worker processes with `pkill -TERM`, removes worktrees and branches without errors.
+
+- [x] **TASK-78: Automated Token Context Injection & Settlement UI Validator**
+  - **Goal:** Wire design token injection into `scripts/generate-agent.sh` and add automated UI validation gate in `scripts/settle-task.sh`.
+  - **Files:** `scripts/generate-agent.sh`, `scripts/settle-task.sh`, `BACKLOG.md`.
+  - **Criteria:** Injected design tokens allow workers to adhere to project UI system; settlement gate verifies UI conformance.
+
+- [x] **TASK-79: WCAG Color Contrast & Form Misalignment Detection in Heuristics**
+  - **Goal:** Add WCAG 2.1 AA relative luminance contrast checks (<4.5:1) and form column alignment jitter detection (3-24px) to `scripts/ui_heuristics.js` and `scripts/ui_formatter.py`.
+  - **Files:** `scripts/ui_heuristics.js`, `scripts/ui_formatter.py`, `BACKLOG.md`.
+  - **Criteria:** Unit tests and self-test pass with contrast and form alignment scoring.
+
+- [x] **TASK-80: Deep Compiler & Typecheck Diagnostic Handoff**
+  - **Goal:** Capture granular typecheck/compiler errors (file names, line numbers, error descriptions from `svelte-check` / `tsc` / `cargo check`) in `scripts/dispatch-worker.sh` for model failover handoff.
+  - **Files:** `scripts/dispatch-worker.sh`, `BACKLOG.md`.
+  - **Criteria:** Model failover prompt includes the exact error lines from previous attempt.
+
+- [x] **TASK-81: Retrospective Settlement Rejections, Auto-Commit Hygiene & PTY Hangup**
+  - **Goal:** Record settlement rejections (`EMPTY_DIFF`, `SETTLEMENT_REJECTED`) in flight recorder; filter out `.amase*` and `telemetry.jsonl` from auto-commits; hangup worker PTY master (`pkill -HUP -t $WORKER_TTY`) on abort; add Invariant 9 enforcing functional source/test edits.
+  - **Files:** `scripts/diagnose-failure.py`, `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`, `scripts/abort-task.sh`, `personas/builder.md`, `scripts/generate-agent.sh`, `BACKLOG.md`.
+  - **Criteria:** `EMPTY_DIFF` recorded in retrospectives; dead Ptyxis tabs closed via PTY hangup; non-source changes rejected.
+
+- [x] **TASK-82: Milestone Progress Banners & Active Model Heartbeats**
+  - **Goal:** Print visible milestone banners in `amase` coordinator terminal (`[▶] STARTING TASK`, `[✓] TASK COMPLETED & SETTLED`), track active model in status, and output 15s heartbeats.
+  - **Files:** `amase`, `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`, `BACKLOG.md`.
+  - **Criteria:** User sees immediate visual feedback in coordinator terminal on task start, attempt, and settlement.
+
+- [x] **TASK-83: Worker Tab Diff Summary & Clean Tab Auto-Close**
+  - **Goal:** Inside visible worker tabs, show git commit message and list of changed files with a 3s countdown before tab auto-closes.
+  - **Files:** `scripts/dispatch-worker.sh`, `BACKLOG.md`.
+  - **Criteria:** Worker tab shows clean summary of changes and exits cleanly.
+
+- [x] **TASK-84: Ground Proposed Task Files in Scout Using Repository File Tree**
+  - **Goal:** In `scripts/scout.py`, query `git ls-files src/ lib/ entrypoints/` and pass the top existing source files to the Scout prompt to eliminate hallucinated file paths in proposed backlog tasks.
+  - **Files:** `scripts/scout.py`, `BACKLOG.md`.
+  - **Criteria:** Scout receives real file paths in prompt context; passes test-gate.
+
+
 
 
 

@@ -79,6 +79,17 @@ def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope
         recent_completed = completed_titles[-25:]
         completed_section = "\nALREADY COMPLETED FEATURES (STRICTLY FORBIDDEN TO RE-PROPOSE OR DUPLICATE):\n" + "\n".join(f"- {t}" for t in recent_completed) + "\n"
 
+    # Ground proposed files in reality: pass compact list of existing source files
+    repo_files = ""
+    try:
+        proc = subprocess.run(["git", "ls-files", "src/", "lib/", "entrypoints/"], capture_output=True, text=True, timeout=5)
+        if proc.returncode == 0 and proc.stdout.strip():
+            files = [f for f in proc.stdout.strip().splitlines() if not f.endswith(('.png', '.svg', '.ico', '.lock', '.yaml', '.yml'))][:40]
+            if files:
+                repo_files = "\nEXISTING REPOSITORY FILES (Reference these exact file paths for - **Files:**):\n" + "\n".join(f"- {f}" for f in files) + "\n"
+    except Exception:
+        pass
+
     # CHISLE: send compact slice of recent backlog
     backlog_slice = backlog[-1200:] if len(backlog) > 1200 else backlog
 
@@ -90,6 +101,7 @@ Keep tasks minimal, atomic, and deterministic.
 {scope_section}
 {engine_section}
 {completed_section}
+{repo_files}
 RECENT BACKLOG:
 {backlog_slice}
 
