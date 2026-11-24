@@ -1,30 +1,48 @@
-Let me examine the diff and check for code duplication in `src/core/`.
-Let me analyze this diff carefully as Sentinel.
-Analysis complete. Let me assess each audit category against this diff in `scripts/settle-task.sh`:
+# Sentinel Audit — `da88e51`
 
-**1. DOM injection risks:** The diff is in a bash settlement script - no `.svelte`/`.vue` files, no `innerHTML`/`outerHTML`, no unescaped templates. **Clean.**
+**Commit:** `da88e51 feat(ast): support comma-separated pattern lists and robust matching in --target-files`
+**Scope:** `scripts/outline-ast.py` (+8/-1)
+**Date:** 2026-11-23
+**Severity scale:** `[CRITICAL]` `[HIGH]` `[MEDIUM]` `[LOW]` `[INFO]`
 
-**2. Prototype pollution/unsafe setter overrides:** The diff contains zero JavaScript. No `Object.setPrototypeOf`, `__proto__`, or unsafe setter patterns. **Clean.**
+## Findings
 
-**3. Manifest V3 permission escalation:** The diff is in `scripts/settle-task.sh` - no `wxt.config.ts`, no manifest changes, no `<all_urls>` patterns. **Clean.**
+### [MEDIUM] `path.lstrip("./")` is a character-set strip, not a prefix strip
+`scripts/outline-ast.py:268`
 
-**4. Code duplication (PONYTAIL Rung 2):** The diff references `$AUDIT_FILE`. The `amase` orchestrator already defines `AUDIT_FILE="$TARGET_DIR/AUDIT.md"` at `amase:38`. The original script at `settle-task.sh:144` already uses `$AUDIT_FILE`. The `src/core/` directory has no existing utilities (glob returned no files). This is not reinventing - it reuses the existing project-wide pattern. **Clean.**
+`str.lstrip("./")` removes *any* leading `.` and `/` characters, not the literal `./` prefix. Confirmed behavior:
 
-**5. Missing input guards on form autofill:** The diff is a bash script for task settlement - no form fields, autofill inputs, or user input handling requiring guards. **Clean.**
+| Input | Normalized | Effect |
+|---|---|---|
+| `./scripts/x.py` | `scripts/x.py` | intended |
+| `../scripts/x.py` | `scripts/x.py` | parent traversal erased |
+| `/abs/scripts/x.py` | `abs/scripts/x.py` | root erased |
+| `.github/workflows/ci.yml` | `github/workflows/ci.yml` | leading dot-dir erased |
+| `.venv/lib/x.py` | `venv/lib/x.py` | leading dot-dir erased |
 
-All 5 categories are clean. The diff is a straightforward variable rename from hardcoded `$AUDIT.md` to the already-existing `$AUDIT_FILE` variable (consistent with line 144 and the `amase` orchestrator), introducing no new risks.
-**Sentinel Audit Complete** - `scripts/settle-task.sh` diff reviewed.
+Impact: `--target-files` can silently mis-match — excluding intended dot-directory files or matching paths the user did not intend (the now-relative form can coincide with a real repo subpath). Read-only outline tool, so no security impact, but the filter is non-deterministic relative to its documented intent.
 
-**Findings across all 5 categories:**
+**Remediation spec:** replace with an explicit prefix strip, e.g. `norm_path = path[2:] if path.startswith("./") else path` (or `os.path.normpath(path)`). Verify `scripts/*.py`, `*.sh`, `./scripts/*.py`, and `.github/**` cases.
 
-| Category | Result |
-|---|---|
-| DOM injection risks (innerHTML, outerHTML, unescaped templates) | Clean - bash script, no DOM |
-| Prototype pollution/unsafe setter overrides | Clean - no JavaScript in diff |
-| Manifest V3 permission escalation / `<all_urls>` | Clean - no manifest changes |
-| Code duplication (PONYTAIL Rung 2) | Clean - `$AUDIT_FILE` already project-wide (`amase:38`, `settle-task.sh:144`); `src/core/` has no existing utilities |
-| Missing input guards on form autofill | Clean - bash settlement script, no forms |
+### [LOW] Basename fallback broadens matching beyond directory intent
+`scripts/outline-ast.py:271`
 
-**Verdict:** `[INFO] Core invariants verified clean.`
+`fnmatch(os.path.basename(norm_path), pattern)` makes every bare pattern match at any depth. `*.sh` now matches `repos/**/deploy.sh`, not just top-level scripts. Intended per help text (`'scripts/*.py,*.sh'`) but worth documenting; it can inflate symbol maps unexpectedly.
 
-The diff is a straightforward refactoring: renaming hardcoded `$AUDIT.md` to the already-existing `$AUDIT_FILE` variable (consistent with line 144 and the `amase` orchestrator), introducing no new security risks or code duplication.
+### [LOW] Empty/whitespace patterns accepted silently
+`scripts/outline-ast.py:332`
+
+`--target-files ","` yields `['', '']`, a truthy list that matches nothing, so the run exits `1` with "no supported source files found" instead of a usage error. Drop empty parts: `[p.strip() for p in ... if p.strip()]`.
+
+## Category Results
+
+1. **DOM injection (`innerHTML`/`outerHTML`/unescaped templates):** N/A — pure Python CLI, no DOM. `[INFO]`
+2. **Prototype pollution / unsafe setters:** N/A — no JavaScript, no `__proto__`/`Object.setPrototypeOf`. `[INFO]`
+3. **MV3 permission escalation / `<all_urls>`:** N/A — no `wxt.config.ts`/manifest/extension code touched. `[INFO]`
+4. **Code duplication (PONYTAIL Rung 2):** No `src/core/` exists in this repo; no prior path-normalization helper to reuse. Net-new helper is justified. `[INFO]`
+5. **Input guards on autofill fields:** N/A — no form/DOM autofill surface in diff. `[INFO]`
+
+## Verdict
+
+No `[CRITICAL]` or `[HIGH]` findings. No Orca escalation required.
+One `[MEDIUM]` correctness bug (`lstrip`) — remediation spec above; regression check pending on fix branch.
