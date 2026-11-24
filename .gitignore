@@ -6,3 +6,6 @@ __pycache__/
 .worktrees/
 run_report.json
 repos/
+node_modules/
+.amase/telemetry.jsonl
+
