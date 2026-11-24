@@ -73,7 +73,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/settle-task.sh`.
   - **Criteria:** Post-merge hook detects invariant patterns in git diff and writes `TASK-INV-01` task to BACKLOG.md; passes `.amase/test-gate.sh`.
 
-- [ ] **TASK-14: Fix `--target-files` glob parsing in `scripts/outline-ast.py`**
+- [x] **TASK-14: Fix `--target-files` glob parsing in `scripts/outline-ast.py`**
   - **Goal:** Split comma-separated glob patterns and match them against file paths in `iter_files()` so `--target-files` filters correctly and reduces worker prompt tokens.
   - **Files:** `scripts/outline-ast.py`.
   - **Criteria:** `python3 scripts/outline-ast.py . --target-files 'scripts/*.py'` outputs only `scripts/*.py` files and exits 0; `.amase/test-gate.sh` passes.
