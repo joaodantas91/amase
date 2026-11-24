@@ -1,20 +1,15 @@
-Looking at this diff, I need to audit against the Sentinel checkpoints. Let me analyze each area:
-**Sentinel Audit Complete** — `scripts/run-task.sh` diff
+Looking at the diff, I need to audit this against the 5 Sentinel responsibilities. Let me first explore the codebase to understand existing utilities.
+Let me check the existing AUDIT.md and scripts for any similar utilities.
+Looking at the diff - changes to `scripts/generate-agent.sh` (piping SCOPE_CONTENT and PERSONA_CONTENT through `prune-prompt.py`) and a new `scripts/prune-prompt.py` that removes markdown comments, strips trailing whitespace, and collapses blank lines.
 
-**Audit:** Pre-commit hook injection mechanism into the worktree
+**Audit against 5 Sentinel responsibilities:**
 
-| Checkpoint | Result |
-|---|---|
-| DOM injection risks | [INFO] — bash script, no DOM operations |
-| Prototype pollution / unsafe setters | **[MEDIUM]** — Hook blocks `as any` and `@ts-ignore` at `scripts/run-task.sh:127`. These TS patterns can suppress prototype pollution type guards when injecting native value setters. Preventive control aligns with Sentinel's "Security Fencing" responsibility. |
-| MV3 permission escalation / `<all_urls>` | [INFO] — No manifest changes |
-| Code duplication (PONYTAIL Rung 2) | [INFO] — No `src/core/` directory in repo |
-| Missing input guards on form autofill | [INFO] — No form surface |
+1. **DOM injection risks** - [INFO] No innerHTML, outerHTML, or unescaped templates in these shell/Python scripts.
+2. **Prototype pollution / unsafe setters** - [INFO] No JavaScript prototype manipulation; the Python script uses only standard library regex/text processing.
+3. **MV3 permission escalation / `<all_urls>`** - [INFO] Not a WXT project; no manifest changes.
+4. **Code duplication (PONYTAIL Rung 2)** - [INFO] `src/core/` doesn't exist in this orchestrator framework; `prune-prompt.py` is a new utility without an existing counterpart to duplicate.
+5. **Missing input guards on form autofill** - [INFO] No form autofill fields in these scripts.
 
-**Additional findings:**
-- **[MEDIUM]** — Hook blocks `package.json` from being staged (`scripts/run-task.sh:126`). Governance guard, but could impede dependency/security updates.
-- **[LOW]** — `chmod 444` on `.amase/scope.md` enforces read-only governance.
+The `prune-prompt.py` script is benign - uses only `sys`, `re` from stdlib; regex `<!--.*?-->` with `re.DOTALL` for comment removal; `rstrip()` for whitespace; blank-line collapsing. No unsafe eval/exec, no prototype risks.
 
-**Verdict:** No `[CRITICAL]` or `[HIGH]` vulnerabilities identified. Orca escalation not triggered.
-
-AUDIT.md written to `/home/joao/dev/orchestrator/AUDIT.md`.
+[INFO]
