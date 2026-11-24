@@ -14,7 +14,9 @@ import urllib.request
 LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completions")
 API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
 MODEL = os.getenv("DESIGNER_MODEL", "designer-fleet")
-SKILL_SEARCH = "/home/joao/dev/orchestrator/skills/ui-ux-pro-max/scripts/search.py"
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+ORCHESTRATOR_ROOT = os.path.dirname(os.path.dirname(SCRIPTS_DIR))
+SKILL_SEARCH = os.path.join(ORCHESTRATOR_ROOT, "skills", "ui-ux-pro-max", "scripts", "search.py")
 
 def get_design_intelligence(query="browser extension developer tool dark mode dashboard"):
     """Query UI/UX Pro Max skill for design system, color tokens, and UX guidelines."""
@@ -41,7 +43,7 @@ def get_design_intelligence(query="browser extension developer tool dark mode da
     return "\n".join(intel)
 
 def run_ux_review(target_dir):
-    with open("/home/joao/dev/orchestrator/personas/designer.md", "r") as f:
+    with open(os.path.join(ORCHESTRATOR_ROOT, "personas", "designer.md"), "r") as f:
         designer_prompt = f.read()
 
     # Collect UI component summaries

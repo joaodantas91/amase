@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ORCHESTRATOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 TARGET="${1:-status}"
-CONFIG="/home/joao/dev/orchestrator/config/litellm-config.yaml"
+CONFIG="$ORCHESTRATOR_DIR/config/litellm-config.yaml"
 
 case "$TARGET" in
   nvidia|bolt)
@@ -34,6 +36,6 @@ esac
 
 # Trigger litellm reload
 pkill -f "litellm.*--port 4000" 2>/dev/null || true
-nohup /home/joao/dev/orchestrator/.venv/bin/litellm --config "$CONFIG" --port 4000 --host 0.0.0.0 --drop_params > /dev/null 2>&1 &
+nohup "$ORCHESTRATOR_DIR/.venv/bin/litellm" --config "$CONFIG" --port 4000 --host 0.0.0.0 --drop_params > /dev/null 2>&1 &
 sleep 1
 echo "[+] Switched and reloaded LiteLLM successfully."

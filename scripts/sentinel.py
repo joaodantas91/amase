@@ -12,6 +12,7 @@ import subprocess
 import urllib.request
 
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+ORCHESTRATOR_ROOT = os.path.dirname(os.path.dirname(SCRIPTS_DIR))
 if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
 from fleet import query_fleet
@@ -19,13 +20,7 @@ from fleet import query_fleet
 MODEL = os.getenv("SENTINEL_MODEL", "opencode/nemotron-3.5-lightning-free")
 
 def run_audit(target_dir, base_ref="HEAD~1"):
-    os.chdir(target_dir)
-    diff = subprocess.check_output(["git", "diff", f"{base_ref}..HEAD"], text=True)
-    if not diff.strip():
-        print("[+] Diff is empty. Nothing to audit.")
-        return
-
-    with open("/home/joao/dev/orchestrator/personas/sentinel.md", "r") as f:
+    with open(os.path.join(ORCHESTRATOR_ROOT, "personas", "sentinel.md"), "r") as f:
         sentinel_prompt = f.read()
 
     user_prompt = f"""You are Sentinel. Audit this recent git diff for:
