@@ -362,6 +362,11 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/fleet.py`, `BACKLOG.md`.
   - **Criteria:** Python compiled cleanly; test gate passes; scout and sentinel execute via fast cloud APIs.
 
+- [x] **TASK-71: Sentinel Flag Argument Parser & Universal Terminal in Settlement**
+  - **Goal:** In `scripts/sentinel.py`, use `argparse` for `--repo` and `--base` to eliminate argument collision where passing `--repo` created a literal directory named `--repo`. In `scripts/settle-task.sh`, replace hardcoded Ptyxis with universal terminal auto-discovery (`ptyxis`, `gnome-terminal`, `kitty`, `alacritty`, `wezterm`, `konsole`, `xterm`) and window fallback.
+  - **Files:** `scripts/sentinel.py`, `scripts/settle-task.sh`, `BACKLOG.md`.
+  - **Criteria:** Sentinel cleanly accepts `--repo <path>` and positional path; settle-task uses universal terminal; test gate passes.
+
 
 
 

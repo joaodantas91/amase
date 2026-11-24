@@ -76,12 +76,20 @@ If clean, report 'Core invariants verified clean'.
         return None
 
 if __name__ == "__main__":
-    if "--dry-run" in sys.argv:
-        target = sys.argv[1] if len(sys.argv) > 1 else "."
-        base = sys.argv[2] if len(sys.argv) > 2 else "HEAD~1"
+    import argparse
+    parser = argparse.ArgumentParser(description="AMASE Sentinel Persona Runner")
+    parser.add_argument("positional_target", nargs="?", default=None, help="Target repository directory")
+    parser.add_argument("--repo", dest="repo", default=None, help="Target repository directory")
+    parser.add_argument("--base", dest="base", default="HEAD~1", help="Base git ref for diff")
+    parser.add_argument("--dry-run", action="store_true", help="Print prompt only without executing LLM")
+
+    args, _ = parser.parse_known_args()
+    target = os.path.abspath(args.repo or args.positional_target or ".")
+    base = args.base
+
+    if args.dry_run:
         with open(os.path.join(ORCHESTRATOR_ROOT, "personas", "sentinel.md"), "r") as f:
             sentinel_prompt = f.read()
-        # Reconstruct diff for display (same logic as run_audit)
         try:
             result = subprocess.run(
                 ["git", "-C", target, "diff", base],
@@ -105,8 +113,6 @@ Format your response following the AUDIT.md contract:
 If clean, report 'Core invariants verified clean'.
 """
         print(user_prompt)
-        import sys as _sys
-        _sys.exit(0)
-    target = sys.argv[1] if len(sys.argv) > 1 else "."
-    base = sys.argv[2] if len(sys.argv) > 2 else "HEAD~1"
+        sys.exit(0)
+
     run_audit(target, base)

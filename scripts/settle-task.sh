@@ -187,13 +187,54 @@ AUDIT_FILE="$TARGET_REPO/AUDIT.md"
 # Check if sentinel_visible_tab is enabled in config
 SENTINEL_VISIBLE=$(jq -r '.ui.sentinel_visible_tab // false' "$ORCHESTRATOR_DIR/.amase/config.json" 2>/dev/null || echo "false")
 
-if [[ "$SENTINEL_VISIBLE" == "true" ]] && [[ -x "$PTYXIS_BIN" ]]; then
+# Universal Terminal Discovery
+TERMINAL_BIN=""
+if [[ -n "${AMASE_TERMINAL:-}" ]] && command -v "$AMASE_TERMINAL" >/dev/null 2>&1; then
+  TERMINAL_BIN=$(command -v "$AMASE_TERMINAL")
+elif [[ -n "${TERMINAL:-}" ]] && command -v "$TERMINAL" >/dev/null 2>&1; then
+  TERMINAL_BIN=$(command -v "$TERMINAL")
+else
+  for term in ptyxis gnome-terminal kitty alacritty wezterm konsole x-terminal-emulator xterm; do
+    if command -v "$term" >/dev/null 2>&1; then
+      TERMINAL_BIN=$(command -v "$term")
+      break
+    fi
+  done
+fi
+
+if [[ "$SENTINEL_VISIBLE" == "true" ]] && [[ -n "$TERMINAL_BIN" ]] && [[ -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
   DONE_FLAG="$ORCHESTRATOR_DIR/.amase/sentinel_done"
   mkdir -p "$(dirname "$DONE_FLAG")"
   rm -f "$DONE_FLAG"
 
-  # Launch Sentinel in visible Ptyxis tab
-  "$PTYXIS_BIN" --tab --working-directory="$TARGET_REPO" --title="AMASE: Sentinel Audit" -- bash -c "python3 '$ORCHESTRATOR_DIR/scripts/sentinel.py' '$TARGET_REPO' 2>&1 | tee '$AUDIT_FILE'; touch '$DONE_FLAG'; sleep 2" &
+  SENTINEL_CMD="python3 '$ORCHESTRATOR_DIR/scripts/sentinel.py' '$TARGET_REPO' 2>&1 | tee '$AUDIT_FILE'; touch '$DONE_FLAG'; sleep 2"
+  term_name=$(basename "$TERMINAL_BIN")
+  case "$term_name" in
+    ptyxis)
+      if ! "$TERMINAL_BIN" --tab --working-directory="$TARGET_REPO" --title="AMASE: Sentinel Audit" -- bash -c "$SENTINEL_CMD" 2>/dev/null; then
+        "$TERMINAL_BIN" --new-window --working-directory="$TARGET_REPO" --title="AMASE: Sentinel Audit" -- bash -c "$SENTINEL_CMD" &
+      fi
+      ;;
+    gnome-terminal)
+      "$TERMINAL_BIN" --tab --working-directory="$TARGET_REPO" --title="AMASE: Sentinel Audit" -- bash -c "$SENTINEL_CMD" 2>/dev/null || \
+      "$TERMINAL_BIN" --window --working-directory="$TARGET_REPO" --title="AMASE: Sentinel Audit" -- bash -c "$SENTINEL_CMD" &
+      ;;
+    kitty)
+      "$TERMINAL_BIN" --directory="$TARGET_REPO" --title="AMASE: Sentinel Audit" bash -c "$SENTINEL_CMD" &
+      ;;
+    alacritty)
+      "$TERMINAL_BIN" --working-directory="$TARGET_REPO" --title="AMASE: Sentinel Audit" -e bash -c "$SENTINEL_CMD" &
+      ;;
+    wezterm)
+      "$TERMINAL_BIN" start --cwd "$TARGET_REPO" -- bash -c "$SENTINEL_CMD" &
+      ;;
+    konsole)
+      "$TERMINAL_BIN" --workdir="$TARGET_REPO" -p "tabtitle=AMASE: Sentinel Audit" -e bash -c "$SENTINEL_CMD" &
+      ;;
+    *)
+      bash -c "$SENTINEL_CMD" &
+      ;;
+  esac
 
   # Wait for DONE_FLAG (polling sleep 2, up to 300s)
   TIMEOUT=300
