@@ -45,6 +45,8 @@ fi
 
 BRANCH_NAME="feature/$TASK_ID"
 WORKTREE_PATH="$TARGET_REPO/.worktrees/$TASK_ID"
+BACKLOG_FILE="$TARGET_REPO/BACKLOG.md"
+AUDIT_FILE="$TARGET_REPO/AUDIT.md"
 
 echo "========================================================"
 echo " AMASE Deterministic One-Click Settlement"
@@ -124,13 +126,13 @@ INV_DIFF=$(git -C "$TARGET_REPO" diff "main..$BRANCH_NAME" 2>/dev/null || true)
 INV_FOUND=0
 
 # Check for raw hex colors in .svelte/.vue files
-if echo "$INV_DIFF" | grep -qE '\.svelte|\.vue' && echo "$INV_DIFF" | grep -qE '#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?'; then
+if echo "$INV_DIFF" | grep -qE '\.(svelte|vue)' && echo "$INV_DIFF" | grep -qE '#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?'; then
   echo "[!] Invariant violation: raw hex color found in .svelte/.vue file"
   INV_FOUND=1
 fi
 
 # Check for 'as any' or '@ts-ignore' in .ts/.tsx files
-if echo "$INV_DIFF" | grep -qE '\.ts\/$.|\.tsx' && echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
+if echo "$INV_DIFF" | grep -qE '\.(ts|tsx)' && echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
   echo "[!] Invariant violation: 'as any' or '@ts-ignore' found in .ts/.tsx file"
   INV_FOUND=1
 fi
@@ -145,7 +147,7 @@ if [[ "$INV_FOUND" -eq 1 ]]; then
     echo "[+] Appending invariant violations to AUDIT.md..."
     echo "---" >> "$AUDIT_FILE"
     echo "Invariant violations detected post-merge:" >> "$AUDIT_FILE"
-    if echo "$INV_DIFF" | grep -qE '\.svelte|\.vue'; then
+    if echo "$INV_DIFF" | grep -qE '\.(svelte|vue)'; then
       echo "- Raw hex color found in .svelte/.vue file" >> "$AUDIT_FILE"
     fi
     if echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
@@ -154,7 +156,7 @@ if [[ "$INV_FOUND" -eq 1 ]]; then
   else
     echo "---" > "$AUDIT_FILE"
     echo "Invariant violations detected post-merge:" >> "$AUDIT_FILE"
-    if echo "$INV_DIFF" | grep -qE '\.svelte|\.vue'; then
+    if echo "$INV_DIFF" | grep -qE '\.(svelte|vue)'; then
       echo "- Raw hex color found in .svelte/.vue file" >> "$AUDIT_FILE"
     fi
     if echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
