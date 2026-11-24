@@ -243,7 +243,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/parallel_dispatcher.py`, `scripts/fleet.py`.
   - **Criteria:** `parallel_dispatcher.py` assigns unique provider targets per concurrent worker; .amase/test-gate.sh passes.
 
-- [ ] **TASK-48: Concurrent OpenCode SQLite Safety & Process Locking**
+- [x] **TASK-48: Concurrent OpenCode SQLite Safety & Process Locking**
   - **Goal:** In `scripts/dispatch-worker.sh` and `scripts/doctor.py`, ensure concurrent OpenCode invocations do not corrupt or block `~/.local/share/opencode/opencode.db`. Verify SQLite WAL mode in `amase doctor` and add a lightweight non-blocking advisory lock on worker startup to serialize database initialization.
   - **Files:** `scripts/dispatch-worker.sh`, `scripts/doctor.py`.
   - **Criteria:** `amase doctor` validates SQLite WAL mode for OpenCode DB; `dispatch-worker.sh` avoids SQLite collision; .amase/test-gate.sh passes.
