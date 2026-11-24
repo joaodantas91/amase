@@ -278,7 +278,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `README.md`.
   - **Criteria:** `amase` auto-inhibits sleep when started in autonomous mode; releases cleanly on exit; .amase/test-gate.sh passes.
 
-- [ ] **TASK-55: UI Validation Fast-Gate Integration in test-gate.sh**
+- [x] **TASK-55: UI Validation Fast-Gate Integration in test-gate.sh**
   - **Goal:** In `.amase/test-gate.sh` and `scripts/init-project.sh`, auto-detect frontend projects with active dev servers or static HTML files and integrate optional `amase ui-check` deterministic layout evaluation into the project test gate.
   - **Files:** `.amase/test-gate.sh`, `scripts/init-project.sh`.
   - **Criteria:** `test-gate.sh` can optionally invoke `amase ui-check` for web targets; .amase/test-gate.sh passes.
