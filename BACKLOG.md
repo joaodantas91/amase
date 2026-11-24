@@ -293,6 +293,12 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/init-project.sh`, `scripts/doctor.py`, `amase`, `.amase/config.json`, `BACKLOG.md`.
   - **Criteria:** `amase doctor --heal` passes; `scripts/init-project.sh --heal` non-destructively populates missing files without overwriting existing; test gate passes.
 
+- [x] **TASK-58: Retrospective Flight Recorder Precision & Local Ollama OpenCode Fleet Registration**
+  - **Goal:** Enhance `scripts/diagnose-failure.py` to classify TypeScript / framework test gate errors (`svelte-check`, `tsc`, `ELIFECYCLE`) as `COMPILER_ERROR` directly from worktrees, add auto-commit test verification in `scripts/dispatch-worker.sh`, and register local Ollama (`qwen2.5-coder:14b`) in `~/.config/opencode/opencode.json`.
+  - **Files:** `scripts/diagnose-failure.py`, `scripts/dispatch-worker.sh`, `amase`, `BACKLOG.md`.
+  - **Criteria:** `diagnose-failure.py` accurately identifies compile/gate errors; `opencode models` lists `ollama/qwen2.5-coder:14b`; test-gate passes.
+
+
 
 
 

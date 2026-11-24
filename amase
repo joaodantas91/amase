@@ -55,10 +55,11 @@ if [[ "${1:-}" == "abort" ]]; then
   shift
   TASK_ID="${1:-}"
   if [[ -z "$TASK_ID" ]]; then
-    echo "Usage: amase abort <task_id>"
+    echo "Usage: amase abort <task_id> [dir]"
     exit 1
   fi
-  exec "$SCRIPT_DIR/scripts/abort-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"
+  TARGET_REPO="${2:-$TARGET_DIR}"
+  exec "$SCRIPT_DIR/scripts/abort-task.sh" --repo "$TARGET_REPO" --task "$TASK_ID"
 fi
 
 if [[ "${1:-}" == "stats" ]]; then

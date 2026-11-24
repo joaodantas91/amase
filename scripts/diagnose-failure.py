@@ -13,33 +13,53 @@ import os
 import sys
 import re
 import json
+import subprocess
 from datetime import datetime, timezone
 
-def diagnose_log(log_path):
+def diagnose_log(log_path, repo_dir=None):
     """Analyze worker log content and return (signature, reason, metrics)."""
-    if not os.path.exists(log_path):
-        return "SOCKET_STALL", "Log file not created (immediate crash).", {"files_read": 0}
+    content = ""
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, "r", errors="ignore") as f:
+                content = f.read()
+        except Exception as e:
+            content = f"Log read error: {e}"
 
-    try:
-        with open(log_path, "r", errors="ignore") as f:
-            content = f.read()
-    except Exception as e:
-        return "UNKNOWN_ERROR", f"Could not read log file: {e}", {"files_read": 0}
+    # If repo_dir has uncommitted changes that fail test gate, capture gate error
+    test_gate_error = ""
+    if repo_dir and os.path.isdir(repo_dir):
+        gate_script = os.path.join(repo_dir, ".amase", "test-gate.sh")
+        if os.path.exists(gate_script) and os.access(gate_script, os.X_OK):
+            try:
+                res = subprocess.run([gate_script], cwd=repo_dir, capture_output=True, text=True, timeout=15)
+                if res.returncode != 0:
+                    test_gate_error = (res.stderr or "") + "\n" + (res.stdout or "")
+            except Exception:
+                pass
+
+    all_logs = content + "\n" + test_gate_error
 
     # Count file read events in opencode log format
-    files_read = len(re.findall(r'(?:reading path|read_file|reading file|loading path=)', content, re.IGNORECASE))
+    files_read = len(re.findall(r'(?:reading path|read_file|reading file|loading path=)', all_logs, re.IGNORECASE))
     metrics = {"files_read": files_read, "log_bytes": len(content)}
 
     # 1. Quota / Rate limit check
-    if re.search(r'(Free usage limit reached|rate_limit_exceeded|429 Too Many Requests|TPM: Limit|quota exceeded)', content, re.IGNORECASE):
+    if re.search(r'(Free usage limit reached|rate_limit_exceeded|429 Too Many Requests|TPM: Limit|quota exceeded)', all_logs, re.IGNORECASE):
         return "QUOTA_EXHAUSTED", "Provider rate limit or free tier quota exhausted.", metrics
 
     # 2. Socket stall check
-    if "stall detected" in content.lower() or len(content.strip()) < 50:
+    if "stall detected" in all_logs.lower() or (len(content.strip()) < 50 and not test_gate_error):
         return "SOCKET_STALL", "Worker hung on network socket without emitting progress.", metrics
 
-    # 3. Compiler / Test Gate errors
-    if re.search(r'(error TS[0-9]+|SyntaxError:|AssertionError|FAILED tests/|Command failed with exit code)', content, re.IGNORECASE):
+    # 3. Compiler / Test Gate / Type Check errors
+    compiler_pattern = (
+        r'(error TS[0-9]+|SyntaxError:|AssertionError|FAILED tests/|Command failed with exit code|'
+        r'svelte-check found [1-9]|Type .* is not assignable|No index signature|'
+        r'Export declaration conflicts|Cannot find module|npm ERR!|ELIFECYCLE|'
+        r'TypeScript error|TypeError:)'
+    )
+    if re.search(compiler_pattern, all_logs, re.IGNORECASE):
         return "COMPILER_ERROR", "Worker code changes failed syntax, type check, or test gate.", metrics
 
     # 4. Context bloat check
@@ -96,7 +116,7 @@ def main():
     except Exception:
         target_repo = worktree
 
-    signature, reason, metrics = diagnose_log(log_path)
+    signature, reason, metrics = diagnose_log(log_path, repo_dir=worktree)
     record_retrospective(target_repo, task_id, model, signature, reason, metrics, duration)
 
 
