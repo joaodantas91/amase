@@ -234,9 +234,9 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Criteria:** `amase parallel --dry-run` outputs non-conflicting task batches; .amase/test-gate.sh passes.
 
 - [ ] **TASK-46: Safe Parallel Execution Settings & Configuration (.amase/config.json & amase config)**
-  - **Goal:** In `.amase/config.json`, `amase config`, and `scripts/init-project.sh`, introduce concurrency configuration (`concurrency.mode`: `"sequential"` | `"auto_parallel"`, `concurrency.max_workers`: 2, `concurrency.provider_sharding`: true). Allow reading and toggling via `amase config --concurrency` and `amase config --set-concurrency <mode>`.
-  - **Files:** `amase`, `scripts/init-project.sh`.
-  - **Criteria:** `amase config --concurrency` displays current mode; `amase config --set-concurrency auto_parallel` updates config.json; .amase/test-gate.sh passes.
+  - **Goal:** In `.amase/config.json`, `amase config`, and `scripts/init-project.sh`, decouple concurrency settings from orchestrator mode (`mode`: `"autonomous"` | `"interactive"`, `concurrency`: `"sequential"` | `"parallel"`, with default `concurrency: "sequential"`). Allow viewing and toggling via `amase config --concurrency` and `amase config --set-concurrency <sequential|parallel>`.
+  - **Files:** `amase`, `scripts/init-project.sh`, `.amase/config.json`.
+  - **Criteria:** Default concurrency is `"sequential"`; `amase config --concurrency` outputs current setting; `amase config --set-concurrency parallel` toggles properly; .amase/test-gate.sh passes.
 
 - [ ] **TASK-47: Provider-Sharded Fleet Load Balancer for Parallel Workers (Anti-429)**
   - **Goal:** In `scripts/parallel_dispatcher.py` and `scripts/fleet.py`, implement upstream provider sharding for concurrent workers. Assign distinct provider endpoints across workers in the same batch (e.g. Worker 1 -> Groq, Worker 2 -> NVIDIA NIM, Worker 3 -> GitHub Models / Ollama) so parallel workers never collide on provider rate limits or trigger 429 errors.
