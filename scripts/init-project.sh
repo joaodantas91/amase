@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AMASE Universal Project Scaffolder
-# Auto-detects project type and generates .amase governance files.
-# Usage: scripts/init-project.sh [dir]  (defaults to current directory)
+# AMASE Universal Project Scaffolder & Auto-Healer
+# Auto-detects project type, initializes or heals .amase governance files.
+# Usage:
+#   scripts/init-project.sh [dir] [--heal]
 # ==============================================================================
 set -euo pipefail
 
-TARGET_DIR="${1:-.}"
+IS_HEAL=0
+TARGET_DIR="."
+
+for arg in "$@"; do
+  if [[ "$arg" == "--heal" ]]; then
+    IS_HEAL=1
+  elif [[ "$arg" != -* ]]; then
+    TARGET_DIR="$arg"
+  fi
+done
+
 if [[ ! -d "$TARGET_DIR" ]]; then
   mkdir -p "$TARGET_DIR"
 fi
@@ -25,23 +36,51 @@ fi
 
 mkdir -p "$TARGET_DIR/.amase"
 
-cat > "$TARGET_DIR/.amase/config.json" <<'CONFIG'
-{
-  "mode": "autonomous",
-  "concurrency": "sequential",
-  "model_tier": "free",
-  "ui": {
-    "builder_visible_tab": true,
-    "target_url": ""
-  },
-  "discovery": {
-    "enabled": true,
-    "max_slices": 2
-  }
-}
-CONFIG
+# 1. Config Auto-Heal / Generate (Schema Version 2)
+CONFIG_FILE="$TARGET_DIR/.amase/config.json"
+python3 -c "
+import json, os
 
-cat > "$TARGET_DIR/.amase/scope.md" <<'SCOPE'
+cfg_path = '$CONFIG_FILE'
+defaults = {
+    'schema_version': 2,
+    'mode': 'autonomous',
+    'concurrency': 'sequential',
+    'model_tier': 'free',
+    'ui': {
+        'builder_visible_tab': True,
+        'target_url': ''
+    },
+    'discovery': {
+        'enabled': True,
+        'max_slices': 2
+    }
+}
+
+data = {}
+if os.path.exists(cfg_path):
+    try:
+        with open(cfg_path, 'r') as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+
+data['schema_version'] = 2
+for k, v in defaults.items():
+    if k not in data:
+        data[k] = v
+    elif isinstance(v, dict) and isinstance(data[k], dict):
+        for sub_k, sub_v in v.items():
+            if sub_k not in data[k]:
+                data[k][sub_k] = sub_v
+
+with open(cfg_path, 'w') as f:
+    json.dump(data, f, indent=2)
+"
+
+# 2. Scope file (never overwrite existing)
+if [[ ! -f "$TARGET_DIR/.amase/scope.md" ]]; then
+  cat > "$TARGET_DIR/.amase/scope.md" <<'SCOPE'
 # AMASE Project Scope & Governance Boundaries
 
 Core Invariant: **MAXIMUM TOKEN DIET ($0 WORKER FLEET)**.
@@ -60,8 +99,11 @@ Core Invariant: **MAXIMUM TOKEN DIET ($0 WORKER FLEET)**.
 - **NO Type Bypasses:** Never use type assertions or ignore directives.
 - **NO Scope Edits:** Never modify `.amase/scope.md`.
 SCOPE
+fi
 
-cat > "$TARGET_DIR/.amase/discovery.md" <<'DISCOVERY'
+# 3. Discovery file (never overwrite existing)
+if [[ ! -f "$TARGET_DIR/.amase/discovery.md" ]]; then
+  cat > "$TARGET_DIR/.amase/discovery.md" <<'DISCOVERY'
 # Discovery & Token Optimization Inbox
 
 Staging area for discovered project improvements, features, and token-saving ideas.
@@ -72,10 +114,13 @@ Staging area for discovered project improvements, features, and token-saving ide
 
 (none yet)
 DISCOVERY
+fi
 
-case "$PROJECT_TYPE" in
-  node)
-    cat > "$TARGET_DIR/.amase/test-gate.sh" <<'GATE'
+# 4. Test gate file (generate only if missing)
+if [[ ! -f "$TARGET_DIR/.amase/test-gate.sh" ]]; then
+  case "$PROJECT_TYPE" in
+    node)
+      cat > "$TARGET_DIR/.amase/test-gate.sh" <<'GATE'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -104,9 +149,9 @@ if [[ -n "$UI_TARGET" ]] && command -v amase >/dev/null 2>&1; then
   amase ui-check "$UI_TARGET"
 fi
 GATE
-    ;;
-  python)
-    cat > "$TARGET_DIR/.amase/test-gate.sh" <<'GATE'
+      ;;
+    python)
+      cat > "$TARGET_DIR/.amase/test-gate.sh" <<'GATE'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -121,9 +166,9 @@ else
   python3 -m pytest
 fi
 GATE
-    ;;
-  rust)
-    cat > "$TARGET_DIR/.amase/test-gate.sh" <<'GATE'
+      ;;
+    rust)
+      cat > "$TARGET_DIR/.amase/test-gate.sh" <<'GATE'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -133,9 +178,9 @@ cd "$REPO_DIR"
 echo "[+] Running AMASE Test Gate (Rust)..."
 cargo test
 GATE
-    ;;
-  go)
-    cat > "$TARGET_DIR/.amase/test-gate.sh" <<'GATE'
+      ;;
+    go)
+      cat > "$TARGET_DIR/.amase/test-gate.sh" <<'GATE'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -145,9 +190,9 @@ cd "$REPO_DIR"
 echo "[+] Running AMASE Test Gate (Go)..."
 go test ./...
 GATE
-    ;;
-  *)
-    cat > "$TARGET_DIR/.amase/test-gate.sh" <<'GATE'
+      ;;
+    *)
+      cat > "$TARGET_DIR/.amase/test-gate.sh" <<'GATE'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -157,11 +202,16 @@ cd "$REPO_DIR"
 echo "[+] Running AMASE Test Gate (unknown project type)..."
 echo "[!] No recognized project type detected; nothing to run."
 GATE
-    ;;
-esac
+      ;;
+  esac
+fi
 
 chmod +x "$TARGET_DIR/.amase/test-gate.sh"
 
-echo "[+] AMASE initialized in $TARGET_DIR"
-echo "[+] Detected project type: $PROJECT_TYPE"
-echo "[+] Created .amase/config.json, .amase/scope.md, .amase/discovery.md, .amase/test-gate.sh"
+if [[ "$IS_HEAL" -eq 1 ]]; then
+  echo "[+] AMASE governance healed in $TARGET_DIR (schema v2)"
+else
+  echo "[+] AMASE initialized in $TARGET_DIR (schema v2)"
+  echo "[+] Detected project type: $PROJECT_TYPE"
+  echo "[+] Governance ready: .amase/config.json, .amase/scope.md, .amase/discovery.md, .amase/test-gate.sh"
+fi

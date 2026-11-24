@@ -156,28 +156,50 @@ def check_ollama():
     return "WARN", "Local Ollama offline. (Run 'ollama serve' or start service for offline fallback)"
 
 
-def check_governance(target_dir):
-    config_file = os.path.join(target_dir, ".amase", "config.json")
-    scope_file = os.path.join(target_dir, ".amase", "scope.md")
-    test_gate = os.path.join(target_dir, ".amase", "test-gate.sh")
+def check_governance(target_dir, heal=False):
+    amase_dir = os.path.join(target_dir, ".amase")
+    config_file = os.path.join(amase_dir, "config.json")
+    scope_file = os.path.join(amase_dir, "scope.md")
+    test_gate = os.path.join(amase_dir, "test-gate.sh")
 
-    present = []
+    if not os.path.exists(amase_dir):
+        return "WARN", "Project not initialized for AMASE: run 'amase init' to scaffold governance."
+
+    # Check schema version
+    schema_ver = 0
     if os.path.exists(config_file):
-        present.append("config.json")
-    if os.path.exists(scope_file):
-        present.append("scope.md")
-    if os.path.exists(test_gate):
-        present.append("test-gate.sh")
+        try:
+            with open(config_file, "r") as f:
+                data = json.load(f)
+                schema_ver = int(data.get("schema_version", 1))
+        except Exception:
+            schema_ver = 0
 
-    if len(present) == 3:
-        return "PASS", f"Project governance initialized ({', '.join(present)})"
-    elif len(present) > 0:
-        return "WARN", f"Partial governance initialized: missing {[f for f in ('config.json', 'scope.md', 'test-gate.sh') if f not in present]}"
-    return "WARN", "Project not initialized for AMASE: run 'amase init' to scaffold governance."
+    missing = []
+    if not os.path.exists(config_file):
+        missing.append("config.json")
+    if not os.path.exists(scope_file):
+        missing.append("scope.md")
+    if not os.path.exists(test_gate):
+        missing.append("test-gate.sh")
+
+    if heal or missing or schema_ver < 2:
+        if heal:
+            init_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "init-project.sh")
+            if os.path.exists(init_script):
+                subprocess.run([init_script, target_dir, "--heal"], capture_output=True, text=True)
+                return "PASS", "Project governance auto-healed to schema v2 (config.json, scope.md, test-gate.sh)"
+        if missing or schema_ver < 2:
+            detail = f"Outdated/incomplete governance (schema v{schema_ver}, missing: {missing or 'none'}). Run 'amase doctor --heal' to update."
+            return "WARN", detail
+
+    return "PASS", f"Project governance initialized (schema v{schema_ver}: config.json, scope.md, test-gate.sh)"
 
 
 def main():
-    target_dir = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
+    heal_requested = "--heal" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--heal"]
+    target_dir = args[0] if args else os.getcwd()
     target_dir = os.path.abspath(target_dir)
 
     scripts_dir = os.path.dirname(os.path.abspath(__file__))
@@ -199,7 +221,7 @@ def main():
         ("GitHub Models Connector", check_github_models()),
         ("Local Ollama Engine", check_ollama()),
         ("Sleep Inhibition (systemd)", check_systemd_inhibit()),
-        ("Project Governance", check_governance(target_dir)),
+        ("Project Governance", check_governance(target_dir, heal=heal_requested)),
     ]
 
     passes = 0

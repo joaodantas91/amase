@@ -15,6 +15,26 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 
+auto_heal_governance() {
+  local dir="${1:-$(pwd)}"
+  if [[ -d "$dir/.amase" ]]; then
+    local needs_heal=0
+    if [[ ! -f "$dir/.amase/config.json" ]] || [[ ! -f "$dir/.amase/scope.md" ]] || [[ ! -f "$dir/.amase/test-gate.sh" ]]; then
+      needs_heal=1
+    else
+      local ver
+      ver=$(jq -r '.schema_version // 0' "$dir/.amase/config.json" 2>/dev/null || echo "0")
+      if [[ "$ver" -lt 2 ]]; then
+        needs_heal=1
+      fi
+    fi
+    if [[ "$needs_heal" -eq 1 ]]; then
+      echo "[+] Auto-healing .amase governance to schema v2 in $dir..."
+      "$SCRIPT_DIR/scripts/init-project.sh" "$dir" --heal >/dev/null 2>&1 || true
+    fi
+  fi
+}
+
 if [[ "${1:-}" == "init" ]]; then
   shift
   INIT_DIR="${1:-.}"
@@ -23,7 +43,12 @@ fi
 
 if [[ "${1:-}" == "doctor" ]]; then
   shift
-  exec "$SCRIPT_DIR/scripts/doctor.py" "${1:-$(pwd)}"
+  DOCTOR_TARGET="${1:-$(pwd)}"
+  if [[ "$DOCTOR_TARGET" == --* ]]; then
+    DOCTOR_TARGET="$(pwd)"
+  fi
+  auto_heal_governance "$DOCTOR_TARGET"
+  exec "$SCRIPT_DIR/scripts/doctor.py" "$@"
 fi
 
 if [[ "${1:-}" == "abort" ]]; then
@@ -48,6 +73,7 @@ fi
 
 if [[ "${1:-}" == "parallel" ]]; then
   shift
+  auto_heal_governance "$TARGET_DIR"
   exec "$SCRIPT_DIR/scripts/parallel_dispatcher.py" --repo "$TARGET_DIR" "$@"
 fi
 
@@ -63,6 +89,7 @@ fi
 
 if [[ "${1:-}" == "config" ]]; then
   shift
+  auto_heal_governance "$TARGET_DIR"
   CONFIG_FILE="$TARGET_DIR/.amase/config.json"
   if [[ ! -f "$CONFIG_FILE" ]]; then
     CONFIG_FILE="$SCRIPT_DIR/.amase/config.json"
@@ -189,6 +216,7 @@ if [[ "$TARGET_DIR" == "--no-inhibit" ]]; then
   TARGET_DIR="${1:-$(pwd)}"
 fi
 cd "$TARGET_DIR"
+auto_heal_governance "$TARGET_DIR"
 
 # Sleep & Lid-Close Inhibition: prevent Linux laptop sleep/hibernation while autonomous loop is active
 if command -v systemd-inhibit >/dev/null 2>&1 && [[ -z "${AMASE_INHIBITED:-}" ]]; then

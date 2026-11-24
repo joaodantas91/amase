@@ -288,6 +288,12 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/dispatch-worker.sh`, `scripts/doctor.py`.
   - **Criteria:** `dispatch-worker.sh` includes retry logic for busy SQLite state; `amase doctor` verifies busy_timeout setting; .amase/test-gate.sh passes.
 
+- [x] **TASK-57: Project Governance Auto-Heal & Versioning (Schema v2)**
+  - **Goal:** Implement non-destructive auto-heal and schema v2 versioning in `scripts/init-project.sh`, `scripts/doctor.py`, and `amase` to automatically repair missing governance files and migrate configurations on the fly across external repositories.
+  - **Files:** `scripts/init-project.sh`, `scripts/doctor.py`, `amase`, `.amase/config.json`, `BACKLOG.md`.
+  - **Criteria:** `amase doctor --heal` passes; `scripts/init-project.sh --heal` non-destructively populates missing files without overwriting existing; test gate passes.
+
+
 
 
 
