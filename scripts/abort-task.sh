@@ -45,7 +45,9 @@ BRANCH_NAME="feature/$TASK_ID"
 
 echo "[+] Aborting task: $TASK_ID in $TARGET_REPO..."
 
-# 1. Terminate any running worker processes for this worktree
+# 1. Terminate any running worker processes for this worktree gracefully, then force
+pkill -TERM -f "$WORKTREE_PATH" 2>/dev/null || true
+sleep 0.5
 pkill -9 -f "$WORKTREE_PATH" 2>/dev/null || true
 
 # 2. Unmount and delete worktree

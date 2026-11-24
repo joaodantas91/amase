@@ -339,8 +339,9 @@ echo "[-] All fleet models exhausted."
 python3 "$ORCHESTRATOR_DIR/scripts/diagnose-failure.py" "$WORKTREE" "$(basename "$WORKTREE")" "fleet-exhausted" "$LOG_FILE" 2>/dev/null || true
 python3 "$ORCHESTRATOR_DIR/scripts/engine_incident.py" --record --script "scripts/dispatch-worker.sh" --signature "FLEET_EXHAUSTED" --message "All worker fleet models failed without producing a valid git commit for $(basename "$WORKTREE")" --project "$WORKTREE" 2>/dev/null || true
 touch "$WORKTREE/.amase-failed"
-sleep 5
-exit 1
+echo "[-] Auto-closing failed worker tab in 2s..."
+sleep 2
+exit 0
 EOF
 
 chmod +x "$RUNNER_SCRIPT"
@@ -432,7 +433,13 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
   fi
 
   if [[ -f "$WORKTREE/.amase-failed" ]]; then
-    echo "[-] Worker reported all fleet models failed. Cleaning up worktree..."
+    echo "[-] Worker reported all fleet models failed. Waiting for tab closure..."
+    for _ in {1..3}; do
+      if ! pgrep -f "$WORKTREE/.amase-run.sh" >/dev/null 2>&1; then
+        break
+      fi
+      sleep 1
+    done
     PARENT_REPO="$(cd "$WORKTREE/../.." 2>/dev/null && pwd || true)"
     "$ORCHESTRATOR_DIR/scripts/abort-task.sh" --repo "${PARENT_REPO:-$(pwd)}" --task "$TASK_NAME" 2>/dev/null || true
     exit 1
