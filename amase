@@ -21,6 +21,11 @@ if [[ "${1:-}" == "stats" ]]; then
   exec "$SCRIPT_DIR/scripts/stats.py" "${1:-.}"
 fi
 
+if [[ "${1:-}" == "test-wiring" ]]; then
+  shift
+  exec "$SCRIPT_DIR/scripts/test-wiring.sh" "${1:-$(pwd)}"
+fi
+
 TARGET_DIR="${1:-$(pwd)}"
 cd "$TARGET_DIR"
 
