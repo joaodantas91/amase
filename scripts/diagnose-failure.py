@@ -105,8 +105,9 @@ def main():
     worktree = os.path.abspath(sys.argv[1])
     task_id = sys.argv[2]
     model = sys.argv[3]
-    log_path = sys.argv[4] if len(sys.argv) > 4 else os.path.join(worktree, ".amase-worker.log")
-    duration = int(sys.argv[5]) if len(sys.argv) > 5 else 0
+    log_path = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] != "" else os.path.join(worktree, ".amase-worker.log")
+    duration = int(sys.argv[5]) if len(sys.argv) > 5 and sys.argv[5] != "" else 0
+    status_override = sys.argv[6] if len(sys.argv) > 6 else ""
 
     # Find the target git repo root (worktree parent or target)
     try:
@@ -121,6 +122,10 @@ def main():
             target_repo = worktree
     except Exception:
         target_repo = worktree
+
+    if status_override == "SUCCESS":
+        record_retrospective(target_repo, task_id, model, "SUCCESS", "Task completed and verified clean.", duration_seconds=duration)
+        sys.exit(0)
 
     signature, reason, metrics = diagnose_log(log_path, repo_dir=worktree)
     record_retrospective(target_repo, task_id, model, signature, reason, metrics, duration)

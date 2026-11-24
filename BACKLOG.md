@@ -381,6 +381,14 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/generate-agent.sh`, `personas/builder.md`, `BACKLOG.md`.
   - **Criteria:** Test gate passes with exit code 0; generate-agent dry-run passes.
 
+- [x] **TASK-74: Failover Error Handoff, Success Win-Rate Tracking & Engine Version in Status**
+  - **Goal:**
+    1. In `scripts/dispatch-worker.sh`, implement priority error handoff: when model $N$ fails, capture test-gate/compiler errors and inject into model $N+1$'s prompt so subsequent models fix the failure instead of starting blind.
+    2. In `scripts/settle-task.sh` and `scripts/diagnose-failure.py`, record `SUCCESS` settlements to flight recorder for positive feedback.
+    3. In `scripts/status.py`, report `AMASE Engine: v2.1.0 (<commit>) at <path>` and win-rate statistics (`X settled, Y incidents (Z% win rate)`).
+  - **Files:** `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`, `scripts/diagnose-failure.py`, `scripts/status.py`, `BACKLOG.md`.
+  - **Criteria:** Test gate passes with exit code 0; amase status displays engine version and win rates; error handoff injected dynamically into next candidate model.
+
 
 
 

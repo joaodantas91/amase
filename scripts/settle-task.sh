@@ -321,6 +321,9 @@ COMMIT_HASH="$(git -C "$TARGET_REPO" rev-parse HEAD)"
 python3 "$ORCHESTRATOR_DIR/scripts/telemetry.py" "$TARGET_REPO" "$TASK_ID" "builder" "$META_MODEL" "$DURATION_SECONDS" "$TOKENS_IN" "$TOKENS_OUT" "$COMMIT_HASH" "0.00" "settled"
 echo "[+] Telemetry recorded."
 
+# Record successful task completion to flight recorder (~/.amase/retrospectives.jsonl)
+python3 "$ORCHESTRATOR_DIR/scripts/diagnose-failure.py" "$TARGET_REPO" "$TASK_ID" "$META_MODEL" "" "$DURATION_SECONDS" "SUCCESS" 2>/dev/null || true
+
 echo "========================================================"
 echo "[+] Settlement complete for $TASK_ID."
 echo "========================================================"

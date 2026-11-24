@@ -96,12 +96,13 @@ def get_active_worktrees(target_dir):
 def get_retrospectives_count(target_dir):
     retro_path = os.path.expanduser("~/.amase/retrospectives.jsonl")
     if not os.path.exists(retro_path):
-        return 0, 0
+        return 0, 0, 0, 0
     total = 0
     proj_count = 0
+    proj_success = 0
     target_abs = os.path.abspath(target_dir)
     try:
-        with open(retro_path, "r") as f:
+        with open(retro_path, "r", errors="ignore") as f:
             for line in f:
                 if line.strip():
                     total += 1
@@ -109,11 +110,14 @@ def get_retrospectives_count(target_dir):
                         d = json.loads(line)
                         if d.get("project") == target_abs or d.get("project_name") == os.path.basename(target_abs):
                             proj_count += 1
+                            if d.get("failure_signature") == "SUCCESS":
+                                proj_success += 1
                     except Exception:
                         pass
     except Exception:
         pass
-    return proj_count, total
+    proj_failures = proj_count - proj_success
+    return proj_success, proj_failures, proj_count, total
 
 
 def check_fleet_summary(scripts_dir):
@@ -167,12 +171,24 @@ def main():
     target_dir = os.path.abspath(target_dir)
 
     scripts_dir = os.path.dirname(os.path.abspath(__file__))
+    orchestrator_root = os.path.dirname(scripts_dir)
+    commit_hash = "unknown"
+    try:
+        res = subprocess.run(["git", "-C", orchestrator_root, "rev-parse", "--short", "HEAD"], capture_output=True, text=True)
+        if res.returncode == 0:
+            commit_hash = res.stdout.strip()
+    except Exception:
+        pass
+
     amase_dir = os.path.join(target_dir, ".amase")
 
     print(f"\n{BOLD}========================================================")
     print(" AMASE Project & Swarm Status")
     print(f" Target Directory: {target_dir}")
     print(f"========================================================{RESET}\n")
+
+    # 0. AMASE Engine
+    print(f"  {BOLD}{'AMASE Engine:':<20}{RESET} v2.1.0 ({commit_hash}) at {orchestrator_root}")
 
     # 1. Project Type
     ptype = detect_project_type(target_dir)
@@ -231,9 +247,10 @@ def main():
     print(f"  {BOLD}{'Fleet Readiness:':<20}{RESET} {fleet_str}")
 
     # 7. Retrospectives Flight Recorder
-    proj_retros, total_retros = get_retrospectives_count(target_dir)
-    if total_retros > 0:
-        print(f"  {BOLD}{'Flight Recorder:':<20}{RESET} {proj_retros} project incidents ({total_retros} total in ~/.amase/retrospectives.jsonl)")
+    proj_succ, proj_fail, proj_total, global_total = get_retrospectives_count(target_dir)
+    if proj_total > 0:
+        pct = int((proj_succ / proj_total) * 100) if proj_total > 0 else 0
+        print(f"  {BOLD}{'Flight Recorder:':<20}{RESET} {proj_succ} settled, {proj_fail} incidents ({pct}% win rate) | {global_total} global")
     else:
         print(f"  {BOLD}{'Flight Recorder:':<20}{RESET} {GREEN}Clean (0 incidents logged){RESET}")
 

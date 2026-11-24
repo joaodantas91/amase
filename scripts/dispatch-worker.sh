@@ -181,6 +181,7 @@ MODELS=("$@")
 cd "$WORKTREE"
 
 OPENCODE_FREE_EXHAUSTED=0
+PREV_FAIL_ERROR=""
 
 for MODEL in "${MODELS[@]}"; do
   if [[ "$MODEL" == opencode/*-free && "$OPENCODE_FREE_EXHAUSTED" -eq 1 ]]; then
@@ -203,6 +204,9 @@ for MODEL in "${MODELS[@]}"; do
   printf '{"task_id": "%s", "model": "%s", "start_time": %s}\n' "$(basename "$WORKTREE")" "$MODEL" "$(date +%s)" > "$WORKTREE/.amase-task-meta.json"
 
   PROMPT=$(cat "$WORKTREE/.amase-task-prompt.txt")
+  if [[ -n "$PREV_FAIL_ERROR" ]]; then
+    PROMPT=$(printf "%s\n\n## PRIORITY ADAPTIVE HANDOFF (PREVIOUS MODEL FAILED):\n%s\nDo NOT repeat the error above. Resolve this specific failure and ensure all tests pass.\n" "$PROMPT" "$PREV_FAIL_ERROR")
+  fi
   
   # Stagger OpenCode startup across concurrent workers to serialize SQLite session table initialization
   if command -v flock >/dev/null 2>&1; then
@@ -306,6 +310,23 @@ for MODEL in "${MODELS[@]}"; do
   fi
 
   echo "[-] Model $MODEL did not commit. Failing over to next fleet model..."
+
+  # Capture failure excerpt for handoff to next candidate model
+  PREV_FAIL_ERROR=""
+  GATE_SCRIPT="$WORKTREE/.amase/test-gate.sh"
+  if [[ -x "$GATE_SCRIPT" ]]; then
+    GATE_OUT=$("$GATE_SCRIPT" 2>&1 | tail -n 8 || true)
+    if [[ -n "$GATE_OUT" ]]; then
+      PREV_FAIL_ERROR="Test gate output:\n$GATE_OUT"
+    fi
+  fi
+  if [[ -z "$PREV_FAIL_ERROR" && -f "$LOG_FILE" ]]; then
+    LOG_ERR=$(grep -iE "error|fail|cannot find|not assignable|ts[0-9]+" "$LOG_FILE" 2>/dev/null | tail -n 6 || true)
+    if [[ -n "$LOG_ERR" ]]; then
+      PREV_FAIL_ERROR="Worker log error:\n$LOG_ERR"
+    fi
+  fi
+
   if grep -qi "Free usage limit reached\|rate_limit_exceeded\|insufficient_quota\|exceeded your current quota" "$LOG_FILE" 2>/dev/null; then
     if [[ -f "$ORCHESTRATOR_DIR/scripts/quota_manager.py" ]]; then
       python3 "$ORCHESTRATOR_DIR/scripts/quota_manager.py" --record "$MODEL" --reason "rate_limit_exceeded" 2>/dev/null || true
