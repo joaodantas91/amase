@@ -25,7 +25,7 @@ def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope
         scout_prompt = f.read()
 
     roadmap = ""
-    if os.path.exists(project_roadmap_path):
+    if project_roadmap_path and os.path.exists(project_roadmap_path):
         with open(project_roadmap_path, "r") as f:
             roadmap = f.read()
 
