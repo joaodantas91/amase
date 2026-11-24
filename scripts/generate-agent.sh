@@ -70,20 +70,30 @@ $PERSONA_CONTENT
 
 EOF
 
-# Check retrospective flight recorder for adaptive learned guardrails
-RETRO_FILE="$REPO_PATH/.amase/retrospectives.jsonl"
+# Check centralized retrospective flight recorder for adaptive learned guardrails
+GLOBAL_RETRO="$HOME/.amase/retrospectives.jsonl"
+LOCAL_RETRO="$REPO_PATH/.amase/retrospectives.jsonl"
 ADAPTIVE_GUARDRAILS=()
 
-if [[ -f "$RETRO_FILE" ]]; then
-  if grep -q '"CONTEXT_BLOAT"' "$RETRO_FILE" 2>/dev/null; then
-    ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: CONTEXT_BLOAT PREVIOUSLY DETECTED] Do NOT scan directories or read files outside the files explicitly listed in the active task.")
+has_retro_sig() {
+  local sig="$1"
+  if [[ -f "$GLOBAL_RETRO" ]] && grep -q "\"failure_signature\": \"$sig\"" "$GLOBAL_RETRO" 2>/dev/null; then
+    return 0
   fi
-  if grep -q '"COMPILER_ERROR"' "$RETRO_FILE" 2>/dev/null; then
-    ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: COMPILER_ERROR PREVIOUSLY DETECTED] Always verify types and run local test suite before committing.")
+  if [[ -f "$LOCAL_RETRO" ]] && grep -q "\"failure_signature\": \"$sig\"" "$LOCAL_RETRO" 2>/dev/null; then
+    return 0
   fi
-  if grep -q '"SOCKET_STALL"' "$RETRO_FILE" 2>/dev/null; then
-    ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: SOCKET_STALL PREVIOUSLY DETECTED] Do not run interactive or long-running commands that block standard input.")
-  fi
+  return 1
+}
+
+if has_retro_sig "CONTEXT_BLOAT"; then
+  ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: CONTEXT_BLOAT PREVIOUSLY DETECTED] Do NOT scan directories or read files outside the files explicitly listed in the active task.")
+fi
+if has_retro_sig "COMPILER_ERROR"; then
+  ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: COMPILER_ERROR PREVIOUSLY DETECTED] Always verify types and run local test suite before committing.")
+fi
+if has_retro_sig "SOCKET_STALL"; then
+  ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: SOCKET_STALL PREVIOUSLY DETECTED] Do not run interactive or long-running commands that block standard input.")
 fi
 
 # Inject AST symbol outline into the agent prompt
@@ -99,7 +109,7 @@ if [[ -f "$AST_SCRIPT" ]]; then
     done
   fi
 
-  if [[ -f "$RETRO_FILE" ]] && grep -q '"CONTEXT_BLOAT"' "$RETRO_FILE" 2>/dev/null; then
+  if has_retro_sig "CONTEXT_BLOAT"; then
     AST_OUTPUT=$(python3 "$AST_SCRIPT" "$REPO_PATH" --include-symbols-only "${FILTER_ARGS[@]}" 2>/dev/null | head -n 50) || true
   else
     AST_OUTPUT=$(python3 "$AST_SCRIPT" "$REPO_PATH" --include-symbols-only "${FILTER_ARGS[@]}" 2>/dev/null) || true

@@ -93,6 +93,29 @@ def get_active_worktrees(target_dir):
     return []
 
 
+def get_retrospectives_count(target_dir):
+    retro_path = os.path.expanduser("~/.amase/retrospectives.jsonl")
+    if not os.path.exists(retro_path):
+        return 0, 0
+    total = 0
+    proj_count = 0
+    target_abs = os.path.abspath(target_dir)
+    try:
+        with open(retro_path, "r") as f:
+            for line in f:
+                if line.strip():
+                    total += 1
+                    try:
+                        d = json.loads(line)
+                        if d.get("project") == target_abs or d.get("project_name") == os.path.basename(target_abs):
+                            proj_count += 1
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+    return proj_count, total
+
+
 def check_fleet_summary(scripts_dir):
     indicators = []
 
@@ -206,6 +229,13 @@ def main():
     # 6. Fleet Readiness
     fleet_str = check_fleet_summary(scripts_dir)
     print(f"  {BOLD}{'Fleet Readiness:':<20}{RESET} {fleet_str}")
+
+    # 7. Retrospectives Flight Recorder
+    proj_retros, total_retros = get_retrospectives_count(target_dir)
+    if total_retros > 0:
+        print(f"  {BOLD}{'Flight Recorder:':<20}{RESET} {proj_retros} project incidents ({total_retros} total in ~/.amase/retrospectives.jsonl)")
+    else:
+        print(f"  {BOLD}{'Flight Recorder:':<20}{RESET} {GREEN}Clean (0 incidents logged){RESET}")
 
     print(f"\n{BOLD}--------------------------------------------------------{RESET}")
     if os.path.isdir(amase_dir) and total > 0:

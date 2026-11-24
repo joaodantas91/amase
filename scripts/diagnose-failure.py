@@ -69,14 +69,20 @@ def diagnose_log(log_path, repo_dir=None):
     return "MODEL_ABORT", "Worker exited cleanly without producing a git commit.", metrics
 
 
-def record_retrospective(repo_dir, task_id, model, signature, reason, metrics=None, duration_seconds=0):
-    """Write post-mortem record to target repo's .amase/retrospectives.jsonl."""
-    amase_dir = os.path.join(repo_dir, ".amase")
-    os.makedirs(amase_dir, exist_ok=True)
-    retro_file = os.path.join(amase_dir, "retrospectives.jsonl")
+def get_global_retro_path():
+    """Return path to centralized worker flight recorder (~/.amase/retrospectives.jsonl)."""
+    amase_home = os.path.expanduser("~/.amase")
+    os.makedirs(amase_home, exist_ok=True)
+    return os.path.join(amase_home, "retrospectives.jsonl")
 
+
+def record_retrospective(repo_dir, task_id, model, signature, reason, metrics=None, duration_seconds=0):
+    """Write post-mortem record to centralized flight recorder ~/.amase/retrospectives.jsonl."""
+    retro_file = get_global_retro_path()
     entry = {
         "timestamp": datetime.now(timezone.utc).astimezone().isoformat(),
+        "project": os.path.abspath(repo_dir),
+        "project_name": os.path.basename(os.path.abspath(repo_dir)),
         "task_id": task_id,
         "model": model,
         "failure_signature": signature,
@@ -88,7 +94,7 @@ def record_retrospective(repo_dir, task_id, model, signature, reason, metrics=No
     with open(retro_file, "a") as f:
         f.write(json.dumps(entry) + "\n")
 
-    print(f"[FlightRecorder] Logged post-mortem for {task_id}: {signature} ({reason})")
+    print(f"[FlightRecorder] Logged post-mortem for {task_id}: {signature} ({reason}) in {retro_file}")
 
 
 def main():

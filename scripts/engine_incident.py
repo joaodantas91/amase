@@ -192,6 +192,27 @@ def main():
             st = inc.get("status")
             msg = inc.get("message")
             print(f"[{ts}] [{st.upper()}] {sig} in {script} ({proj}): {msg}")
+
+        retro_path = os.path.expanduser("~/.amase/retrospectives.jsonl")
+        if os.path.exists(retro_path):
+            retros = []
+            with open(retro_path, "r") as f:
+                for l in f:
+                    if l.strip():
+                        try:
+                            retros.append(json.loads(l))
+                        except Exception:
+                            pass
+            if retros:
+                print(f"\n=== AMASE Worker Retrospectives ({len(retros)} total in ~/.amase/retrospectives.jsonl) ===")
+                for r in retros[-10:]:
+                    ts = r.get("timestamp", "").split(".")[0]
+                    sig = r.get("failure_signature", "FAIL")
+                    task = r.get("task_id", "")
+                    proj = r.get("project_name", "")
+                    model = r.get("model", "")
+                    reason = r.get("reason", "")
+                    print(f"[{ts}] [{sig}] {task} ({proj}) via {model}: {reason}")
         sys.exit(0)
 
     parser.print_help()

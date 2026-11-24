@@ -323,6 +323,12 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `/home/joao/.gemini/config/GEMINI.md`, `README.md`, `BACKLOG.md`.
   - **Criteria:** Protocol explicitly guides clean agents to run `amase status` / `amase` without token-wasting manual script reads.
 
+- [x] **TASK-64: Centralize Retrospective Flight Recorder (~/.amase/retrospectives.jsonl)**
+  - **Goal:** Unify scattered local `.amase/retrospectives.jsonl` files into a single persistent global registry at `~/.amase/retrospectives.jsonl` with project tags. Eliminates untracked file pollution across repositories, enables cross-project learned guardrails in `generate-agent.sh`, and integrates with `amase status` and `amase incidents`.
+  - **Files:** `scripts/diagnose-failure.py`, `scripts/generate-agent.sh`, `scripts/status.py`, `scripts/engine_incident.py`, `BACKLOG.md`.
+  - **Criteria:** Retrospectives write to `~/.amase/retrospectives.jsonl`; `amase incidents` lists global retrospectives; test gate passes.
+
+
 
 
 
