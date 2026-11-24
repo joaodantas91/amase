@@ -168,7 +168,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/dispatch-worker.sh`.
   - **Criteria:** A failed or timed-out worker run records a valid JSON record with failure signature and metrics to `.amase/retrospectives.jsonl`; bash -n scripts/dispatch-worker.sh exits 0; .amase/test-gate.sh passes.
 
-- [ ] **TASK-33: Adaptive Prompt Envelope & Self-Improvement Loop**
+- [x] **TASK-33: Adaptive Prompt Envelope & Self-Improvement Loop**
   - **Goal:** In `scripts/generate-agent.sh`, inspect past entries in `.amase/retrospectives.jsonl`. If previous tasks in this project suffered from `CONTEXT_BLOAT`, auto-restrict `outline-ast.py` to target files and inject targeted guardrail rules into `.amase-rules.md`.
   - **Files:** `scripts/generate-agent.sh`.
   - **Criteria:** `scripts/generate-agent.sh` dry-run with a simulated `CONTEXT_BLOAT` retrospective injects the restricted scope guardrail; .amase/test-gate.sh passes.

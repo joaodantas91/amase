@@ -70,15 +70,43 @@ $PERSONA_CONTENT
 
 EOF
 
+# Check retrospective flight recorder for adaptive learned guardrails
+RETRO_FILE="$REPO_PATH/.amase/retrospectives.jsonl"
+ADAPTIVE_GUARDRAILS=()
+
+if [[ -f "$RETRO_FILE" ]]; then
+  if grep -q '"CONTEXT_BLOAT"' "$RETRO_FILE" 2>/dev/null; then
+    ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: CONTEXT_BLOAT PREVIOUSLY DETECTED] Do NOT scan directories or read files outside the files explicitly listed in the active task.")
+  fi
+  if grep -q '"COMPILER_ERROR"' "$RETRO_FILE" 2>/dev/null; then
+    ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: COMPILER_ERROR PREVIOUSLY DETECTED] Always verify types and run local test suite before committing.")
+  fi
+  if grep -q '"SOCKET_STALL"' "$RETRO_FILE" 2>/dev/null; then
+    ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: SOCKET_STALL PREVIOUSLY DETECTED] Do not run interactive or long-running commands that block standard input.")
+  fi
+fi
+
 # Inject AST symbol outline into the agent prompt
 AST_SCRIPT="$ORCHESTRATOR_DIR/scripts/outline-ast.py"
 if [[ -f "$AST_SCRIPT" ]]; then
-  AST_OUTPUT=$(python3 "$AST_SCRIPT" "$REPO_PATH" --include-symbols-only 2>/dev/null) || true
+  if [[ -f "$RETRO_FILE" ]] && grep -q '"CONTEXT_BLOAT"' "$RETRO_FILE" 2>/dev/null; then
+    AST_OUTPUT=$(python3 "$AST_SCRIPT" "$REPO_PATH" --include-symbols-only 2>/dev/null | head -n 50) || true
+  else
+    AST_OUTPUT=$(python3 "$AST_SCRIPT" "$REPO_PATH" --include-symbols-only 2>/dev/null) || true
+  fi
   if [[ -n "$AST_OUTPUT" ]]; then
     echo ""
     echo "## CODEBASE AST SYMBOL MAP"
     printf '%s\n' "$AST_OUTPUT"
   fi
+fi
+
+if [[ "${#ADAPTIVE_GUARDRAILS[@]}" -gt 0 ]]; then
+  echo ""
+  echo "## ADAPTIVE EXPERIENCE GUARDRAILS (LEARNED FROM RECENT FAILURES):"
+  for g in "${ADAPTIVE_GUARDRAILS[@]}"; do
+    echo "$g"
+  done
 fi
 
 if [[ "$ROLE" == "builder" ]]; then
