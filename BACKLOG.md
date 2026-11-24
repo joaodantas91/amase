@@ -376,6 +376,11 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/scout.py`, `scripts/settle-task.sh`, `scripts/dispatch-worker.sh`, `amase`, `BACKLOG.md`.
   - **Criteria:** Test gate passes with exit code 0; duplicate tasks rejected; empty settlements blocked; worktrees clean on interrupt.
 
+- [x] **TASK-73: Adaptive Zero-Commit Guardrail (MODEL_ABORT Resolution)**
+  - **Goal:** Close the loop on retrospective flight recorder findings: when `MODEL_ABORT` is detected in `~/.amase/retrospectives.jsonl`, dynamically inject adaptive instructions via `scripts/generate-agent.sh` and `personas/builder.md` mandating that workers never exit with zero commits; if a feature already exists, they must add/expand a unit test and commit `test(TASK-XX): verify criteria`.
+  - **Files:** `scripts/generate-agent.sh`, `personas/builder.md`, `BACKLOG.md`.
+  - **Criteria:** Test gate passes with exit code 0; generate-agent dry-run passes.
+
 
 
 

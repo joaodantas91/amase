@@ -95,6 +95,9 @@ fi
 if has_retro_sig "SOCKET_STALL"; then
   ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: SOCKET_STALL PREVIOUSLY DETECTED] Do not run interactive or long-running commands that block standard input.")
 fi
+if has_retro_sig "MODEL_ABORT"; then
+  ADAPTIVE_GUARDRAILS+=("- [ADAPTIVE GUARDRAIL: ZERO COMMIT DETECTED PREVIOUSLY] You MUST make a git commit before exiting. If the requested feature is already implemented, add or expand a unit test verifying the criteria and commit.")
+fi
 
 # Inject AST symbol outline into the agent prompt
 AST_SCRIPT="$ORCHESTRATOR_DIR/scripts/outline-ast.py"
