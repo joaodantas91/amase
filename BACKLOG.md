@@ -48,7 +48,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `.amase/test-gate.sh`.
   - **Criteria:** Linter runs during test gate; clean exit code 0.
 
-- [ ] **TASK-09: Pipeline Dry-Run Simulator (amase test-wiring)**
+- [x] **TASK-09: Pipeline Dry-Run Simulator (amase test-wiring)**
   - **Goal:** Add `amase test-wiring` subcommand that tests worktree creation, agent directive generation, git hooks, and settlement cleanup end-to-end without spending model calls.
   - **Files:** `amase`, `scripts/test-wiring.sh`.
   - **Criteria:** Verifies complete orchestrator mechanics in <2 seconds.
