@@ -157,3 +157,23 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Update default fallback models in `scripts/sentinel.py` to `sentinel-fleet`, `scripts/scout.py` to `scout-fleet`, and `scripts/dispatch-worker.sh` to `nvidia/nvidia/nemotron-3.5-lightning-30b-a3b`, completely eliminating hardcoded dependencies on exhausted community pools.
   - **Files:** `scripts/sentinel.py`, `scripts/scout.py`, `scripts/dispatch-worker.sh`.
   - **Criteria:** `python3 scripts/sentinel.py --dry-run . HEAD~1` exits 0; `python3 scripts/scout.py --objective "Test" --dry-run` exits 0; `bash -n scripts/dispatch-worker.sh` exits 0; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-31: Unified Multi-Persona Token Telemetry & Ledger Breakdown**
+  - **Goal:** Update telemetry recording to track role-level tokens (`builder`, `sentinel`, `scout`, `coordinator`). Record `role`, `tokens_in`, `tokens_out`, and `model` in `.amase/telemetry.jsonl`. Update `scripts/stats.py` (`amase stats`) to render a role-based breakdown table summarizing tasks, tokens in/out, duration, and cost per persona.
+  - **Files:** `scripts/stats.py`, `scripts/settle-task.sh`, `scripts/scout.py`, `scripts/fleet.py`.
+  - **Criteria:** `amase stats` renders a multi-persona breakdown table displaying `ROLE`, `TOKENS IN`, `TOKENS OUT`, and `COST`; python3 -m py_compile scripts/stats.py exits 0; .amase/test-gate.sh passes.
+
+- [ ] **TASK-32: Failure Diagnostic Signatures & Post-Mortem Flight Recorder**
+  - **Goal:** In `scripts/dispatch-worker.sh`, when an attempt fails or times out, analyze the run log to categorize the failure signature (`CONTEXT_BLOAT`, `COMPILER_ERROR`, `SOCKET_STALL`, `QUOTA_EXHAUSTED`). Write a structured post-mortem entry to `.amase/retrospectives.jsonl`.
+  - **Files:** `scripts/dispatch-worker.sh`.
+  - **Criteria:** A failed or timed-out worker run records a valid JSON record with failure signature and metrics to `.amase/retrospectives.jsonl`; bash -n scripts/dispatch-worker.sh exits 0; .amase/test-gate.sh passes.
+
+- [ ] **TASK-33: Adaptive Prompt Envelope & Self-Improvement Loop**
+  - **Goal:** In `scripts/generate-agent.sh`, inspect past entries in `.amase/retrospectives.jsonl`. If previous tasks in this project suffered from `CONTEXT_BLOAT`, auto-restrict `outline-ast.py` to target files and inject targeted guardrail rules into `.amase-rules.md`.
+  - **Files:** `scripts/generate-agent.sh`.
+  - **Criteria:** `scripts/generate-agent.sh` dry-run with a simulated `CONTEXT_BLOAT` retrospective injects the restricted scope guardrail; .amase/test-gate.sh passes.
+
+- [ ] **TASK-34: Automated Failure Cleanup & Worktree Pruning (amase abort)**
+  - **Goal:** Add `amase abort [task-id]` and automatic teardown in `dispatch-worker.sh` when all fleet models fail, cleanly unmounting the worktree (`git worktree remove --force`), pruning the branch, and resetting task state to `[ ]` without leaving dangling worktrees.
+  - **Files:** `amase`, `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`.
+  - **Criteria:** `amase abort <task-id>` unmounts worktree and deletes branch; git status is 100% clean; .amase/test-gate.sh passes.
