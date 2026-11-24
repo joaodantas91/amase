@@ -213,7 +213,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `README.md`.
   - **Criteria:** README.md contains Token Efficiency and Self-Improvement sections; .amase/test-gate.sh passes.
 
-- [ ] **TASK-42: Internal Script Reference & Architecture Catalog in README.md**
+- [x] **TASK-42: Internal Script Reference & Architecture Catalog in README.md**
   - **Goal:** Document all host-side orchestration and mechanical offloading scripts in `README.md` (lifecycle, AST parsing, multi-persona agents, telemetry, diagnostics), detailing their exact role and 0-token footprint.
   - **Files:** `README.md`.
   - **Criteria:** README.md contains Internal Script Reference section with all active scripts; .amase/test-gate.sh passes.
