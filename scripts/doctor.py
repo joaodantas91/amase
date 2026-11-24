@@ -114,6 +114,20 @@ def check_github_models():
     return "WARN", "No GitHub token found. (Run 'gh auth login' or export GITHUB_TOKEN to enable free GitHub Models)."
 
 
+def check_ollama():
+    try:
+        req = urllib.request.Request("http://localhost:11434/api/tags")
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            models = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
+            if models:
+                return "PASS", f"Local Ollama online (Active models: {', '.join(models)})"
+            return "WARN", "Local Ollama daemon online, but no models downloaded yet. (Run 'ollama pull qwen2.5-coder:14b')"
+    except Exception:
+        pass
+    return "WARN", "Local Ollama offline. (Run 'ollama serve' or start service for offline fallback)"
+
+
 def check_governance(target_dir):
     config_file = os.path.join(target_dir, ".amase", "config.json")
     scope_file = os.path.join(target_dir, ".amase", "scope.md")
@@ -154,6 +168,7 @@ def main():
         ("Terminal Multiplexer", check_terminal_tab()),
         ("Model Fleet API Keys", check_api_keys(orchestrator_dir)),
         ("GitHub Models Connector", check_github_models()),
+        ("Local Ollama Engine", check_ollama()),
         ("Project Governance", check_governance(target_dir)),
     ]
 

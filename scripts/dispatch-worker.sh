@@ -72,6 +72,14 @@ if [[ "$MODEL_TIER" == "pro" ]]; then
   )
 fi
 
+# Add active local Ollama models to worker candidate fleet if online
+if curl -s -m 1 http://localhost:11434/api/tags >/dev/null 2>&1; then
+  LOCAL_CODER=$(curl -s http://localhost:11434/api/tags 2>/dev/null | grep -o '"qwen2.5-coder:[^"]*"' | tr -d '"' | head -n 1 || true)
+  if [[ -n "$LOCAL_CODER" ]]; then
+    FLEET_MODELS+=("ollama/$LOCAL_CODER")
+  fi
+fi
+
 # Deduplicate
 UNIQUE_FLEET=()
 for m in "${FLEET_MODELS[@]}"; do

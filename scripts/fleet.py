@@ -5,8 +5,9 @@ Executes prompts against the $0 Free Model Fleet.
 Headless, fast, zero GUI tab popups.
 1. Checks local LiteLLM Proxy (:4000) if active.
 2. Gracefully falls back to headless OpenCode CLI (nemotron-3.5-lightning-free, etc.).
-3. Falls back to GitHub Models (models.github.ai) using GITHUB_TOKEN or gh CLI.
-4. Falls back to direct Groq API if key is present.
+3. Falls back to Local Ollama daemon (localhost:11434) for 100% offline, unlimited tokens.
+4. Falls back to GitHub Models (models.github.ai) using GITHUB_TOKEN or gh CLI.
+5. Falls back to direct Groq API if key is present.
 """
 import json
 import os
@@ -18,6 +19,7 @@ import urllib.request
 OPENCODE_BIN = os.getenv("OPENCODE_BIN", "/home/joao/.bun/bin/opencode")
 LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completions")
 API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 LAST_USAGE = {"tokens_in": 0, "tokens_out": 0, "model": ""}
 
@@ -37,6 +39,70 @@ FREE_MODELS = [
     "opencode/flint-40b-free",
     "opencode/mimo-v2.6-flash-free",
 ]
+
+
+def get_local_ollama_models(host: str = OLLAMA_HOST):
+    """Check if local Ollama daemon is reachable and return active model names."""
+    try:
+        req = urllib.request.Request(f"{host}/api/tags")
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            models = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
+            return models
+    except Exception:
+        return []
+
+
+def query_ollama(prompt: str, system_prompt: str = "", model: str = None, host: str = OLLAMA_HOST, timeout: int = 45) -> str:
+    """Query local Ollama daemon for offline, zero-cost, unlimited inference."""
+    available = get_local_ollama_models(host)
+    if not available:
+        return ""
+
+    selected_model = model
+    if not selected_model or selected_model not in available:
+        # Prefer coder models
+        coder_models = [m for m in available if "coder" in m.lower()]
+        selected_model = coder_models[0] if coder_models else available[0]
+
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    payload = {
+        "model": selected_model,
+        "messages": messages,
+        "stream": True,
+        "options": {
+            "temperature": 0.1,
+            "num_predict": 1024,
+        }
+    }
+
+    req = urllib.request.Request(
+        f"{host}/api/chat",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"}
+    )
+
+    try:
+        content_parts = []
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            for line in resp:
+                if line.strip():
+                    chunk = json.loads(line.decode("utf-8"))
+                    text = chunk.get("message", {}).get("content", "")
+                    if text:
+                        content_parts.append(text)
+                    if chunk.get("done"):
+                        LAST_USAGE["tokens_in"] = chunk.get("prompt_eval_count", 0)
+                        LAST_USAGE["tokens_out"] = chunk.get("eval_count", 0)
+                        LAST_USAGE["model"] = f"ollama/{selected_model}"
+            return "".join(content_parts).strip()
+    except Exception as e:
+        sys.stderr.write(f"[-] Ollama query failed: {e}\n")
+        return ""
 
 
 def get_github_token() -> str:
@@ -115,7 +181,7 @@ def query_github_models(prompt: str, system_prompt: str = "", model: str = "open
 def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, title: str = "", timeout: int = 60) -> str:
     """
     Query the free model pool with automatic failover across LiteLLM, OpenCode CLI,
-    GitHub Models, and direct Groq API.
+    Local Ollama, GitHub Models, and direct Groq API.
     Runs headlessly in the background with zero tab popups.
     """
     # 1. Try LiteLLM proxy if reachable
@@ -171,12 +237,17 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
                 sys.stderr.write(f"[-] Fleet model {m} failed: {e}\n")
                 continue
 
-    # 3. GitHub Models auto-connector fallback (zero-config if gh token present)
+    # 3. Local Ollama fallback (100% offline, unlimited tokens, zero rate limits)
+    ollama_content = query_ollama(prompt, system_prompt, timeout=timeout)
+    if ollama_content.strip():
+        return ollama_content.strip()
+
+    # 4. GitHub Models auto-connector fallback (zero-config if gh token present)
     gh_content = query_github_models(prompt, system_prompt, model="openai/gpt-4o-mini", timeout=12)
     if gh_content.strip():
         return gh_content.strip()
 
-    # 4. Direct Groq fallback if GROQ_API_KEY is present
+    # 5. Direct Groq fallback if GROQ_API_KEY is present
     groq_key = os.getenv("GROQ_API_KEY")
     if not groq_key:
         env_path = os.path.join(os.path.dirname(__file__), "..", ".env")

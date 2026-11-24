@@ -70,12 +70,21 @@ model_list:
       api_key: os.environ/GITHUB_TOKEN
       drop_params: true
 
+  # ============================================================================
+  # 8. LOCAL OLLAMA FLEET (100% Offline, Zero-Cost Local Hardware)
+  # ============================================================================
+  - model_name: ollama-fleet
+    litellm_params:
+      model: ollama/qwen2.5-coder:14b
+      api_base: http://localhost:11434
+      drop_params: true
+
 router_settings:
   routing_strategy: "least-busy"
   fallbacks:
-    - coding-fleet: ["coding-fleet", "github-fleet"]
-    - scout-fleet: ["scout-fleet", "github-fleet"]
-    - sentinel-fleet: ["sentinel-fleet", "github-fleet"]
+    - coding-fleet: ["coding-fleet", "github-fleet", "ollama-fleet"]
+    - scout-fleet: ["scout-fleet", "github-fleet", "ollama-fleet"]
+    - sentinel-fleet: ["sentinel-fleet", "github-fleet", "ollama-fleet"]
   model_group_alias:
     "gpt-5.6-terra": "coding-fleet"
     "gpt-4o": "coding-fleet"
