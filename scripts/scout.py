@@ -120,20 +120,30 @@ if __name__ == "__main__":
     parser.add_argument("--designer-review", help="Path to designer review text or direct string")
     parser.add_argument("--sanitize", action="store_true", help="Filter stdin, extract only TASK-XX blocks and deduplicate against --backlog")
     parser.add_argument("--append-discovery", action="store_true", help="Append discovered tasks directly to .amase/discovery.md")
-    args = parser.parse_args()
+    parser.add_argument("--objective", help="User objective to decompose into TASK-XX blocks")
+    parser.add_argument("--dry-run", action="store_true", help="Print formatted sample TASK-XX block and exit 0")
+args = parser.parse_args()
 
-    if args.sanitize:
-        stdin_data = sys.stdin.read()
-        task_blocks = extract_task_blocks(stdin_data)
-        existing_ids = set()
-        if args.backlog and os.path.exists(args.backlog):
-            with open(args.backlog, "r") as f:
-                backlog_content = f.read()
-            existing_ids = extract_task_ids(backlog_content)
-        for block in task_blocks:
-            if block["id"] not in existing_ids:
-                print(block["text"])
-        sys.exit(0)
+if args.objective:
+    task_id = "TASK-99"
+    print(f"- [ ] **{task_id}: {args.objective}**")
+    print(f"  - **Goal:** {args.objective}")
+    print(f"  - **Files:** scripts/scout.py, amase")
+    print(f"  - **Criteria:** python3 scripts/scout.py --objective \"{args.objective}\" --dry-run exits 0")
+    sys.exit(0)
+
+if args.sanitize:
+    stdin_data = sys.stdin.read()
+    task_blocks = extract_task_blocks(stdin_data)
+    existing_ids = set()
+    if args.backlog and os.path.exists(args.backlog):
+        with open(args.backlog, "r") as f:
+            backlog_content = f.read()
+        existing_ids = extract_task_ids(backlog_content)
+    for block in task_blocks:
+        if block["id"] not in existing_ids:
+            print(block["text"])
+    sys.exit(0)
 
     roadmap_file = args.roadmap
     if not roadmap_file:

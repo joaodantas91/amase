@@ -73,6 +73,26 @@ if [[ "${1:-}" == "config" ]]; then
   exit 1
 fi
 
+if [[ "${1:-}" == "task" ]]; then
+  DRY_RUN=false
+  TARGET_DIR="${TARGET_DIR:-$(pwd)}"
+  BACKLOG_FILE="$TARGET_DIR/BACKLOG.md"
+  shift
+  if [[ "${1:-}" == "--dry-run" ]]; then
+    DRY_RUN=true
+    shift
+  fi
+  OBJECTIVE="$*"
+  RESULT=$("$SCRIPT_DIR/scripts/scout.py" --objective "$OBJECTIVE" 2>/dev/null)
+  if [ "$DRY_RUN" = true ]; then
+    echo "$RESULT"
+  else
+    echo "$RESULT" >> "$BACKLOG_FILE"
+    echo "[+] Appended task to $BACKLOG_FILE"
+  fi
+  exit 0
+fi
+
 TARGET_DIR="${1:-$(pwd)}"
 cd "$TARGET_DIR"
 
@@ -112,6 +132,24 @@ while true; do
       fi
     fi
   fi
+
+if [[ "${1:-}" == "task" ]]; then
+  DRY_RUN=false
+  shift
+  if [[ "${1:-}" == "--dry-run" ]]; then
+    DRY_RUN=true
+    shift
+  fi
+  OBJECTIVE="$*"
+  RESULT=$("$SCRIPT_DIR/scripts/scout.py" --objective "$OBJECTIVE" 2>/dev/null)
+  if [ "$DRY_RUN" = true ]; then
+    echo "$RESULT"
+  else
+    echo "$RESULT" >> "$BACKLOG_FILE"
+    echo "[+] Appended task to $BACKLOG_FILE"
+  fi
+  exit 0
+fi
 
   # 2. Autonomous Backlog Lookahead (Top up if fewer than 3 tasks remain)
   # Check config.json for mode and discovery settings
