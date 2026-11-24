@@ -143,22 +143,22 @@ if [[ "$INV_FOUND" -eq 1 ]]; then
   # Write findings to AUDIT.md
   if [[ -f "$AUDIT_FILE" ]]; then
     echo "[+] Appending invariant violations to AUDIT.md..."
-    echo "---" >> "$AUDIT.md"
-    echo "Invariant violations detected post-merge:" >> "$AUDIT.md"
+    echo "---" >> "$AUDIT_FILE"
+    echo "Invariant violations detected post-merge:" >> "$AUDIT_FILE"
     if echo "$INV_DIFF" | grep -qE '\.svelte|\.vue'; then
-      echo "- Raw hex color found in .svelte/.vue file" >> "$AUDIT.md"
+      echo "- Raw hex color found in .svelte/.vue file" >> "$AUDIT_FILE"
     fi
     if echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
-      echo "- 'as any' or '@ts-ignore' found in .ts/.tsx file" >> "$AUDIT.md"
+      echo "- 'as any' or '@ts-ignore' found in .ts/.tsx file" >> "$AUDIT_FILE"
     fi
   else
-    echo "---" > "$AUDIT.md"
-    echo "Invariant violations detected post-merge:" >> "$AUDIT.md"
+    echo "---" > "$AUDIT_FILE"
+    echo "Invariant violations detected post-merge:" >> "$AUDIT_FILE"
     if echo "$INV_DIFF" | grep -qE '\.svelte|\.vue'; then
-      echo "- Raw hex color found in .svelte/.vue file" >> "$AUDIT.md"
+      echo "- Raw hex color found in .svelte/.vue file" >> "$AUDIT_FILE"
     fi
     if echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
-      echo "- 'as any' or '@ts-ignore' found in .ts/.tsx file" >> "$AUDIT.md"
+      echo "- 'as any' or '@ts-ignore' found in .ts/.tsx file" >> "$AUDIT_FILE"
     fi
   fi
 else
