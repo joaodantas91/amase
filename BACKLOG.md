@@ -258,7 +258,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/ui_heuristics.js`.
   - **Criteria:** Node evaluation test detects simulated element collisions and overflow; .amase/test-gate.sh passes.
 
-- [ ] **TASK-51: Asset & Console Failure Interceptor (scripts/ui_network_audit.py)**
+- [x] **TASK-51: Asset & Console Failure Interceptor (scripts/ui_network_audit.py)**
   - **Goal:** Create `scripts/ui_network_audit.py` to capture failed network requests (404/500), broken `<img>` assets (`naturalWidth === 0`), and unhandled browser console errors/warnings during headless page navigation, outputting structured JSON metrics at 0 LLM tokens.
   - **Files:** `scripts/ui_network_audit.py`.
   - **Criteria:** `python3 scripts/ui_network_audit.py --help` exits 0; captures mock network/console errors; .amase/test-gate.sh passes.
