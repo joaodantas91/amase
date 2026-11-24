@@ -141,3 +141,8 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** In `scripts/dispatch-worker.sh`, wrap each model attempt in `.amase-run.sh` with `timeout --kill-after=5s 120s` so hung sockets are immediately severed in 2 minutes. Add a 45s log inactivity watchdog in `dispatch-worker.sh` that detects zero bytes written for 45s and sends SIGKILL to force instant failover to the next fleet model.
   - **Files:** `scripts/dispatch-worker.sh`.
   - **Criteria:** `bash -n scripts/dispatch-worker.sh` exits 0; `grep -q 'timeout --kill-after' scripts/dispatch-worker.sh` exits 0; `scripts/test-wiring.sh` passes; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-27: Instant OpenCode Free-Quota Detection & Automatic Groq Direct Swap**
+  - **Goal:** In `scripts/dispatch-worker.sh`, monitor `~/.local/share/opencode/log/opencode.log` to detect `"Free usage limit reached"` instantly (<1s) and SIGKILL opencode without waiting for timeouts. In `scripts/fleet.py`, add automatic stdlib `urllib.request` failover to Groq (`openai/gpt-oss-120b`) using `GROQ_API_KEY` from `.env` so child personas (Sentinel, Scout, Designer) never stall when OpenCode free pool is exhausted.
+  - **Files:** `scripts/dispatch-worker.sh`, `scripts/fleet.py`.
+  - **Criteria:** `python3 -c "import sys; sys.path.insert(0, 'scripts'); from fleet import query_fleet; res = query_fleet('Say test in one word'); assert len(res) > 0"` exits 0 and returns valid text; `bash -n scripts/dispatch-worker.sh` exits 0; `.amase/test-gate.sh` passes.
