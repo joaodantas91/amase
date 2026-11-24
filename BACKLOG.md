@@ -198,7 +198,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/run-task.sh`, `scripts/dispatch-worker.sh`.
   - **Criteria:** Child worktree has access to parent environment variables without git tracking .env; bash -n scripts/run-task.sh exits 0; .amase/test-gate.sh passes.
 
-- [ ] **TASK-39: Accurate Builder Token Capture & Telemetry Backfill**
+- [x] **TASK-39: Accurate Builder Token Capture & Telemetry Backfill**
   - **Goal:** In `scripts/extract_tokens.py` (and `scripts/settle-task.sh`, `scripts/stats.py`), extract real builder token usage from OpenCode SQLite database (`~/.local/share/opencode/opencode.db`) matching session timestamp/directory with fallback heuristics, and backfill historical telemetry records so `amase stats` reports accurate builder token consumption.
   - **Files:** `scripts/extract_tokens.py`, `scripts/settle-task.sh`, `scripts/stats.py`.
   - **Criteria:** `python3 scripts/extract_tokens.py --help` exits 0; `amase stats` shows non-zero builder token usage; .amase/test-gate.sh passes.
