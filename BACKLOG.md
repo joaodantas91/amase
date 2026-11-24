@@ -88,7 +88,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/prune-prompt.py`, `scripts/generate-agent.sh`.
   - **Criteria:** `python3 scripts/prune-prompt.py prompts/swarm_invariants.md` exits 0 and outputs fewer bytes than input; `.amase/test-gate.sh` passes.
 
-- [ ] **TASK-17: Fix post-merge invariant audit variable scoping in settle-task.sh**
+- [x] **TASK-17: Fix post-merge invariant audit variable scoping in settle-task.sh**
   - **Goal:** Define `BACKLOG_FILE` and `AUDIT_FILE` before the invariant check so post-merge remediation runs without unset-variable failures and detects violations per changed file type.
   - **Files:** `scripts/settle-task.sh`.
   - **Criteria:** `bash -n scripts/settle-task.sh` exits 0 and `.amase/test-gate.sh` passes.
