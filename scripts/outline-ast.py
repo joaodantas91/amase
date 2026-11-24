@@ -14,6 +14,7 @@ compact symbol map. See docs/OPEN_SOURCE_TOOL_REGISTRY.md.
 """
 import argparse
 import ast
+import fnmatch
 import os
 import re
 import sys
@@ -260,9 +261,19 @@ def outline_source(path, src):
     return parser(src)
 
 
-def iter_files(target, max_depth):
+def _matches_target_files(path, patterns):
+    if not patterns:
+        return True
+    for pattern in patterns:
+        if fnmatch.fnmatch(path, pattern):
+            return True
+    return False
+
+
+def iter_files(target, max_depth, target_files=None):
     if os.path.isfile(target):
-        yield target
+        if target_files is None or _matches_target_files(target, target_files):
+            yield target
         return
     root_depth = target.rstrip(os.sep).count(os.sep)
     for dirpath, dirnames, filenames in os.walk(target):
@@ -279,7 +290,9 @@ def iter_files(target, max_depth):
                 continue
             if ext not in LANG_BY_EXT:
                 continue
-            yield os.path.join(dirpath, name)
+            path = os.path.join(dirpath, name)
+            if target_files is None or _matches_target_files(path, target_files):
+                yield path
 
 
 def outline_file(path):
@@ -307,6 +320,8 @@ def main(argv=None):
                         help="Also list files that yield no symbols")
     parser.add_argument("--include-symbols-only", action="store_true",
                         help="Output only function signatures and interface contracts (minified skeleton)")
+    parser.add_argument("--target-files", default=None,
+                        help="Comma-separated glob patterns to filter which files to index (e.g. 'scripts/*.py,*.sh')")
     args = parser.parse_args(argv)
 
     if not os.path.exists(args.target):
@@ -315,7 +330,7 @@ def main(argv=None):
 
     files = 0
     symbols = 0
-    for path in iter_files(args.target, args.max_depth):
+    for path in iter_files(args.target, args.max_depth, args.target_files):
         result = outline_file(path)
         if result is None:
             if args.include_empty and os.path.isfile(path):
