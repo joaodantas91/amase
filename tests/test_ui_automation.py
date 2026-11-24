@@ -55,6 +55,23 @@ class TestUIAutomation(unittest.TestCase):
         self.assertEqual(res.returncode, 0)
         self.assertNotIn("DESIGN SYSTEM & UI INVARIANTS", res.stdout)
 
+    def test_ui_formatter_includes_contrast_and_misalignment(self):
+        import sys
+        scripts_dir = os.path.join(ORCHESTRATOR_DIR, "scripts")
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        from ui_formatter import format_ui_report, estimate_token_count
+
+        mock_layout = {
+            "contrastIssues": [{"selector": "p#muted", "ratio": "2.1:1", "required": "4.5:1"}],
+            "misalignments": [{"elementA": "input#a", "elementB": "input#b", "deltaPx": 8}]
+        }
+        report = format_ui_report("http://localhost:3000", mock_layout, {})
+        self.assertIn("[UI FAIL]", report)
+        self.assertIn("Low Contrast: p#muted (2.1:1 < 4.5:1)", report)
+        self.assertIn("Misaligned: input#a vs input#b (8px shift)", report)
+        self.assertLess(estimate_token_count(report), 150)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -31,6 +31,8 @@ def format_ui_report(
     overflows: List[Dict[str, Any]] = layout_results.get("overflows", [])
     overlaps: List[Dict[str, Any]] = layout_results.get("overlaps", [])
     tiny_targets: List[Dict[str, Any]] = layout_results.get("tinyTargets", [])
+    contrast_issues: List[Dict[str, Any]] = layout_results.get("contrastIssues", [])
+    misalignments: List[Dict[str, Any]] = layout_results.get("misalignments", [])
 
     failed_requests: List[Dict[str, Any]] = network_results.get("failed_requests", [])
     broken_images: List[Dict[str, Any]] = network_results.get("broken_images", [])
@@ -38,6 +40,7 @@ def format_ui_report(
 
     total_issues = (
         len(overflows) + len(overlaps) + len(tiny_targets) +
+        len(contrast_issues) + len(misalignments) +
         len(failed_requests) + len(broken_images) + len(console_errors)
     )
 
@@ -62,12 +65,22 @@ def format_ui_report(
             overlap_str += f" (+{len(overlaps) - 3} more)"
         lines.append(f"- Collisions: {overlap_str}")
 
-    # 3. Tiny Targets (< 24px, cap at 2)
+    # 3. Low Contrast (cap at 2)
+    if contrast_issues:
+        items = [f"{c.get('selector')} ({c.get('ratio')} < {c.get('required')})" for c in contrast_issues[:2]]
+        lines.append(f"- Low Contrast: {', '.join(items)}")
+
+    # 4. Alignment Jitter (cap at 2)
+    if misalignments:
+        items = [f"{m.get('elementA')} vs {m.get('elementB')} ({m.get('deltaPx')}px shift)" for m in misalignments[:2]]
+        lines.append(f"- Misaligned: {', '.join(items)}")
+
+    # 5. Tiny Targets (< 24px, cap at 2)
     if tiny_targets:
         items = [f"{t.get('selector')} ({t.get('size')})" for t in tiny_targets[:2]]
         lines.append(f"- Tiny Targets: {', '.join(items)}")
 
-    # 4. Network failures (4xx, 5xx, cap at 3)
+    # 6. Network failures (4xx, 5xx, cap at 3)
     if failed_requests:
         items = [f"{r.get('status', 0)} {r.get('url', '').split('/')[-1] or r.get('url')}" for r in failed_requests[:3]]
         lines.append(f"- Failed Requests: {', '.join(items)}")
@@ -103,6 +116,12 @@ def run_formatter_test():
         ],
         "tinyTargets": [
             {"selector": "button.icon-close", "size": "16x16px"}
+        ],
+        "contrastIssues": [
+            {"selector": "p.text-muted", "ratio": "2.1:1", "required": "4.5:1"}
+        ],
+        "misalignments": [
+            {"elementA": "input#email", "elementB": "input#name", "deltaPx": 8}
         ]
     }
 

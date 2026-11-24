@@ -11,6 +11,34 @@
  * Can be passed to page.evaluate() or executed directly via Node (--test).
  */
 
+function parseColor(str) {
+  if (!str) return null;
+  const match = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (!match) return null;
+  return {
+    r: parseInt(match[1], 10),
+    g: parseInt(match[2], 10),
+    b: parseInt(match[3], 10),
+    a: match[4] !== undefined ? parseFloat(match[4]) : 1.0
+  };
+}
+
+function getLuminance(rgb) {
+  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(v => {
+    v = v / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function getContrastRatio(fg, bg) {
+  const l1 = getLuminance(fg);
+  const l2 = getLuminance(bg);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 function inspectLayout(options = {}) {
   const maxOverflowTolerance = options.overflowTolerance || 2;
   const minTargetSize = options.minTargetSize || 24;
@@ -21,7 +49,9 @@ function inspectLayout(options = {}) {
     viewport: { width: viewportWidth, height: viewportHeight },
     overflows: [],
     overlaps: [],
-    tinyTargets: []
+    tinyTargets: [],
+    contrastIssues: [],
+    misalignments: []
   };
 
   const getSelector = (el) => {
@@ -108,6 +138,85 @@ function inspectLayout(options = {}) {
     }
   }
 
+  // 4. Color contrast inspection (WCAG AA: min 4.5:1 for normal text, 3.0:1 for large text)
+  const textSelector = 'p, span, h1, h2, h3, h4, h5, h6, label, button, a';
+  const textEls = Array.from(document.querySelectorAll(textSelector));
+
+  const getEffectiveBgColor = (element) => {
+    let curr = element;
+    while (curr && curr !== document && curr.nodeType === 1) {
+      const s = window.getComputedStyle(curr);
+      if (s) {
+        const bg = parseColor(s.backgroundColor);
+        if (bg && bg.a > 0.05) return bg;
+      }
+      curr = curr.parentElement;
+    }
+    return { r: 255, g: 255, b: 255, a: 1 };
+  };
+
+  for (const el of textEls) {
+    if (el.offsetParent === null && el.tagName !== 'BODY') continue;
+    const style = window.getComputedStyle(el);
+    if (!style || style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue;
+
+    const text = el.textContent ? el.textContent.trim() : '';
+    if (!text || text.length === 0) continue;
+
+    const fg = parseColor(style.color);
+    if (!fg) continue;
+
+    const bg = getEffectiveBgColor(el);
+    const ratio = getContrastRatio(fg, bg);
+
+    const fontSize = parseFloat(style.fontSize) || 16;
+    const fontWeight = parseInt(style.fontWeight, 10) || 400;
+    const isLarge = fontSize >= 24 || (fontSize >= 18.5 && fontWeight >= 700);
+    const minRatio = isLarge ? 3.0 : 4.5;
+
+    if (ratio < minRatio) {
+      results.contrastIssues.push({
+        selector: getSelector(el),
+        ratio: `${ratio.toFixed(1)}:1`,
+        required: `${minRatio}:1`,
+        text: text.length > 20 ? text.slice(0, 18) + '...' : text
+      });
+    }
+  }
+
+  // 5. Column misalignment & layout jitter detection for vertically adjacent form controls
+  const formContainers = Array.from(document.querySelectorAll('form, .form, .form-group, fieldset, main, section, .card, body'));
+  const checkedPairs = new Set();
+
+  for (const container of formContainers) {
+    const inputs = Array.from(container.querySelectorAll('input:not([type="hidden"]), select, textarea'));
+    if (inputs.length < 2) continue;
+
+    for (let i = 0; i < inputs.length - 1; i++) {
+      const elA = inputs[i];
+      const elB = inputs[i + 1];
+      const rA = elA.getBoundingClientRect();
+      const rB = elB.getBoundingClientRect();
+
+      // Check if vertically stacked within reasonable form row distance
+      if (rB.top >= rA.bottom - 5 && rB.top <= rA.bottom + 80) {
+        const delta = Math.abs(rA.left - rB.left);
+        // Misalignment jitter: between 3px and 24px (unintended shift)
+        if (delta >= 3 && delta <= 24) {
+          const key = `${getSelector(elA)}|${getSelector(elB)}`;
+          if (!checkedPairs.has(key)) {
+            checkedPairs.add(key);
+            results.misalignments.push({
+              elementA: getSelector(elA),
+              elementB: getSelector(elB),
+              deltaPx: Math.round(delta)
+            });
+          }
+        }
+      }
+    }
+  }
+
   return results;
 }
 
@@ -143,6 +252,28 @@ if (require.main === module) {
         offsetParent: {},
         getBoundingClientRect: () => ({ x: 10, y: 10, width: 16, height: 16, left: 10, right: 26, top: 10, bottom: 26 }),
         contains: () => false
+      },
+      {
+        tagName: 'P',
+        id: 'low-contrast-text',
+        textContent: 'Hard to read text',
+        offsetParent: {},
+        getBoundingClientRect: () => ({ x: 10, y: 50, width: 200, height: 20, left: 10, right: 210, top: 50, bottom: 70 }),
+        contains: () => false
+      },
+      {
+        tagName: 'INPUT',
+        id: 'input-a',
+        offsetParent: {},
+        getBoundingClientRect: () => ({ x: 10, y: 200, width: 200, height: 40, left: 10, right: 210, top: 200, bottom: 240 }),
+        contains: () => false
+      },
+      {
+        tagName: 'INPUT',
+        id: 'input-b',
+        offsetParent: {},
+        getBoundingClientRect: () => ({ x: 18, y: 250, width: 200, height: 40, left: 18, right: 218, top: 250, bottom: 290 }),
+        contains: () => false
       }
     ];
 
@@ -151,11 +282,33 @@ if (require.main === module) {
       body: {},
       querySelectorAll: (sel) => {
         if (sel === 'body *') return elements;
-        if (sel.includes('button')) return elements;
+        if (sel.includes('button') || sel.includes('input') || sel.includes('text')) {
+          return elements.filter(e => ['BUTTON', 'A', 'INPUT', 'P'].includes(e.tagName));
+        }
+        if (sel.includes('form') || sel.includes('body')) {
+          return [{
+            querySelectorAll: () => elements.filter(e => e.tagName === 'INPUT')
+          }];
+        }
         return [];
       }
     };
-    global.window.getComputedStyle = () => ({ display: 'block', visibility: 'visible', opacity: '1' });
+    global.window.getComputedStyle = (el) => {
+      if (el && el.id === 'low-contrast-text') {
+        return {
+          display: 'block', visibility: 'visible', opacity: '1',
+          color: 'rgb(200, 200, 200)',
+          backgroundColor: 'rgb(255, 255, 255)',
+          fontSize: '14px', fontWeight: '400'
+        };
+      }
+      return {
+        display: 'block', visibility: 'visible', opacity: '1',
+        color: 'rgb(0, 0, 0)',
+        backgroundColor: 'rgb(255, 255, 255)',
+        fontSize: '16px', fontWeight: '400'
+      };
+    };
 
     const results = inspectLayout();
     console.log('Results:', JSON.stringify(results, null, 2));
@@ -163,15 +316,19 @@ if (require.main === module) {
     const hasOverflow = results.overflows.some(o => o.selector === '#submit-btn' && o.overflowPx > 50);
     const hasOverlap = results.overlaps.some(o => o.elementA === '#submit-btn' && o.elementB === '#cancel-link');
     const hasTiny = results.tinyTargets.some(t => t.selector === '#icon-btn');
+    const hasContrast = results.contrastIssues.some(c => c.selector === '#low-contrast-text');
+    const hasMisalignment = results.misalignments.some(m => m.elementA === '#input-a' && m.elementB === '#input-b');
 
-    if (hasOverflow && hasOverlap && hasTiny) {
+    if (hasOverflow && hasOverlap && hasTiny && hasContrast && hasMisalignment) {
       console.log('✓ Viewport overflow detected correctly.');
       console.log('✓ Element collision/overlap detected correctly.');
       console.log('✓ Tiny click target detected correctly.');
+      console.log('✓ Low WCAG color contrast detected correctly.');
+      console.log('✓ Form column misalignment detected correctly.');
       console.log('[+] ui_heuristics.js self-test PASSED (exit code 0).');
       process.exit(0);
     } else {
-      console.error('[-] Self-test assertions failed:', { hasOverflow, hasOverlap, hasTiny });
+      console.error('[-] Self-test assertions failed:', { hasOverflow, hasOverlap, hasTiny, hasContrast, hasMisalignment });
       process.exit(1);
     }
   } else {
