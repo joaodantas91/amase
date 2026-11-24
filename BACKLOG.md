@@ -233,7 +233,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/run-task.sh`, `scripts/settle-task.sh`.
   - **Criteria:** `amase parallel --dry-run` outputs non-conflicting task batches; .amase/test-gate.sh passes.
 
-- [ ] **TASK-46: Safe Parallel Execution Settings & Configuration (.amase/config.json & amase config)**
+- [x] **TASK-46: Safe Parallel Execution Settings & Configuration (.amase/config.json & amase config)**
   - **Goal:** In `.amase/config.json`, `amase config`, and `scripts/init-project.sh`, decouple concurrency settings from orchestrator mode (`mode`: `"autonomous"` | `"interactive"`, `concurrency`: `"sequential"` | `"parallel"`, with default `concurrency: "sequential"`). Allow viewing and toggling via `amase config --concurrency` and `amase config --set-concurrency <sequential|parallel>`.
   - **Files:** `amase`, `scripts/init-project.sh`, `.amase/config.json`.
   - **Criteria:** Default concurrency is `"sequential"`; `amase config --concurrency` outputs current setting; `amase config --set-concurrency parallel` toggles properly; .amase/test-gate.sh passes.
