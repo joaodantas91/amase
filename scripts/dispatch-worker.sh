@@ -95,7 +95,7 @@ for MODEL in "${MODELS[@]}"; do
 
   PROMPT=$(cat "$WORKTREE/.amase-task-prompt.txt")
   
-  "$OPENCODE_BIN" run --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" || true
+  timeout --kill-after=5s 120s "$OPENCODE_BIN" run --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" || true
 
   # If git commit made, we are done
   LAST_COMMIT=$(git log -1 --format="%ct" 2>/dev/null || echo 0)
@@ -184,6 +184,12 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
       LAST_LOG_SIZE="$CURRENT_LOG_SIZE"
       STALL_SECONDS=0
     fi
+  fi
+
+  if [ "$STALL_SECONDS" -ge 45 ]; then
+    echo "[-] Model stall detected (no output for 45s). Forcing failover..."
+    pkill -P $(pgrep -f "$WORKTREE/.amase-run.sh") opencode 2>/dev/null || true
+    STALL_SECONDS=0
   fi
 
   if [ $((ELAPSED % 15)) -eq 0 ]; then
