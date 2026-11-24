@@ -268,7 +268,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/ui_formatter.py`, `scripts/ui_validator.py`, `amase`.
   - **Criteria:** `amase ui-check --help` exits 0; mock failure output is under 150 tokens; .amase/test-gate.sh passes.
 
-- [ ] **TASK-53: Universal UI Validation MCP Server (scripts/ui_mcp_server.py)**
+- [x] **TASK-53: Universal UI Validation MCP Server (scripts/ui_mcp_server.py)**
   - **Goal:** Create `scripts/ui_mcp_server.py` exposing a standard Model Context Protocol (MCP) tool (`validate_ui`) over stdio. Allows external AI orchestrators (Claude Code, Cursor, OpenCode, Windsurf, Antigravity) to inspect web pages and receive condensed CHISLE visual telemetry.
   - **Files:** `scripts/ui_mcp_server.py`.
   - **Criteria:** MCP server initializes and responds to `tools/list` and `tools/call` over stdio; .amase/test-gate.sh passes.
