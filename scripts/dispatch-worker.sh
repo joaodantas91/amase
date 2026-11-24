@@ -103,6 +103,20 @@ fi
 
 rm -f "$LOG_FILE" "$DONE_FILE"
 
+# Ensure OpenCode SQLite database uses WAL mode and 5s busy timeout to prevent concurrent lock collisions
+python3 -c "
+import sqlite3, os
+p = os.path.expanduser('~/.local/share/opencode/opencode.db')
+if os.path.exists(p):
+    try:
+        conn = sqlite3.connect(p, timeout=3.0)
+        conn.execute('PRAGMA journal_mode = WAL;')
+        conn.execute('PRAGMA busy_timeout = 5000;')
+        conn.close()
+    except Exception:
+        pass
+" 2>/dev/null || true
+
 INITIAL_COMMIT_TIME=$(git -C "$WORKTREE" log -1 --format="%ct" 2>/dev/null || echo 0)
 START_TIME=$(date +%s)
 
@@ -137,6 +151,16 @@ for MODEL in "${MODELS[@]}"; do
 
   PROMPT=$(cat "$WORKTREE/.amase-task-prompt.txt")
   
+  # Stagger OpenCode startup across concurrent workers to serialize SQLite session table initialization
+  if command -v flock >/dev/null 2>&1; then
+    (
+      flock -x -w 5 200 || true
+      sleep 0.5
+    ) 200>/tmp/amase-opencode-startup.lock
+  else
+    sleep $(( (RANDOM % 15) / 10 ))
+  fi
+
   timeout --kill-after=5s 120s "$OPENCODE_BIN" run --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
   WORKER_PID=$!
 

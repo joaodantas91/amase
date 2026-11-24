@@ -51,6 +51,26 @@ def check_opencode():
     return "WARN", "OpenCode CLI not found in ~/.bun/bin or PATH. Free fleet builder will use fallback."
 
 
+def check_opencode_db():
+    db_path = os.path.expanduser("~/.local/share/opencode/opencode.db")
+    if not os.path.exists(db_path):
+        return "WARN", f"OpenCode DB not found at {db_path} (initialized on first run)"
+    try:
+        import sqlite3
+        conn = sqlite3.connect(db_path, timeout=3.0)
+        cursor = conn.cursor()
+        mode = cursor.execute("PRAGMA journal_mode;").fetchone()[0]
+        if mode.lower() != "wal":
+            cursor.execute("PRAGMA journal_mode = WAL;")
+            mode = cursor.execute("PRAGMA journal_mode;").fetchone()[0]
+        cursor.execute("PRAGMA busy_timeout = 5000;")
+        conn.close()
+        return "PASS", f"OpenCode SQLite WAL mode active ({mode.upper()}) at {db_path}"
+    except Exception as e:
+        return "WARN", f"OpenCode DB check failed: {e}"
+
+
+
 def check_litellm():
     url = os.getenv("LITELLM_URL", "http://localhost:4000/health")
     try:
@@ -164,6 +184,7 @@ def main():
         ("Git Version & Worktrees", check_git(target_dir)),
         ("Python Runtime", check_python()),
         ("OpenCode CLI Tool", check_opencode()),
+        ("OpenCode SQLite Safety", check_opencode_db()),
         ("LiteLLM Proxy (:4000)", check_litellm()),
         ("Terminal Multiplexer", check_terminal_tab()),
         ("Model Fleet API Keys", check_api_keys(orchestrator_dir)),
