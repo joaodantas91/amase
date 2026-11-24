@@ -54,6 +54,16 @@ if [[ -f "scripts/ui_network_audit.py" ]]; then
   echo "  ✓ scripts/ui_network_audit.py (mock-test passed)"
 fi
 
+if [[ -f "scripts/ui_formatter.py" ]]; then
+  python3 scripts/ui_formatter.py >/dev/null 2>&1
+  echo "  ✓ scripts/ui_formatter.py (self-test passed)"
+fi
+
+if [[ -f "scripts/ui_validator.py" ]]; then
+  python3 scripts/ui_validator.py --mock-test >/dev/null 2>&1
+  echo "  ✓ scripts/ui_validator.py (mock-test passed)"
+fi
+
 # 2.1 Validate JavaScript syntax and heuristics self-test
 if command -v node >/dev/null 2>&1; then
   echo "[+] Validating JavaScript scripts syntax..."

@@ -127,6 +127,18 @@ amase parallel --max-parallel 3 # Scale to 3 parallel workers
 
 ---
 
+### `amase ui-check <url> [--viewport WxH] [--json]`
+
+Headless deterministic UI layout and runtime failure validator. Detects viewport overflows, interactive element collisions, broken images, and uncaught console errors, condensing findings into a strict <150-token markdown summary for LLMs (0 image tokens).
+
+```bash
+amase ui-check http://localhost:3000                # Check default mobile (375x812)
+amase ui-check http://localhost:3000 --viewport 1280x800 # Check desktop
+amase ui-check http://localhost:3000 --json         # Full structured JSON telemetry
+```
+
+---
+
 ### `amase test-wiring`
 
 End-to-end simulation of worktree, AST extraction, git hooks, and settlement in `<2s`. Validates the full pipeline: worktree creation, pre-commit hook enforcement, sentinel audit, and clean teardown.
@@ -271,4 +283,11 @@ AMASE is powered by specialized host-side scripts that perform deterministic sof
 - **`extract_tokens.py`**: Extracts exact LLM token counts from OpenCode's SQLite database (`~/.local/share/opencode/opencode.db`) with fallback duration heuristics.
 - **`telemetry.py`**: Multi-persona telemetry logger appending standardized execution records to `.amase/telemetry.jsonl`.
 - **`stats.py`**: Formats and prints real-time multi-persona terminal activity logs and role breakdown summaries (`amase stats`).
+
+### 5. Deterministic UI & Visual Validation (0-Token Heuristics)
+- **`ui_heuristics.js`**: In-browser DOM evaluator running headlessly to detect horizontal viewport overflows, interactive collisions, and tiny click targets (0 image tokens).
+- **`ui_network_audit.py`**: Captures failed network responses (404/500), broken `<img>` assets, and unhandled browser console errors.
+- **`ui_formatter.py`**: CHISLE token condenser compiling layout and network findings into a strict <150-token markdown diagnostic.
+- **`ui_validator.py`**: Orchestrates headless inspections into the standalone CLI `amase ui-check <url>`.
+
 

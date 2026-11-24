@@ -51,6 +51,11 @@ if [[ "${1:-}" == "parallel" ]]; then
   exec "$SCRIPT_DIR/scripts/parallel_dispatcher.py" --repo "$TARGET_DIR" "$@"
 fi
 
+if [[ "${1:-}" == "ui-check" ]]; then
+  shift
+  exec "$SCRIPT_DIR/scripts/ui_validator.py" "$@"
+fi
+
 if [[ "${1:-}" == "test-wiring" ]]; then
   shift
   exec "$SCRIPT_DIR/scripts/test-wiring.sh" "${1:-$(pwd)}"
