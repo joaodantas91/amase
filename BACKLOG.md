@@ -126,3 +126,8 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Add metrics endpoint
   - **Files:** scripts/scout.py, amase
   - **Criteria:** python3 scripts/scout.py --objective "Add metrics endpoint" --dry-run exits 0
+
+- [ ] **TASK-24: Update README.md to Modern CLI Architecture & Scrub Vault References**
+  - **Goal:** Scrub all hardcoded private vault references (`joao-os`, `/home/joao/dev/joao-os`) from `README.md`, `scripts/scout.py`, and `scripts/designer.py` to make the repository fully portable. Rewrite `README.md` with complete documentation for the modern `amase` CLI (`init`, `config`, `task`, `stats`, `test-wiring`, and loop execution), configuration governance (`.amase/config.json`), and $0 fleet execution.
+  - **Files:** `README.md`, `scripts/scout.py`, `scripts/designer.py`.
+  - **Criteria:** `grep -rn 'joao-os' README.md scripts/` returns no matches (exit 1); `python3 -m py_compile scripts/scout.py scripts/designer.py` exits 0; `.amase/test-gate.sh` passes.
