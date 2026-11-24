@@ -273,6 +273,22 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/ui_mcp_server.py`.
   - **Criteria:** MCP server initializes and responds to `tools/list` and `tools/call` over stdio; .amase/test-gate.sh passes.
 
+- [ ] **TASK-54: Automatic Sleep & Lid-Close Inhibition via systemd-inhibit in amase**
+  - **Goal:** In `amase`, automatically wrap continuous autonomous execution with `systemd-inhibit --what=idle:sleep:handle-lid-switch --who=AMASE --why="AMASE autonomous execution"` when available on Linux systems. Prevents laptop sleep, screen hibernation, or lid-close suspension from terminating running workers or dropping API sockets during long unattended runs.
+  - **Files:** `amase`, `README.md`.
+  - **Criteria:** `amase` auto-inhibits sleep when started in autonomous mode; releases cleanly on exit; .amase/test-gate.sh passes.
+
+- [ ] **TASK-55: UI Validation Fast-Gate Integration in test-gate.sh**
+  - **Goal:** In `.amase/test-gate.sh` and `scripts/init-project.sh`, auto-detect frontend projects with active dev servers or static HTML files and integrate optional `amase ui-check` deterministic layout evaluation into the project test gate.
+  - **Files:** `.amase/test-gate.sh`, `scripts/init-project.sh`.
+  - **Criteria:** `test-gate.sh` can optionally invoke `amase ui-check` for web targets; .amase/test-gate.sh passes.
+
+- [ ] **TASK-56: OpenCode SQLite Connection Retry & WAL Pragma Auto-Tuner**
+  - **Goal:** In `scripts/dispatch-worker.sh` and `scripts/doctor.py`, add automated SQLite retry loops with exponential backoff on `SQLITE_BUSY` errors, ensuring high-concurrency worker execution never drops database commits.
+  - **Files:** `scripts/dispatch-worker.sh`, `scripts/doctor.py`.
+  - **Criteria:** `dispatch-worker.sh` includes retry logic for busy SQLite state; `amase doctor` verifies busy_timeout setting; .amase/test-gate.sh passes.
+
+
 
 
 
