@@ -1,8 +1,8 @@
 # AUDIT.md
 
 ## Audit Summary
-**Target:** Recent git diff (TASK-30: Default Persona Model Fallbacks)
-**Scope:** `scripts/dispatch-worker.sh`, `scripts/scout.py`, `scripts/sentinel.py`, `BACKLOG.md`
+**Target:** Recent git diff (TASK-31: Unified Multi-Persona Token Telemetry & Ledger Breakdown)
+**Scope:** `AUDIT.md`, `BACKLOG.md`, `scripts/fleet.py`
 **Result:** **Core invariants verified clean**
 
 ---
@@ -15,7 +15,7 @@
 
 ### 2. Prototype Pollution / Unsafe Setters
 - **Status:** N/A
-- **Analysis:** No native value setters, `Object.defineProperty`, or prototype chain modifications are introduced. The changes are strictly configuration string updates.
+- **Analysis:** No native value setters, `Object.defineProperty`, or prototype chain modifications are introduced. The changes are strictly Python script updates and documentation.
 
 ### 3. Manifest V3 Permission Escalation
 - **Status:** N/A
@@ -23,7 +23,7 @@
 
 ### 4. Code Duplication (PONYTAIL Rung 2)
 - **Status:** Clean
-- **Analysis:** The changes replace hardcoded model strings with environment-variable-driven defaults (`sentinel-fleet`, `scout-fleet`, `nvidia/nvidia/nemotron-3.5-lightning-30b-a3b`). No new helper functions are introduced that would duplicate existing utilities in `src/core/`. The pattern `os.getenv("VAR", "default")` is consistent with existing codebase conventions.
+- **Analysis:** The diff introduces a `LAST_USAGE` dictionary and a `get_last_usage()` function in `scripts/fleet.py`. This is a new telemetry utility specific to the fleet script. No existing utilities in `src/core/` (which typically houses browser extension logic) are duplicated. The pattern is consistent with local state management in CLI scripts.
 
 ### 5. Missing Input Guards on Form Autofill
 - **Status:** N/A
@@ -43,4 +43,4 @@
 
 ---
 
-**[INFO]** Model fallbacks updated to dedicated fleet aliases. No security, DOM, or MV3 compliance issues identified. Branch is safe to merge.
+**[INFO]** Telemetry scaffolding added to `scripts/fleet.py`. No security, DOM, or MV3 compliance issues identified. Branch is safe to merge.
