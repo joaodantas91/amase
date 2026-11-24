@@ -1,25 +1,25 @@
 # Sentinel Audit Report
 
-**Target:** Recent git diff (TASK-44: Local Ollama Fleet Integration)
-**Audit Scope:** `config/litellm-config.yaml`, `scripts/dispatch-worker.sh` (truncated), `AUDIT.md`
+**Target:** Recent git diff (TASK-45: Parallel Execution CLI & Docs)
+**Audit Scope:** `AUDIT.md` (deletion), `README.md` (documentation updates)
 
 ---
 
 ### 1. DOM Injection Risks
 **Status: CLEAN**
-The diff modifies a YAML configuration file and a shell script. No JavaScript, HTML, or browser-side template literals are present. No `innerHTML`, `outerHTML`, or unescaped user input injection vectors exist.
+The diff modifies Markdown documentation (`README.md`) and deletes a previous audit report (`AUDIT.md`). No JavaScript, HTML, or browser-side template literals are present. No `innerHTML`, `outerHTML`, or unescaped user input injection vectors exist.
 
 ### 2. Prototype Pollution / Unsafe Setters
 **Status: CLEAN**
-No code execution context is introduced that interacts with the browser's prototype chain. The changes are configuration-based (YAML) and shell-based. No `Object.defineProperty`, native setter overrides, or prototype chain manipulations are present.
+No code execution context is introduced. The changes are purely informational (Markdown). No `Object.defineProperty`, native setter overrides, or prototype chain manipulations are present.
 
 ### 3. Manifest V3 Permission Escalation
 **Status: NO CHANGES**
-No `wxt.config.ts`, `manifest.json`, or extension source files are modified. No host permissions or `<all_urls>` patterns are introduced. The `api_base` in `litellm-config.yaml` points to `http://localhost:11434`, which is a backend proxy configuration for local inference, not a browser extension host permission.
+No `wxt.config.ts`, `manifest.json`, or extension source files are modified. No host permissions or `<all_urls>` patterns are introduced.
 
 ### 4. Code Duplication (PONYTAIL Rung 2)
-**Status: CLEAN**
-The new `ollama-fleet` entry in `config/litellm-config.yaml` is a standalone model definition. It does not introduce new utility functions that duplicate existing helpers in `src/core/`. It follows the same pattern as other fleet definitions in the file.
+**Status: N/A**
+No new utility functions or source code files are added. The diff only updates documentation for the `amase parallel` command.
 
 ### 5. Missing Input Guards on Form Autofill
 **Status: N/A**
@@ -36,9 +36,9 @@ No form autofill logic or browser input handling is modified.
 ---
 
 **Additional Observations:**
-- **[LOW]** `config/litellm-config.yaml`: The `ollama-fleet` uses `http://localhost:11434` (plaintext HTTP). While acceptable for local development, ensure that this endpoint is not exposed to non-localhost interfaces in production environments to prevent unauthorized access to local inference services.
-- **[INFO]** `config/litellm-config.yaml`: The addition of `ollama-fleet` as a final fallback for `coding-fleet`, `scout-fleet`, and `sentinel-fleet` is a valid routing strategy for offline/zero-cost scenarios. Ensure that the local Ollama service is properly monitored for availability to avoid silent failures in the fallback chain.
+- **[INFO]** `README.md`: The documentation for `amase parallel` correctly describes the use of Git worktrees and terminal tabs. Ensure that the underlying implementation (not in this diff) properly handles worktree cleanup to prevent disk space leaks in long-running sessions.
+- **[INFO]** `AUDIT.md`: The previous audit report was deleted. This is acceptable as audit reports are typically ephemeral or moved to a dedicated log directory. Ensure that the new audit process (triggered by this diff) correctly regenerates `AUDIT.md` upon completion.
 
 ---
 
-[INFO] Core invariants verified clean.
+Core invariants verified clean.
