@@ -49,6 +49,11 @@ echo "[+] Validating Python scripts compilation..."
 python3 -m py_compile scripts/*.py
 echo "  ✓ Python scripts compiled cleanly"
 
+if [[ -f "scripts/ui_network_audit.py" ]]; then
+  python3 scripts/ui_network_audit.py --mock-test >/dev/null 2>&1
+  echo "  ✓ scripts/ui_network_audit.py (mock-test passed)"
+fi
+
 # 2.1 Validate JavaScript syntax and heuristics self-test
 if command -v node >/dev/null 2>&1; then
   echo "[+] Validating JavaScript scripts syntax..."
