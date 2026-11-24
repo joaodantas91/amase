@@ -83,7 +83,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/run-task.sh`.
   - **Criteria:** `bash scripts/test-wiring.sh` passes end-to-end; `.amase/test-gate.sh` passes.
 
-- [ ] **TASK-16: Context Pruner & Diff-Only Prompt Minifier**
+- [x] **TASK-16: Context Pruner & Diff-Only Prompt Minifier**
   - **Goal:** Add a stdlib minifier that strips comments and blank lines from injected prompt rules in `generate-agent.sh`, cutting worker context 30-40%.
   - **Files:** `scripts/prune-prompt.py`, `scripts/generate-agent.sh`.
   - **Criteria:** `python3 scripts/prune-prompt.py prompts/swarm_invariants.md` exits 0 and outputs fewer bytes than input; `.amase/test-gate.sh` passes.
