@@ -208,10 +208,45 @@ fi
 
 chmod +x "$TARGET_DIR/.amase/test-gate.sh"
 
+# 5. Universal AGENTS.md in project root (standard for all AI tools: Claude Code, OpenCode, Cursor, Antigravity)
+AGENTS_FILE="$TARGET_DIR/AGENTS.md"
+if [[ ! -f "$AGENTS_FILE" ]]; then
+  cat > "$AGENTS_FILE" <<'AGENTS'
+# Project AI Protocol
+
+When an AI assistant or coordinator is opened in this repository:
+
+1. **NEVER modify or write code directly in the assistant/coordinator session.**
+   All implementation, refactoring, testing, and debugging are executed exclusively by child worker personas via the $0 Free Fleet in isolated git worktrees.
+
+2. **One-Command Autonomous Execution:**
+   - **Inspect Status:** Run `amase status` for an instant unified status overview.
+   - **Execute Tasks:** Run `amase` in the terminal.
+   - **DO NOT** read internal orchestrator scripts (`run-task.sh`, `settle-task.sh`, `amase` source) or manually commit files. AMASE handles governance auto-healing, git auto-syncing, worker dispatching ($0 models), deterministic test gates, and git settlement autonomously.
+
+3. **Invariants:**
+   - **CAVEMAN**: Terse, factual updates. Zero conversational filler or pleasantries.
+   - **PONYTAIL**: Minimal working diffs, YAGNI, standard library first.
+   - **CHISLE**: Strict context hygiene.
+AGENTS
+elif ! grep -q "amase status" "$AGENTS_FILE" 2>/dev/null; then
+  TMP_AGENTS=$(mktemp)
+  cat > "$TMP_AGENTS" <<'AGENTS'
+# AMASE Coordinator Protocol
+When an AI assistant or coordinator is opened in this repository:
+- Run `amase status` to inspect project and backlog state.
+- Run `amase` in the terminal to execute backlog tasks autonomously.
+- NEVER modify or write code directly in the assistant session; child workers execute tasks in isolated worktrees via the $0 Free Fleet.
+
+AGENTS
+  cat "$AGENTS_FILE" >> "$TMP_AGENTS"
+  mv "$TMP_AGENTS" "$AGENTS_FILE"
+fi
+
 if [[ "$IS_HEAL" -eq 1 ]]; then
   echo "[+] AMASE governance healed in $TARGET_DIR (schema v2)"
 else
   echo "[+] AMASE initialized in $TARGET_DIR (schema v2)"
   echo "[+] Detected project type: $PROJECT_TYPE"
-  echo "[+] Governance ready: .amase/config.json, .amase/scope.md, .amase/discovery.md, .amase/test-gate.sh"
+  echo "[+] Governance ready: AGENTS.md, .amase/config.json, .amase/scope.md, .amase/discovery.md, .amase/test-gate.sh"
 fi

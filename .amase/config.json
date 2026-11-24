@@ -10,7 +10,8 @@
   "ui": {
     "builder_visible_tab": true,
     "sentinel_visible_tab": true,
-    "headless_analyzers": false
+    "headless_analyzers": false,
+    "target_url": ""
   },
   "persona_routing": {
     "builder": [
