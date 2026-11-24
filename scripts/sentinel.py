@@ -12,7 +12,7 @@ import subprocess
 import urllib.request
 
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
-ORCHESTRATOR_ROOT = os.path.dirname(os.path.dirname(SCRIPTS_DIR))
+ORCHESTRATOR_ROOT = os.path.dirname(SCRIPTS_DIR)
 if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
 from fleet import query_fleet

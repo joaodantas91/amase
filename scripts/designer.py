@@ -15,7 +15,7 @@ LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completion
 API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
 MODEL = os.getenv("DESIGNER_MODEL", "designer-fleet")
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
-ORCHESTRATOR_ROOT = os.path.dirname(os.path.dirname(SCRIPTS_DIR))
+ORCHESTRATOR_ROOT = os.path.dirname(SCRIPTS_DIR)
 SKILL_SEARCH = os.path.join(ORCHESTRATOR_ROOT, "skills", "ui-ux-pro-max", "scripts", "search.py")
 
 def get_design_intelligence(query="browser extension developer tool dark mode dashboard"):
