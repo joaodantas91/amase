@@ -228,7 +228,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/fleet.py`, `scripts/doctor.py`, `scripts/start-proxy.sh`.
   - **Criteria:** `amase doctor` reports local Ollama status; `fleet.py` detects Ollama when active; .amase/test-gate.sh passes.
 
-- [ ] **TASK-45: Parallel Non-Conflicting Worktree Orchestration (amase parallel)**
+- [x] **TASK-45: Parallel Non-Conflicting Worktree Orchestration (amase parallel)**
   - **Goal:** In `amase`, `scripts/dispatch-worker.sh`, and `scripts/settle-task.sh`, add `amase parallel` to identify non-conflicting tasks in `BACKLOG.md` (orthogonal target files) and dispatch up to 2–3 isolated worktree workers concurrently in separate Ptyxis tabs.
   - **Files:** `amase`, `scripts/run-task.sh`, `scripts/settle-task.sh`.
   - **Criteria:** `amase parallel --dry-run` outputs non-conflicting task batches; .amase/test-gate.sh passes.
