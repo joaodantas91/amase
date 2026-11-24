@@ -315,13 +315,17 @@ for MODEL in "${MODELS[@]}"; do
   PREV_FAIL_ERROR=""
   GATE_SCRIPT="$WORKTREE/.amase/test-gate.sh"
   if [[ -x "$GATE_SCRIPT" ]]; then
-    GATE_OUT=$("$GATE_SCRIPT" 2>&1 | tail -n 8 || true)
-    if [[ -n "$GATE_OUT" ]]; then
-      PREV_FAIL_ERROR="Test gate output:\n$GATE_OUT"
+    RAW_GATE_OUT=$("$GATE_SCRIPT" 2>&1 || true)
+    # Extract actual compiler/type/test failure diagnostics (file path, line, and Error message)
+    DIAG_ERR=$(echo "$RAW_GATE_OUT" | grep -iE "error|fail|cannot find|not assignable|does not exist|\.ts:[0-9]+|\.js:[0-9]+" -B 1 -A 2 | tail -n 18 || true)
+    if [[ -n "$DIAG_ERR" ]]; then
+      PREV_FAIL_ERROR="Test gate diagnostics:\n$DIAG_ERR"
+    else
+      PREV_FAIL_ERROR="Test gate output:\n$(echo "$RAW_GATE_OUT" | tail -n 12)"
     fi
   fi
   if [[ -z "$PREV_FAIL_ERROR" && -f "$LOG_FILE" ]]; then
-    LOG_ERR=$(grep -iE "error|fail|cannot find|not assignable|ts[0-9]+" "$LOG_FILE" 2>/dev/null | tail -n 6 || true)
+    LOG_ERR=$(grep -iE "error|fail|cannot find|not assignable|ts[0-9]+" "$LOG_FILE" 2>/dev/null | tail -n 10 || true)
     if [[ -n "$LOG_ERR" ]]; then
       PREV_FAIL_ERROR="Worker log error:\n$LOG_ERR"
     fi
