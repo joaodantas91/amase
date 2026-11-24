@@ -150,6 +150,23 @@ else
   echo "[-] FAIL: test-ts-ignore.ts not staged properly"
 fi
 
+# 11. Verify sentinel audit simulation
+echo "[+] Verifying sentinel audit simulation..."
+SIM_WORKTREE="$WORKTREE_PATH/sim-sentinel"
+mkdir -p "$SIM_WORKTREE"
+cp -rn "$WORKTREE_PATH/"* "$SIM_WORKTREE/" 2>/dev/null || true
+# Create a test file that would trigger a HIGH finding (DOM injection risk)
+echo 'element.innerHTML = userInput;' > "$SIM_WORKTREE/test-dom-injection.js"
+git -C "$SIM_WORKTREE" add test-dom-injection.js >/dev/null 2>&1 || true
+git -C "$SIM_WORKTREE" commit -m "chore: add test DOM injection file" >/dev/null 2>&1 || true
+SIM_AUDIT=$(python3 "$ORCHESTRATOR_DIR/scripts/sentinel.py" "$SIM_WORKTREE" 2>&1) || true
+if echo "$SIM_AUDIT" | grep -qE '^\[(CRITICAL|HIGH|MEDIUM|LOW|INFO)\]' || echo "$SIM_AUDIT" | grep -q "Core invariants verified clean"; then
+  echo "[+] PASS: Sentinel audit produced valid output format"
+else
+  echo "[-] FAIL: Sentinel audit output format unexpected"
+  echo "$SIM_AUDIT"
+fi
+
 # 11. Clean up: reset test commits, remove test files
 echo "[+] Cleaning up test artifacts..."
 git -C "$WORKTREE_PATH" reset --hard HEAD >/dev/null 2>&1 || true

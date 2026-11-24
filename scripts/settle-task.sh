@@ -128,6 +128,8 @@ BACKLOG_FILE="$TARGET_REPO/BACKLOG.md"
 # 4. Run sentinel security audit on the merged codebase.
 echo "[+] Running sentinel security audit..."
 SENTINEL_OUTPUT=$(python3 "$ORCHESTRATOR_DIR/scripts/sentinel.py" "$TARGET_REPO" 2>&1) || true
+AUDIT_FILE="$TARGET_REPO/AUDIT.md"
+echo "$SENTINEL_OUTPUT" > "$AUDIT_FILE"
 if echo "$SENTINEL_OUTPUT" | grep -qE '^[*-] \[(CRITICAL|HIGH)\]'; then
   echo "[!] Sentinel detected [CRITICAL] or [HIGH] vulnerability!"
   echo "[+] Prepending TASK-SEC-01 to BACKLOG.md for remediation..."
@@ -136,6 +138,14 @@ if echo "$SENTINEL_OUTPUT" | grep -qE '^[*-] \[(CRITICAL|HIGH)\]'; then
   fi
 else
   echo "[+] Sentinel audit clean: no critical/high vulnerabilities detected."
+fi
+
+# Commit AUDIT.md if it was created and contains output
+if [[ -f "$AUDIT_FILE" ]] && [[ -s "$AUDIT_FILE" ]]; then
+  echo "[+] Committing $AUDIT.md..."
+  git -C "$TARGET_REPO" add "$AUDIT_FILE"
+  git -C "$TARGET_REPO" -c user.name="AMASE Settle" -c user.email="settle@amase.local" \
+    commit -m "chore(settle): add sentinel audit output to AUDIT.md" >/dev/null 2>&1 || true
 fi
 
 # 5. Mark the task as [x] in BACKLOG.md and commit on main.
