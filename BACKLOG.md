@@ -52,3 +52,13 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Add `amase test-wiring` subcommand that tests worktree creation, agent directive generation, git hooks, and settlement cleanup end-to-end without spending model calls.
   - **Files:** `amase`, `scripts/test-wiring.sh`.
   - **Criteria:** Verifies complete orchestrator mechanics in <2 seconds.
+
+- [ ] **TASK-10: Token-Pruned Context Injection via AST Symbol Filter**
+  - **Goal:** Enhance `scripts/outline-ast.py` with an `--include-symbols-only` flag that produces a minified context skeleton containing only relevant function signatures and interface contracts for specific target files, reducing worker prompt tokens by another 30%.
+  - **Files:** `scripts/outline-ast.py`, `scripts/generate-agent.sh`.
+  - **Criteria:** Generates symbol skeleton; passes `.amase/test-gate.sh`.
+
+- [ ] **TASK-11: Automatic Sentinel Remediation Injection Hook**
+  - **Goal:** In `scripts/settle-task.sh`, integrate `scripts/sentinel.py` as an automatic post-merge security gate. If Sentinel reports `[CRITICAL]` or `[HIGH]` vulnerabilities, automatically prepend `TASK-SEC-01` to `BACKLOG.md`.
+  - **Files:** `scripts/settle-task.sh`.
+  - **Criteria:** Post-merge hook catches simulated vulnerability and writes task to backlog; passes test gate.
