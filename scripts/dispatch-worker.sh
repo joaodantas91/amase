@@ -18,8 +18,22 @@ if [[ -z "$WORKTREE" || -z "$TASK_PROMPT" ]]; then
 fi
 
 OPENCODE_BIN="/home/joao/.bun/bin/opencode"
-PTYXIS_BIN="/usr/bin/ptyxis"
 ORCHESTRATOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Universal Terminal Discovery (supports any Linux desktop environment)
+TERMINAL_BIN=""
+if [[ -n "${AMASE_TERMINAL:-}" ]] && command -v "$AMASE_TERMINAL" >/dev/null 2>&1; then
+  TERMINAL_BIN=$(command -v "$AMASE_TERMINAL")
+elif [[ -n "${TERMINAL:-}" ]] && command -v "$TERMINAL" >/dev/null 2>&1; then
+  TERMINAL_BIN=$(command -v "$TERMINAL")
+else
+  for term in ptyxis gnome-terminal kitty alacritty wezterm konsole x-terminal-emulator xterm; do
+    if command -v "$term" >/dev/null 2>&1; then
+      TERMINAL_BIN=$(command -v "$term")
+      break
+    fi
+  done
+fi
 
 # Read config from worktree
 CONFIG_FILE="$WORKTREE/.amase/config.json"
@@ -305,12 +319,46 @@ echo "[+] Models:   ${UNIQUE_FLEET[*]}"
 echo "[+] Timestamp: $(date -Iseconds)"
 echo "========================================================"
 
-# Launch worker in dedicated visible Ptyxis tab by default
+launch_worker_ui() {
+  local term_name
+  term_name=$(basename "$TERMINAL_BIN")
+  case "$term_name" in
+    ptyxis)
+      # Try tab in active window; if no active window, open in new window
+      if ! "$TERMINAL_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- "$RUNNER_SCRIPT" "$@" 2>/dev/null; then
+        "$TERMINAL_BIN" --new-window --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- "$RUNNER_SCRIPT" "$@" &
+      fi
+      ;;
+    gnome-terminal)
+      "$TERMINAL_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- "$RUNNER_SCRIPT" "$@" 2>/dev/null || \
+      "$TERMINAL_BIN" --window --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- "$RUNNER_SCRIPT" "$@" &
+      ;;
+    kitty)
+      "$TERMINAL_BIN" --directory="$WORKTREE" --title="AMASE: $TASK_NAME" "$RUNNER_SCRIPT" "$@" &
+      ;;
+    alacritty)
+      "$TERMINAL_BIN" --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -e "$RUNNER_SCRIPT" "$@" &
+      ;;
+    wezterm)
+      "$TERMINAL_BIN" start --cwd "$WORKTREE" -- "$RUNNER_SCRIPT" "$@" &
+      ;;
+    konsole)
+      "$TERMINAL_BIN" --workdir="$WORKTREE" -p "tabtitle=AMASE: $TASK_NAME" -e "$RUNNER_SCRIPT" "$@" &
+      ;;
+    x-terminal-emulator|xterm)
+      "$TERMINAL_BIN" -T "AMASE: $TASK_NAME" -e "$RUNNER_SCRIPT" "$@" &
+      ;;
+    *)
+      "$RUNNER_SCRIPT" "$@" > "$LOG_FILE" 2>&1 &
+      ;;
+  esac
+}
+
+# Launch worker in dedicated visible terminal window/tab by default
 : "${USE_GUI_TAB:=${AMASE_GUI_TAB:-1}}"
-if [[ "$USE_GUI_TAB" == "1" && -x "$PTYXIS_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
-  echo "[+] Opening single worker tab in Terminal (Ptyxis)..."
-  "$PTYXIS_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- \
-    "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "$ORCHESTRATOR_DIR" "${UNIQUE_FLEET[@]}" &
+if [[ "$USE_GUI_TAB" == "1" && -n "$TERMINAL_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
+  echo "[+] Opening visible worker tab/window in $(basename "$TERMINAL_BIN")..."
+  launch_worker_ui "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "$ORCHESTRATOR_DIR" "${UNIQUE_FLEET[@]}"
 else
   echo "[+] Running worker in clean headless background (zero tab popups)..."
   "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "$ORCHESTRATOR_DIR" "${UNIQUE_FLEET[@]}" > "$LOG_FILE" 2>&1 &

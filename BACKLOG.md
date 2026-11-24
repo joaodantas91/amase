@@ -352,6 +352,11 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/run-task.sh`, `scripts/dispatch-worker.sh`, `scripts/quota_manager.py`, `personas/builder.md`, `scripts/generate-agent.sh`, `.amase/test-gate.sh`, `BACKLOG.md`.
   - **Criteria:** Test gate passes with exit code 0; worktree cache replicates cleanly; quota cooldown skips dead models instantly.
 
+- [x] **TASK-69: Universal Linux Terminal Discovery & Fallback Window Spawning**
+  - **Goal:** In `scripts/dispatch-worker.sh`, replace hardcoded `PTYXIS_BIN` with auto-discovery across `ptyxis`, `gnome-terminal`, `kitty`, `alacritty`, `wezterm`, `konsole`, and `xterm` (configurable via `AMASE_TERMINAL`). Implement `--new-window` fallback when `--tab` cannot find an active window, guaranteeing a visible terminal window opens reliably.
+  - **Files:** `scripts/dispatch-worker.sh`, `BACKLOG.md`.
+  - **Criteria:** Universal terminal detection; tab-to-window fallback; test gate passes cleanly.
+
 
 
 
