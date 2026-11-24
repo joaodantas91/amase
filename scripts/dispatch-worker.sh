@@ -478,12 +478,22 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
     STALL_SECONDS=0
   fi
 
+  # Report model transitions and periodic heartbeat progress
+  CURRENT_META_MODEL=""
+  if [[ -f "$WORKTREE/.amase-task-meta.json" ]]; then
+    CURRENT_META_MODEL=$(grep -o '"model": *"[^"]*"' "$WORKTREE/.amase-task-meta.json" 2>/dev/null | cut -d'"' -f4 || true)
+  fi
+  if [[ -n "$CURRENT_META_MODEL" && "$CURRENT_META_MODEL" != "${LAST_REPORTED_MODEL:-}" ]]; then
+    echo "[+] Active worker model: $CURRENT_META_MODEL"
+    LAST_REPORTED_MODEL="$CURRENT_META_MODEL"
+  fi
+
   if [ $((ELAPSED % 15)) -eq 0 ]; then
     LAST_LINE="..."
     if [[ -f "$LOG_FILE" ]]; then
       LAST_LINE=$(grep -v "^$" "$LOG_FILE" 2>/dev/null | tail -n 1 | head -c 80 || echo "...")
     fi
-    echo "[Heartbeat] ${ELAPSED}s elapsed | Activity: $LAST_LINE"
+    echo "[Heartbeat] ${ELAPSED}s elapsed (${CURRENT_META_MODEL:-worker}) | Activity: $LAST_LINE"
   fi
 done
 

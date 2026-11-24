@@ -399,12 +399,19 @@ except Exception:
     TASK_ID=$(echo "$TASK_DESC" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | cut -c1-20)
   fi
 
+  TOTAL_TASKS=$(grep -cE "^- \[[ x]\]" "$BACKLOG_FILE" || echo 1)
+  DONE_TASKS=$(grep -cE "^- \[x\]" "$BACKLOG_FILE" || echo 0)
+  PROGRESS_PCT=0
+  if [[ "$TOTAL_TASKS" -gt 0 ]]; then
+    PROGRESS_PCT=$(( (DONE_TASKS * 100) / TOTAL_TASKS ))
+  fi
+
   echo ""
-  echo "----------------------------------------------------------"
-  echo "[+] Next Task:   $TASK_ID"
-  echo "[+] Description: $TASK_DESC"
-  echo "[+] Pending:     $PENDING_COUNT remaining"
-  echo "----------------------------------------------------------"
+  echo "=========================================================="
+  echo " [▶] STARTING TASK: $TASK_ID"
+  echo " [▶] Title:    $TASK_DESC"
+  echo " [▶] Progress: $DONE_TASKS/$TOTAL_TASKS completed ($PROGRESS_PCT%) | $PENDING_COUNT pending"
+  echo "=========================================================="
 
   # 5. Execute task with retry backoff for transient rate limits (429/503)
   MAX_RETRIES=2
@@ -428,13 +435,27 @@ except Exception:
       if "$SCRIPT_DIR/scripts/settle-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"; then
         TASK_SUCCESS=true
 
+        UPDATED_DONE=$(grep -cE "^- \[x\]" "$BACKLOG_FILE" || echo "$DONE_TASKS")
+        UPDATED_REMAINING=$((TOTAL_TASKS - UPDATED_DONE))
+        UPDATED_PCT=0
+        if [[ "$TOTAL_TASKS" -gt 0 ]]; then
+          UPDATED_PCT=$(( (UPDATED_DONE * 100) / TOTAL_TASKS ))
+        fi
+
+        echo ""
+        echo "=========================================================="
+        echo " [✓] TASK COMPLETED & SETTLED: $TASK_ID"
+        echo " [✓] Title:    $TASK_DESC"
+        echo " [✓] Merged:   feature/$TASK_ID -> main"
+        echo " [✓] Progress: $UPDATED_DONE/$TOTAL_TASKS completed ($UPDATED_PCT%) | $UPDATED_REMAINING pending"
+        echo "=========================================================="
+        echo ""
+
         # 8. Post-merge Sentinel Audit Gate
         if [[ -x "$SCRIPT_DIR/scripts/sentinel.py" ]]; then
           echo "[+] Running Sentinel security audit on merged commit..."
           python3 "$SCRIPT_DIR/scripts/sentinel.py" --repo "$TARGET_DIR" 2>/dev/null || true
         fi
-
-        echo "[+] Task $TASK_ID successfully completed and settled. Proceeding immediately to next task..."
         break
       else
         echo "[-] Settlement rejected $TASK_ID (validation failed or empty diff). Cleaning worktree..."
@@ -444,7 +465,11 @@ except Exception:
         "$SCRIPT_DIR/scripts/abort-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID" 2>/dev/null || true
       fi
     else
-      echo "[!] Worker attempt $ATTEMPT failed or timed out on $TASK_ID."
+      echo ""
+      echo "=========================================================="
+      echo " [!] TASK ATTEMPT $ATTEMPT FAILED: $TASK_ID"
+      echo " [!] Cleaning worktree before next retry..."
+      echo "=========================================================="
       "$SCRIPT_DIR/scripts/abort-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID" 2>/dev/null || true
       if [[ $ATTEMPT -le $MAX_RETRIES ]]; then
         BACKOFF_SECS=$((ATTEMPT * 30))
