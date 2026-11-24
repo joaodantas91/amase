@@ -1,6 +1,6 @@
 # Sentinel Audit Report
 
-**Target:** Recent git diff (TASK-41: Documentation Updates & CLI Expansion)
+**Target:** Recent git diff (TASK-42: Documentation Expansion - Internal Script Reference)
 **Audit Scope:** `AUDIT.md`, `README.md`
 
 ---
@@ -19,7 +19,7 @@ No `wxt.config.ts`, `manifest.json`, or extension source files are modified. No 
 
 ### 4. Code Duplication (PONYTAIL Rung 2)
 **Status: CLEAN**
-The diff adds documentation for new CLI commands (`amase doctor`, `amase abort`, `amase incidents`). It does not introduce new utility functions or logic that would duplicate existing helpers in `src/core/`.
+The diff adds documentation for existing internal scripts (`init-project.sh`, `run-task.sh`, etc.). It does not introduce new utility functions or logic that would duplicate existing helpers in `src/core/`.
 
 ### 5. Missing Input Guards on Form Autofill
 **Status: N/A**
