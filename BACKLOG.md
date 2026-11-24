@@ -203,7 +203,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/extract_tokens.py`, `scripts/settle-task.sh`, `scripts/stats.py`.
   - **Criteria:** `python3 scripts/extract_tokens.py --help` exits 0; `amase stats` shows non-zero builder token usage; .amase/test-gate.sh passes.
 
-- [ ] **TASK-40: Global Engine Incident Telemetry & Orchestrator Ingestion Loop**
+- [x] **TASK-40: Global Engine Incident Telemetry & Orchestrator Ingestion Loop**
   - **Goal:** Create `scripts/engine_incident.py` to record orchestrator tool bugs and runtime limitations from any target project into central `~/.amase/engine_issues.jsonl`. When running inside orchestrator repo, update `scripts/scout.py` to ingest these engine incidents and autonomously generate `TASK-ENG-XX` self-healing tasks in orchestrator's `BACKLOG.md`.
   - **Files:** `scripts/engine_incident.py`, `scripts/scout.py`, `amase`.
   - **Criteria:** `python3 scripts/engine_incident.py --help` exits 0; simulated incident ingested into Scout as TASK-ENG block; .amase/test-gate.sh passes.
