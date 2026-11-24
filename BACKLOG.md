@@ -53,7 +53,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/test-wiring.sh`.
   - **Criteria:** Verifies complete orchestrator mechanics in <2 seconds.
 
-- [ ] **TASK-10: Token-Pruned Context Injection via AST Symbol Filter**
+- [x] **TASK-10: Token-Pruned Context Injection via AST Symbol Filter**
   - **Goal:** Enhance `scripts/outline-ast.py` with an `--include-symbols-only` flag that produces a minified context skeleton containing only relevant function signatures and interface contracts for specific target files, reducing worker prompt tokens by another 30%.
   - **Files:** `scripts/outline-ast.py`, `scripts/generate-agent.sh`.
   - **Criteria:** Generates symbol skeleton; passes `.amase/test-gate.sh`.

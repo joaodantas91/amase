@@ -123,8 +123,22 @@ if ! git -C "$TARGET_REPO" merge --ff-only "$BRANCH_NAME" >/dev/null 2>&1; then
 fi
 echo "[+] Merged $BRANCH_NAME into main."
 
-# 4. Mark the task as [x] in BACKLOG.md and commit on main.
 BACKLOG_FILE="$TARGET_REPO/BACKLOG.md"
+
+# 4. Run sentinel security audit on the merged codebase.
+echo "[+] Running sentinel security audit..."
+SENTINEL_OUTPUT=$(python3 "$ORCHESTRATOR_DIR/scripts/sentinel.py" "$TARGET_REPO" 2>&1) || true
+if echo "$SENTINEL_OUTPUT" | grep -qE '^[*-] \[(CRITICAL|HIGH)\]'; then
+  echo "[!] Sentinel detected [CRITICAL] or [HIGH] vulnerability!"
+  echo "[+] Prepending TASK-SEC-01 to BACKLOG.md for remediation..."
+  if [[ -f "$BACKLOG_FILE" ]]; then
+    sed -i "1s/^/- [ ] **TASK-SEC-01: Remediate Sentinel Audit Findings**\n/" "$BACKLOG_FILE"
+  fi
+else
+  echo "[+] Sentinel audit clean: no critical/high vulnerabilities detected."
+fi
+
+# 5. Mark the task as [x] in BACKLOG.md and commit on main.
 if [[ -f "$BACKLOG_FILE" ]]; then
   echo "[+] Marking $TASK_ID as [x] in BACKLOG.md..."
   sed -i "s/^\(- \[ \] \*\*$TASK_ID:\)/- [x] **$TASK_ID:/" "$BACKLOG_FILE"
