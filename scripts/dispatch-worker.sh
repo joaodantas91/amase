@@ -103,18 +103,26 @@ fi
 
 rm -f "$LOG_FILE" "$DONE_FILE"
 
-# Ensure OpenCode SQLite database uses WAL mode and 5s busy timeout to prevent concurrent lock collisions
+# Auto-tune OpenCode SQLite database for high concurrency: WAL mode, 10s busy timeout, synchronous NORMAL
 python3 -c "
-import sqlite3, os
+import sqlite3, os, time
 p = os.path.expanduser('~/.local/share/opencode/opencode.db')
 if os.path.exists(p):
-    try:
-        conn = sqlite3.connect(p, timeout=3.0)
-        conn.execute('PRAGMA journal_mode = WAL;')
-        conn.execute('PRAGMA busy_timeout = 5000;')
-        conn.close()
-    except Exception:
-        pass
+    for attempt in range(5):
+        try:
+            conn = sqlite3.connect(p, timeout=5.0)
+            conn.execute('PRAGMA journal_mode = WAL;')
+            conn.execute('PRAGMA busy_timeout = 10000;')
+            conn.execute('PRAGMA synchronous = NORMAL;')
+            conn.close()
+            break
+        except sqlite3.OperationalError as e:
+            if 'locked' in str(e).lower() or 'busy' in str(e).lower():
+                time.sleep(0.2 * (2 ** attempt))
+            else:
+                break
+        except Exception:
+            break
 " 2>/dev/null || true
 
 INITIAL_COMMIT_TIME=$(git -C "$WORKTREE" log -1 --format="%ct" 2>/dev/null || echo 0)
@@ -173,6 +181,16 @@ for MODEL in "${MODELS[@]}"; do
       echo "[!] Free usage limit reached in provider log (<1s). Killing opencode immediately and failing over..."
       kill -9 "$WORKER_PID" 2>/dev/null || true
       OPENCODE_FREE_EXHAUSTED=1
+      break
+    fi
+
+    # SQLite busy or locked detection: back off and retry
+    if grep -q "database is locked" "$LOG_FILE" 2>/dev/null || \
+       ( [ -f ~/.local/share/opencode/log/opencode.log ] && tail -n 10 ~/.local/share/opencode/log/opencode.log | grep -q "database is locked" ); then
+      echo ""
+      echo "[!] SQLite busy detected in provider log. Retrying with backoff..."
+      kill -9 "$WORKER_PID" 2>/dev/null || true
+      sleep 1
       break
     fi
     sleep 1

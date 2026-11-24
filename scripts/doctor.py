@@ -57,15 +57,17 @@ def check_opencode_db():
         return "WARN", f"OpenCode DB not found at {db_path} (initialized on first run)"
     try:
         import sqlite3
-        conn = sqlite3.connect(db_path, timeout=3.0)
+        conn = sqlite3.connect(db_path, timeout=5.0)
         cursor = conn.cursor()
         mode = cursor.execute("PRAGMA journal_mode;").fetchone()[0]
         if mode.lower() != "wal":
             cursor.execute("PRAGMA journal_mode = WAL;")
             mode = cursor.execute("PRAGMA journal_mode;").fetchone()[0]
-        cursor.execute("PRAGMA busy_timeout = 5000;")
+        cursor.execute("PRAGMA busy_timeout = 10000;")
+        cursor.execute("PRAGMA synchronous = NORMAL;")
+        timeout_ms = cursor.execute("PRAGMA busy_timeout;").fetchone()[0]
         conn.close()
-        return "PASS", f"OpenCode SQLite WAL mode active ({mode.upper()}) at {db_path}"
+        return "PASS", f"OpenCode SQLite tuned ({mode.upper()}, busy_timeout={timeout_ms}ms) at {db_path}"
     except Exception as e:
         return "WARN", f"OpenCode DB check failed: {e}"
 
