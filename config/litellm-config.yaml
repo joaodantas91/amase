@@ -12,23 +12,23 @@ model_list:
 
   # ============================================================================
   # 2. SCOUT FLEET (Product Discovery & Backlog Formulation)
-  # Uses Nemotron 3.5 Super 120B on NVIDIA NIM -> High architectural reasoning, 0 Google tokens used
+  # Uses Groq GPT-OSS 120B -> Sub-second decomposition, 0 Google tokens used
   # ============================================================================
   - model_name: scout-fleet
     litellm_params:
-      model: openai/nvidia/nemotron-3.5-super-vl-120b-a12b
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
       drop_params: true
 
   # ============================================================================
   # 3. SENTINEL FLEET (Security Audit & Diff Inspection)
-  # Uses Groq Qwen 3.8 27B -> Code security specialist, 0 Google tokens used
+  # Uses Nemotron 3.5 Lightning 30B on NVIDIA NIM -> 128k context for large diffs, 0 Google tokens used
   # ============================================================================
   - model_name: sentinel-fleet
     litellm_params:
-      model: groq/qwen/qwen3.8-27b
-      api_key: os.environ/GROQ_API_KEY
+      model: openai/nvidia/nemotron-3.5-lightning-30b-a3b
+      api_base: https://integrate.api.nvidia.com/v1
+      api_key: os.environ/NVIDIA_API_KEY
       drop_params: true
 
   # ============================================================================

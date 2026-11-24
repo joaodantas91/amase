@@ -24,9 +24,13 @@ PTYXIS_BIN="/usr/bin/ptyxis"
 CONFIG_FILE="$WORKTREE/.amase/config.json"
 MODEL_TIER="free"
 BUILDER_VISIBLE_TAB=true
+CONFIGURED_BUILDER_MODELS=()
 if [ -f "$CONFIG_FILE" ]; then
   MODEL_TIER=$(jq -r '.model_tier // "free"' "$CONFIG_FILE" 2>/dev/null || echo "free")
   BUILDER_VISIBLE_TAB=$(jq -r '.ui.builder_visible_tab // true' "$CONFIG_FILE" 2>/dev/null || echo "true")
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && CONFIGURED_BUILDER_MODELS+=("$line")
+  done < <(jq -r '.persona_routing.builder[]?' "$CONFIG_FILE" 2>/dev/null || true)
 fi
 
 # If builder visible tab is disabled, run headless
@@ -37,17 +41,26 @@ else
 fi
 
 # Ordered $0 Free Fleet (best performers first)
-FLEET_MODELS=(
-  "$REQUESTED_MODEL"
-  "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b"
-  "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b"
-  "openrouter/openrouter/free"
-  "opencode/nemotron-3.5-lightning-free"
-  "opencode/beam-free"
-  "opencode/deepseek-v4.1-flash-free"
-  "opencode/flint-40b-free"
-  "opencode/mimo-v2.6-flash-free"
-)
+if [ "${#CONFIGURED_BUILDER_MODELS[@]}" -gt 0 ]; then
+  FLEET_MODELS=(
+    "$REQUESTED_MODEL"
+    "${CONFIGURED_BUILDER_MODELS[@]}"
+    "opencode/nemotron-3.5-lightning-free"
+    "opencode/beam-free"
+  )
+else
+  FLEET_MODELS=(
+    "$REQUESTED_MODEL"
+    "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b"
+    "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b"
+    "openrouter/openrouter/free"
+    "opencode/nemotron-3.5-lightning-free"
+    "opencode/beam-free"
+    "opencode/deepseek-v4.1-flash-free"
+    "opencode/flint-40b-free"
+    "opencode/mimo-v2.6-flash-free"
+  )
+fi
 
 # If pro tier, prepend pro models
 if [[ "$MODEL_TIER" == "pro" ]]; then

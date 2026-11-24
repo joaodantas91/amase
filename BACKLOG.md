@@ -147,3 +147,8 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Update `SCRIPT_DIR` resolution in `amase` using `readlink -f` so invoking `amase` via symlinks in `$PATH` (e.g. `~/.local/bin/amase stats`, `config`, etc.) cleanly finds orchestrator helper scripts without requiring `cd /home/joao/dev/orchestrator`.
   - **Files:** `amase`.
   - **Criteria:** `amase stats` and `amase config --show` succeed from any arbitrary directory; `bash -n amase` exits 0; `.amase/test-gate.sh` passes.
+
+- [x] **TASK-29: Persona-Model Matrix Governance & Quota Fence Enforcement**
+  - **Goal:** Codify the persona-model routing matrix in `.amase/config.json` (`persona_routing`), update `litellm-config.yaml` to route Sentinel to NVIDIA NIM (128k context) and Scout to Groq (0.1s latency), configure `dispatch-worker.sh` to read `.persona_routing.builder`, and add the quota fence rule to `.agents/skills/amase-invariants/SKILL.md`.
+  - **Files:** `.amase/config.json`, `config/litellm-config.yaml`, `scripts/dispatch-worker.sh`, `.agents/skills/amase-invariants/SKILL.md`.
+  - **Criteria:** `jq -e '.persona_routing.builder' .amase/config.json` exits 0; `bash -n scripts/dispatch-worker.sh` exits 0; `.amase/test-gate.sh` passes.
