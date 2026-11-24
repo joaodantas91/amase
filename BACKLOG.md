@@ -357,6 +357,11 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/dispatch-worker.sh`, `BACKLOG.md`.
   - **Criteria:** Universal terminal detection; tab-to-window fallback; test gate passes cleanly.
 
+- [x] **TASK-70: Fleet Fallback Reordering, Quota Cache Awareness & Ollama Opt-In in fleet.py**
+  - **Goal:** In `scripts/fleet.py` (`query_fleet`), re-order providers to prioritize fast cloud endpoints (Direct Groq and GitHub Models at 1-2s response) ahead of OpenCode CLI, integrate `quota_manager` to skip exhausted free pools, and gate local Ollama behind explicit opt-in (`AMASE_ALLOW_LOCAL_LLM=1`) to eliminate 146%+ CPU lockups on Sentinel/Scout.
+  - **Files:** `scripts/fleet.py`, `BACKLOG.md`.
+  - **Criteria:** Python compiled cleanly; test gate passes; scout and sentinel execute via fast cloud APIs.
+
 
 
 

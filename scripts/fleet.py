@@ -244,37 +244,7 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
     except Exception:
         pass  # Fall back to next options
 
-    # 2. OpenCode CLI fallback (pure headless)
-    if os.path.exists(OPENCODE_BIN) and os.access(OPENCODE_BIN, os.X_OK):
-        combined_prompt = prompt
-        if system_prompt:
-            combined_prompt = f"{system_prompt}\n\n{prompt}"
-
-        candidate_models = FREE_MODELS
-        if model_hint and model_hint in FREE_MODELS:
-            candidate_models = [model_hint] + [m for m in FREE_MODELS if m != model_hint]
-
-        for m in candidate_models:
-            try:
-                cmd = [OPENCODE_BIN, "run", "--model", m, combined_prompt]
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-                if res.returncode == 0 and res.stdout.strip():
-                    return res.stdout.strip()
-            except Exception as e:
-                sys.stderr.write(f"[-] Fleet model {m} failed: {e}\n")
-                continue
-
-    # 3. Local Ollama fallback (100% offline, unlimited tokens, zero rate limits)
-    ollama_content = query_ollama(prompt, system_prompt, timeout=timeout)
-    if ollama_content.strip():
-        return ollama_content.strip()
-
-    # 4. GitHub Models auto-connector fallback (zero-config if gh token present)
-    gh_content = query_github_models(prompt, system_prompt, model="openai/gpt-4o-mini", timeout=12)
-    if gh_content.strip():
-        return gh_content.strip()
-
-    # 5. Direct Groq fallback if GROQ_API_KEY is present
+    # 2. Direct Groq fallback if GROQ_API_KEY is present (blazing fast 1-2s response)
     groq_key = os.getenv("GROQ_API_KEY")
     if not groq_key:
         env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
@@ -317,6 +287,51 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
                     return content.strip()
         except Exception as e:
             sys.stderr.write(f"[-] Direct Groq fallback failed: {e}\n")
+
+    # 3. GitHub Models auto-connector fallback (zero-config, 1-2s response)
+    gh_content = query_github_models(prompt, system_prompt, model="openai/gpt-4o-mini", timeout=12)
+    if gh_content.strip():
+        return gh_content.strip()
+
+    # 4. OpenCode CLI fallback (pure headless) with quota cache awareness
+    if os.path.exists(OPENCODE_BIN) and os.access(OPENCODE_BIN, os.X_OK):
+        combined_prompt = prompt
+        if system_prompt:
+            combined_prompt = f"{system_prompt}\n\n{prompt}"
+
+        candidate_models = FREE_MODELS
+        if model_hint and model_hint in FREE_MODELS:
+            candidate_models = [model_hint] + [m for m in FREE_MODELS if m != model_hint]
+
+        # Check quota manager if available
+        try:
+            import quota_manager
+            candidate_models = [m for m in candidate_models if quota_manager.check_quota(m)[0]]
+        except Exception:
+            pass
+
+        for m in candidate_models:
+            try:
+                cmd = [OPENCODE_BIN, "run", "--model", m, combined_prompt]
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=min(timeout, 30))
+                if res.returncode == 0 and res.stdout.strip():
+                    return res.stdout.strip()
+                if "Free usage limit reached" in res.stderr or "Free usage limit reached" in res.stdout:
+                    try:
+                        import quota_manager
+                        quota_manager.record_exhaustion(m, reason="Free usage limit reached")
+                    except Exception:
+                        pass
+            except Exception as e:
+                sys.stderr.write(f"[-] Fleet model {m} failed: {e}\n")
+                continue
+
+    # 5. Local Ollama fallback (strictly opt-in via AMASE_ALLOW_LOCAL_LLM=1 to prevent 100%+ CPU stalls)
+    allow_local = os.getenv("AMASE_ALLOW_LOCAL_LLM", "0") in ("1", "true", "True")
+    if allow_local:
+        ollama_content = query_ollama(prompt, system_prompt, timeout=timeout)
+        if ollama_content.strip():
+            return ollama_content.strip()
 
     sys.stderr.write("[-] All free fleet options exhausted.\n")
     return ""
