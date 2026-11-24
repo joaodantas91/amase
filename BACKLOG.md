@@ -136,3 +136,8 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Update `.amase/config.json` with `"headless_analyzers": false` and `"sentinel_visible_tab": true`. Update `scripts/settle-task.sh` to check this configuration and launch Sentinel in a visible Ptyxis terminal tab (`/usr/bin/ptyxis --tab`) displaying live audit stream to `$AUDIT_FILE`, auto-closing cleanly upon audit completion.
   - **Files:** `.amase/config.json`, `scripts/settle-task.sh`.
   - **Criteria:** `bash -n scripts/settle-task.sh` exits 0; `grep -q 'PTYXIS_BIN' scripts/settle-task.sh` exits 0; `scripts/test-wiring.sh` passes; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-26: Free Model Stall Watchdog & 120s Per-Attempt Timeout**
+  - **Goal:** In `scripts/dispatch-worker.sh`, wrap each model attempt in `.amase-run.sh` with `timeout --kill-after=5s 120s` so hung sockets are immediately severed in 2 minutes. Add a 45s log inactivity watchdog in `dispatch-worker.sh` that detects zero bytes written for 45s and sends SIGKILL to force instant failover to the next fleet model.
+  - **Files:** `scripts/dispatch-worker.sh`.
+  - **Criteria:** `bash -n scripts/dispatch-worker.sh` exits 0; `grep -q 'timeout --kill-after' scripts/dispatch-worker.sh` exits 0; `scripts/test-wiring.sh` passes; `.amase/test-gate.sh` passes.
