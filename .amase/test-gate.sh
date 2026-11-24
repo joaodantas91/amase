@@ -23,6 +23,9 @@ if [[ "$DIFF_ONLY" == "true" ]]; then
       elif [[ "$f" == *.py ]]; then
         python3 -m py_compile "$f"
         echo "  ✓ $f (compiled OK)"
+      elif [[ "$f" == *.js ]]; then
+        node -c "$f"
+        echo "  ✓ $f (syntax OK)"
       fi
     fi
   done
@@ -45,6 +48,21 @@ done
 echo "[+] Validating Python scripts compilation..."
 python3 -m py_compile scripts/*.py
 echo "  ✓ Python scripts compiled cleanly"
+
+# 2.1 Validate JavaScript syntax and heuristics self-test
+if command -v node >/dev/null 2>&1; then
+  echo "[+] Validating JavaScript scripts syntax..."
+  for js in scripts/*.js; do
+    if [[ -f "$js" ]]; then
+      node -c "$js"
+      echo "  ✓ $js (syntax OK)"
+    fi
+  done
+  if [[ -f "scripts/ui_heuristics.js" ]]; then
+    node scripts/ui_heuristics.js --test >/dev/null 2>&1
+    echo "  ✓ scripts/ui_heuristics.js (self-test passed)"
+  fi
+fi
 
 if command -v shellcheck >/dev/null 2>&1; then
   echo "[+] Running shellcheck on amase and scripts/*.sh..."
