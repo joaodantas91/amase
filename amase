@@ -13,7 +13,59 @@ if [[ -z "${TARGET_DIR:-}" ]]; then
   TARGET_DIR="$(pwd)"
 fi
 
+AMASE_VERSION="2.1.0"
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+
+show_help() {
+  cat <<'EOF'
+AMASE - Autonomous Multi-Agent Swarm Orchestrator (v2.1)
+Continuous unattended execution of software backlogs using $0 free fleet.
+
+USAGE:
+  amase [OPTIONS] [DIRECTORY]
+  amase <SUBCOMMAND> [ARGS...]
+
+CORE COMMANDS:
+  amase [dir]                     Run continuous autonomous loop on target repository
+  amase init [dir]                Initialize project with .amase governance files
+  amase doctor [dir] [--heal]     Verify environment, models, and project governance
+  amase parallel [dir] [opts]     Dispatch non-conflicting tasks concurrently in parallel worktrees
+  amase abort <task_id> [dir]     Safely unmount worktree and prune task branch
+  amase task [--dry-run] <goal>   Scout a single task objective and append to BACKLOG.md
+  amase config [options]          View or modify .amase/config.json settings
+  amase stats [dir]               Show telemetry, token usage, cost ($0), and model stats
+  amase incidents [options]       List recorded engine incidents and failure retrospectives
+  amase ui-check <url>            Headless layout collision, asset, and UI validator (CHISLE)
+  amase test-wiring [dir]         Dry-run validation of the worker dispatch and gating cycle
+
+OPTIONS:
+  -h, --help                      Display this help menu
+  -v, --version                   Display AMASE version
+  --no-inhibit                    Bypass systemd-inhibit sleep inhibition lock
+
+EXAMPLES:
+  amase                           # Start autonomous loop in current directory
+  amase ~/dev/kandidat            # Run loop on external project
+  amase init ~/dev/my-rust-app    # Scaffold governance for a Rust project
+  amase doctor --heal             # Check health and auto-heal missing governance
+  amase config --set-concurrency parallel
+  amase abort TASK-54             # Abort failed task and clean working tree
+
+DOCUMENTATION:
+  Repository: https://github.com/joaodantas91/amase
+  Governance: <project>/.amase/config.json, scope.md, discovery.md, test-gate.sh
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
+  show_help
+  exit 0
+fi
+
+if [[ "${1:-}" == "-v" || "${1:-}" == "--version" || "${1:-}" == "version" ]]; then
+  echo "AMASE v$AMASE_VERSION"
+  exit 0
+fi
 
 auto_heal_governance() {
   local dir="${1:-$(pwd)}"

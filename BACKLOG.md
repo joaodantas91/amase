@@ -303,6 +303,12 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/generate-agent.sh`, `scripts/run-task.sh`, `scripts/test-wiring.sh`, `BACKLOG.md`.
   - **Criteria:** Script syntax passes; prompt generation is language-agnostic; test-gate passes.
 
+- [x] **TASK-60: Root CLI Help Menu & Version Flags (--help, --version)**
+  - **Goal:** Add structured help menu (`amase --help`, `amase -h`) and version flag (`amase --version`, `amase -v`) displaying command usage, subcommands, sleep inhibition flags, examples, and documentation links without triggering bash fallback errors.
+  - **Files:** `amase`, `BACKLOG.md`.
+  - **Criteria:** `amase --help` and `amase -v` exit 0 with formatted usage; test gate passes.
+
+
 
 
 
