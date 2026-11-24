@@ -223,3 +223,35 @@ AMASE improves itself cleanly through a two-sided feedback architecture that kee
 2. **Orchestrator Ingestion**: When running AMASE within the orchestrator repository itself (`/home/joao/dev/orchestrator`), `scripts/scout.py` reads pending engine incidents and generates `TASK-ENG-XX` backlog tasks.
 3. **Deterministic Repair**: The Builder resolves the engine issue, runs the self-test gate, and merges the fix to `main`, instantly updating the tool for all projects.
 4. **Dogfooding**: Every feature of AMASE (Tasks 01 through 41) has been developed, gated, audited by Sentinel, and settled using AMASE itself.
+
+---
+
+## Internal Script Reference (`scripts/`)
+
+AMASE is powered by specialized host-side scripts that perform deterministic software engineering tasks at 0 LLM tokens:
+
+### 1. Worktree & Lifecycle Orchestration
+- **`init-project.sh`**: Scaffolds `.amase/` governance (`scope.md`, `discovery.md`, `config.json`, `test-gate.sh`) in any target project.
+- **`run-task.sh`**: Creates an ephemeral Git worktree (`.worktrees/TASK-XX`), checks out the feature branch, and propagates environment secrets safely.
+- **`dispatch-worker.sh`**: Launches the worker in a visible terminal tab (Ptyxis), monitors execution with a sub-second watchdog (<1s quota failover), and manages multi-model fleet rotation.
+- **`settle-task.sh`**: Executes deterministic one-click settlement: runs targeted fast tests, full test gate, audits git diff for forbidden patterns, merges to `main`, updates `BACKLOG.md`, records telemetry, and cleanly prunes the worktree.
+- **`abort-task.sh`**: Safely tears down failed or stalled tasks, unmounting worktrees (`git worktree remove --force`), pruning branches, and resetting task state.
+
+### 2. Context & AST Extraction (Token Diet)
+- **`outline-ast.py`**: Parses codebase AST locally on the host machine to extract class, function, and export signatures without dumping full files into context. Supports `--filter "<keyword>"` for task-targeted symbol pruning.
+- **`generate-agent.sh`**: Assembles the dynamic prompt envelope for child workers, combining scope boundaries, filtered AST symbols, and adaptive learned guardrails.
+
+### 3. Multi-Persona Swarm Agents
+- **`scout.py`**: Autonomous discovery persona querying LiteLLM free pools to discover the next vertical slices and ingesting external engine incidents when running on the orchestrator.
+- **`sentinel.py`**: Post-merge security and invariant auditor inspecting git commits for vulnerabilities, data loss risks, and anti-patterns.
+- **`designer.py`**: UI/UX design intelligence auditor inspecting visual frontend components and design systems.
+- **`fleet.py`**: Free-tier LiteLLM proxy router and fallback engine managing free model pools ($0 cost).
+
+### 4. Diagnostics, Incidents & Telemetry
+- **`doctor.py`**: System health check verifying Git worktree support, Python, runtime environments, LiteLLM daemon on `:4000`, OpenCode CLI, and API keys.
+- **`engine_incident.py`**: Central flight recorder logging tool bugs across any target project to `~/.amase/engine_issues.jsonl` and formatting self-healing backlog tasks for the orchestrator.
+- **`diagnose-failure.py`**: Retrospective analyzer classifying failed worker runs into machine-readable signatures (`CONTEXT_BLOAT`, `COMPILER_ERROR`, `SOCKET_STALL`, `QUOTA_EXHAUSTED`).
+- **`extract_tokens.py`**: Extracts exact LLM token counts from OpenCode's SQLite database (`~/.local/share/opencode/opencode.db`) with fallback duration heuristics.
+- **`telemetry.py`**: Multi-persona telemetry logger appending standardized execution records to `.amase/telemetry.jsonl`.
+- **`stats.py`**: Formats and prints real-time multi-persona terminal activity logs and role breakdown summaries (`amase stats`).
+
