@@ -20,6 +20,15 @@ from fleet import query_fleet
 MODEL = os.getenv("SENTINEL_MODEL", "opencode/nemotron-3.5-lightning-free")
 
 def run_audit(target_dir, base_ref="HEAD~1"):
+    try:
+        result = subprocess.run(
+            ["git", "-C", target_dir, "diff", base_ref],
+            capture_output=True, text=True, timeout=30
+        )
+        diff = result.stdout if result.returncode == 0 else ""
+    except Exception:
+        diff = ""
+
     with open(os.path.join(ORCHESTRATOR_ROOT, "personas", "sentinel.md"), "r") as f:
         sentinel_prompt = f.read()
 
@@ -49,6 +58,37 @@ If clean, report 'Core invariants verified clean'.
         return None
 
 if __name__ == "__main__":
+    if "--dry-run" in sys.argv:
+        target = sys.argv[1] if len(sys.argv) > 1 else "."
+        base = sys.argv[2] if len(sys.argv) > 2 else "HEAD~1"
+        with open(os.path.join(ORCHESTRATOR_ROOT, "personas", "sentinel.md"), "r") as f:
+            sentinel_prompt = f.read()
+        # Reconstruct diff for display (same logic as run_audit)
+        try:
+            result = subprocess.run(
+                ["git", "-C", target, "diff", base],
+                capture_output=True, text=True, timeout=30
+            )
+            diff = result.stdout if result.returncode == 0 else ""
+        except Exception:
+            diff = ""
+        user_prompt = f"""You are Sentinel. Audit this recent git diff for:
+1. DOM injection risks (innerHTML, outerHTML, unescaped templates)
+2. Prototype pollution or unsafe setter overrides
+3. Manifest V3 permission escalation or broad host patterns (<all_urls>)
+4. Code duplication (PONYTAIL Rung 2): Are new helpers reinventing utilities that already exist in src/core/?
+5. Missing input guards on form autofill fields
+
+DIFF TO AUDIT:
+{diff[:4000]}
+
+Format your response following the AUDIT.md contract:
+- [CRITICAL] / [HIGH] / [LOW] / [INFO]
+If clean, report 'Core invariants verified clean'.
+"""
+        print(user_prompt)
+        import sys as _sys
+        _sys.exit(0)
     target = sys.argv[1] if len(sys.argv) > 1 else "."
     base = sys.argv[2] if len(sys.argv) > 2 else "HEAD~1"
     run_audit(target, base)
