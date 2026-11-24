@@ -1,48 +1,20 @@
-# Sentinel Audit — `da88e51`
+[-] Fleet model opencode/nemotron-3.5-lightning-free failed: Command '['/home/joao/.bun/bin/opencode', 'run', '--model', 'opencode/nemotron-3.5-lightning-free', '# Persona: Sentinel (QA, Security & MV3 Auditor)\n\n## Purpose\nContinuous verification, DOM safety auditing, and Manifest V3 security fence.\n\n## Responsibilities\n1. **Security Fencing:** Guard against prototype pollution when injecting native value setters.\n2. **Resource Hygiene:** Verify `MutationObserver` cleanup and `disconnect()` calls to prevent memory leaks in long-running job portal SPAs.\n3. **Chrome Web Store Compliance:** Ensure no external eval, no remote scripts, and minimal required permissions in `wxt.config.ts`.\n4. **Automated Verification:** Executes full suite verification and static analysis before branches merge into `main`.\n\n## Autonomous Escalation Protocol (Machine-Readable Contract)\n1. **Output Contract:** Whenever an audit runs, write findings to `AUDIT.md` in the project root with exact tags: `[CRITICAL]`, `[HIGH]`, `[MEDIUM]`, or `[LOW]`.\n2. **Autonomous Escalation:** If any `[CRITICAL]` or `[HIGH]` vulnerability is identified:\n   - Immediately notify the Orchestrator via Orca orchestration mail:\n     `orca orchestration send --to run:<run_id> --type escalation --subject "Sentinel Alert: <Vulnerability Title>" --body "<Remediation Spec>"`\n3. **Verification Gate:** Once a remediation branch is dispatched and submitted, Sentinel runs regression checks and signs off by writing `[RESOLVED]` in `AUDIT.md`.\n\n\nYou are Sentinel. Audit this recent git diff for:\n1. DOM injection risks (innerHTML, outerHTML, unescaped templates)\n2. Prototype pollution or unsafe setter overrides\n3. Manifest V3 permission escalation or broad host patterns (<all_urls>)\n4. Code duplication (PONYTAIL Rung 2): Are new helpers reinventing utilities that already exist in src/core/?\n5. Missing input guards on form autofill fields\n\nDIFF TO AUDIT:\ndiff --git a/scripts/outline-ast.py b/scripts/outline-ast.py\nindex b193e85..4b1ca81 100755\n--- a/scripts/outline-ast.py\n+++ b/scripts/outline-ast.py\n@@ -264,8 +264,12 @@ def outline_source(path, src):\n def _matches_target_files(path, patterns):\n     if not patterns:\n         return True\n+    # Normalize path: remove ./ prefix for fnmatch matching\n+    norm_path = path.lstrip("./")\n     for pattern in patterns:\n-        if fnmatch.fnmatch(path, pattern):\n+        if fnmatch.fnmatch(norm_path, pattern):\n+            return True\n+        if fnmatch.fnmatch(os.path.basename(norm_path), pattern):\n             return True\n     return False\n \n@@ -324,6 +328,9 @@ def main(argv=None):\n                         help="Comma-separated glob patterns to filter which files to index (e.g. \'scripts/*.py,*.sh\')")\n     args = parser.parse_args(argv)\n \n+    if args.target_files:\n+        args.target_files = [p.strip() for p in args.target_files.split(\',\')]\n+\n     if not os.path.exists(args.target):\n         sys.stderr.write(f"outline-ast: no such file or directory: {args.target}\\n")\n         return 1\n\n\nFormat your response following the AUDIT.md contract:\n- [CRITICAL] / [HIGH] / [MEDIUM] / [LOW] / [INFO]\nIf clean, report \'Core invariants verified clean\'.\n']' timed out after 60 seconds
+[-] Fleet model opencode/beam-free failed: Command '['/home/joao/.bun/bin/opencode', 'run', '--model', 'opencode/beam-free', '# Persona: Sentinel (QA, Security & MV3 Auditor)\n\n## Purpose\nContinuous verification, DOM safety auditing, and Manifest V3 security fence.\n\n## Responsibilities\n1. **Security Fencing:** Guard against prototype pollution when injecting native value setters.\n2. **Resource Hygiene:** Verify `MutationObserver` cleanup and `disconnect()` calls to prevent memory leaks in long-running job portal SPAs.\n3. **Chrome Web Store Compliance:** Ensure no external eval, no remote scripts, and minimal required permissions in `wxt.config.ts`.\n4. **Automated Verification:** Executes full suite verification and static analysis before branches merge into `main`.\n\n## Autonomous Escalation Protocol (Machine-Readable Contract)\n1. **Output Contract:** Whenever an audit runs, write findings to `AUDIT.md` in the project root with exact tags: `[CRITICAL]`, `[HIGH]`, `[MEDIUM]`, or `[LOW]`.\n2. **Autonomous Escalation:** If any `[CRITICAL]` or `[HIGH]` vulnerability is identified:\n   - Immediately notify the Orchestrator via Orca orchestration mail:\n     `orca orchestration send --to run:<run_id> --type escalation --subject "Sentinel Alert: <Vulnerability Title>" --body "<Remediation Spec>"`\n3. **Verification Gate:** Once a remediation branch is dispatched and submitted, Sentinel runs regression checks and signs off by writing `[RESOLVED]` in `AUDIT.md`.\n\n\nYou are Sentinel. Audit this recent git diff for:\n1. DOM injection risks (innerHTML, outerHTML, unescaped templates)\n2. Prototype pollution or unsafe setter overrides\n3. Manifest V3 permission escalation or broad host patterns (<all_urls>)\n4. Code duplication (PONYTAIL Rung 2): Are new helpers reinventing utilities that already exist in src/core/?\n5. Missing input guards on form autofill fields\n\nDIFF TO AUDIT:\ndiff --git a/scripts/outline-ast.py b/scripts/outline-ast.py\nindex b193e85..4b1ca81 100755\n--- a/scripts/outline-ast.py\n+++ b/scripts/outline-ast.py\n@@ -264,8 +264,12 @@ def outline_source(path, src):\n def _matches_target_files(path, patterns):\n     if not patterns:\n         return True\n+    # Normalize path: remove ./ prefix for fnmatch matching\n+    norm_path = path.lstrip("./")\n     for pattern in patterns:\n-        if fnmatch.fnmatch(path, pattern):\n+        if fnmatch.fnmatch(norm_path, pattern):\n+            return True\n+        if fnmatch.fnmatch(os.path.basename(norm_path), pattern):\n             return True\n     return False\n \n@@ -324,6 +328,9 @@ def main(argv=None):\n                         help="Comma-separated glob patterns to filter which files to index (e.g. \'scripts/*.py,*.sh\')")\n     args = parser.parse_args(argv)\n \n+    if args.target_files:\n+        args.target_files = [p.strip() for p in args.target_files.split(\',\')]\n+\n     if not os.path.exists(args.target):\n         sys.stderr.write(f"outline-ast: no such file or directory: {args.target}\\n")\n         return 1\n\n\nFormat your response following the AUDIT.md contract:\n- [CRITICAL] / [HIGH] / [MEDIUM] / [LOW] / [INFO]\nIf clean, report \'Core invariants verified clean\'.\n']' timed out after 60 seconds
+AUDIT.md written and committed (`baa8ad0`). No escalation (no CRITICAL/HIGH).
 
-**Commit:** `da88e51 feat(ast): support comma-separated pattern lists and robust matching in --target-files`
-**Scope:** `scripts/outline-ast.py` (+8/-1)
-**Date:** 2026-11-23
-**Severity scale:** `[CRITICAL]` `[HIGH]` `[MEDIUM]` `[LOW]` `[INFO]`
+## Sentinel Audit — `da88e51 scripts/outline-ast.py`
 
-## Findings
-
-### [MEDIUM] `path.lstrip("./")` is a character-set strip, not a prefix strip
-`scripts/outline-ast.py:268`
-
-`str.lstrip("./")` removes *any* leading `.` and `/` characters, not the literal `./` prefix. Confirmed behavior:
-
-| Input | Normalized | Effect |
+| # | Category | Result |
 |---|---|---|
-| `./scripts/x.py` | `scripts/x.py` | intended |
-| `../scripts/x.py` | `scripts/x.py` | parent traversal erased |
-| `/abs/scripts/x.py` | `abs/scripts/x.py` | root erased |
-| `.github/workflows/ci.yml` | `github/workflows/ci.yml` | leading dot-dir erased |
-| `.venv/lib/x.py` | `venv/lib/x.py` | leading dot-dir erased |
+| 1 | DOM injection (`innerHTML`/`outerHTML`/unescaped templates) | N/A — Python CLI, no DOM `[INFO]` |
+| 2 | Prototype pollution / unsafe setters | N/A — no JS `[INFO]` |
+| 3 | MV3 permission escalation / `<all_urls>` | N/A — no manifest/`wxt.config.ts` touched `[INFO]` |
+| 4 | Code duplication (PONYTAIL Rung 2) | No `src/core/` in repo; no existing path helper `[INFO]` |
+| 5 | Autofill input guards | N/A — no form surface `[INFO]` |
 
-Impact: `--target-files` can silently mis-match — excluding intended dot-directory files or matching paths the user did not intend (the now-relative form can coincide with a real repo subpath). Read-only outline tool, so no security impact, but the filter is non-deterministic relative to its documented intent.
+**Findings:**
+- `[MEDIUM]` `scripts/outline-ast.py:268` — `path.lstrip("./")` strips a character *set*, not the `./` prefix. Verified: `../scripts/x.py`→`scripts/x.py`, `/abs/...`→`abs/...`, `.github/...`→`github/...`, `.venv/...`→`venv/...`. Silently mis-matches `--target-files`; read-only, no security impact. Fix: `path[2:] if path.startswith("./") else path` or `os.path.normpath`.
+- `[LOW]` `:271` — basename fallback makes bare patterns match any depth (`*.sh` hits `repos/**/deploy.sh`). Intended per help text but broadens scope.
+- `[LOW]` `:332` — `--target-files ","` yields `['','']` (truthy, matches nothing) → exit 1 instead of usage error. Filter empties.
 
-**Remediation spec:** replace with an explicit prefix strip, e.g. `norm_path = path[2:] if path.startswith("./") else path` (or `os.path.normpath(path)`). Verify `scripts/*.py`, `*.sh`, `./scripts/*.py`, and `.github/**` cases.
-
-### [LOW] Basename fallback broadens matching beyond directory intent
-`scripts/outline-ast.py:271`
-
-`fnmatch(os.path.basename(norm_path), pattern)` makes every bare pattern match at any depth. `*.sh` now matches `repos/**/deploy.sh`, not just top-level scripts. Intended per help text (`'scripts/*.py,*.sh'`) but worth documenting; it can inflate symbol maps unexpectedly.
-
-### [LOW] Empty/whitespace patterns accepted silently
-`scripts/outline-ast.py:332`
-
-`--target-files ","` yields `['', '']`, a truthy list that matches nothing, so the run exits `1` with "no supported source files found" instead of a usage error. Drop empty parts: `[p.strip() for p in ... if p.strip()]`.
-
-## Category Results
-
-1. **DOM injection (`innerHTML`/`outerHTML`/unescaped templates):** N/A — pure Python CLI, no DOM. `[INFO]`
-2. **Prototype pollution / unsafe setters:** N/A — no JavaScript, no `__proto__`/`Object.setPrototypeOf`. `[INFO]`
-3. **MV3 permission escalation / `<all_urls>`:** N/A — no `wxt.config.ts`/manifest/extension code touched. `[INFO]`
-4. **Code duplication (PONYTAIL Rung 2):** No `src/core/` exists in this repo; no prior path-normalization helper to reuse. Net-new helper is justified. `[INFO]`
-5. **Input guards on autofill fields:** N/A — no form/DOM autofill surface in diff. `[INFO]`
-
-## Verdict
-
-No `[CRITICAL]` or `[HIGH]` findings. No Orca escalation required.
-One `[MEDIUM]` correctness bug (`lstrip`) — remediation spec above; regression check pending on fix branch.
+**Verdict:** No `[CRITICAL]`/`[HIGH]`. Orca escalation not triggered. `[RESOLVED]` pending fix-branch regression for the `[MEDIUM]`.
