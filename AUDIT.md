@@ -1,2 +1,44 @@
-[-] Fleet model opencode/nemotron-3.5-lightning-free failed: Command '['/home/joao/.bun/bin/opencode', 'run', '--model', 'opencode/nemotron-3.5-lightning-free', '# Persona: Sentinel (QA, Security & MV3 Auditor)\n\n## Purpose\nContinuous verification, DOM safety auditing, and Manifest V3 security fence.\n\n## Responsibilities\n1. **Security Fencing:** Guard against prototype pollution when injecting native value setters.\n2. **Resource Hygiene:** Verify `MutationObserver` cleanup and `disconnect()` calls to prevent memory leaks in long-running job portal SPAs.\n3. **Chrome Web Store Compliance:** Ensure no external eval, no remote scripts, and minimal required permissions in `wxt.config.ts`.\n4. **Automated Verification:** Executes full suite verification and static analysis before branches merge into `main`.\n\n## Autonomous Escalation Protocol (Machine-Readable Contract)\n1. **Output Contract:** Whenever an audit runs, write findings to `AUDIT.md` in the project root with exact tags: `[CRITICAL]`, `[HIGH]`, `[MEDIUM]`, or `[LOW]`.\n2. **Autonomous Escalation:** If any `[CRITICAL]` or `[HIGH]` vulnerability is identified:\n   - Immediately notify the Orchestrator via Orca orchestration mail:\n     `orca orchestration send --to run:<run_id> --type escalation --subject "Sentinel Alert: <Vulnerability Title>" --body "<Remediation Spec>"`\n3. **Verification Gate:** Once a remediation branch is dispatched and submitted, Sentinel runs regression checks and signs off by writing `[RESOLVED]` in `AUDIT.md`.\n\n\nYou are Sentinel. Audit this recent git diff for:\n1. DOM injection risks (innerHTML, outerHTML, unescaped templates)\n2. Prototype pollution or unsafe setter overrides\n3. Manifest V3 permission escalation or broad host patterns (<all_urls>)\n4. Code duplication (PONYTAIL Rung 2): Are new helpers reinventing utilities that already exist in src/core/?\n5. Missing input guards on form autofill fields\n\nDIFF TO AUDIT:\ndiff --git a/.amase-task-meta.json b/.amase-task-meta.json\nindex 9c97124..dc1d0bd 100644\n--- a/.amase-task-meta.json\n+++ b/.amase-task-meta.json\n@@ -1 +1 @@\n-{"task_id": "TASK-22", "model": "opencode/nemotron-3.5-lightning-free", "start_time": 1795483769}\n+{"task_id": "TASK-22", "model": "opencode/nemotron-3.5-lightning-free", "start_time": 1795483894}\ndiff --git a/.amase-task-prompt.txt b/.amase-task-prompt.txt\nindex 6c08140..81b9b04 100644\n--- a/.amase-task-prompt.txt\n+++ b/.amase-task-prompt.txt\n@@ -1 +1 @@\n-Implement TASK-22: 1. Create .amase/config.json with mode: manual, model_tier: free, discovery: {enabled: false, max_slices: 2}, ui: {builder_visible_tab: true, headless_analyzers: true}. 2. Update \'amase\' with \'amase config [--show|--model-tier|--mode|--discovery]\' subcommand. In the loop, read .amase/config.json; if mode==\'manual\' or discovery.enabled==false, do not trigger Scout when backlog is low; exit cleanly when backlog is empty. 3. In scripts/dispatch-worker.sh, check .amase/config.json for model_tier (pro vs free) and ui.builder_visible_tab. 4. Verify \'bash amase config --show\', \'bash -n amase\', \'bash -n scripts/dispatch-worker.sh\' and \'.amase/test-gate.sh\' pass. Commit with git.. When finished, commit changes with git.\n+Refine TASK-22 in worktree: 1. In \'amase\', fix CONFIG_FILE resolution to \'CONFIG_FILE="$TARGET_DIR/.amase/config.json"; if [ ! -f "$CONFIG_FILE" ]; then CONFIG_FILE="$SCRIPT_DIR/.amase/config.json"; fi\' (avoiding the ../ bug). 2. In scripts/dispatch-worker.sh: if BUILDER_VISIBLE_TAB is false, set USE_GUI_TAB=0; if MODEL_TIER is \'pro\', prepend (\'opencode/gemini-2.5-pro\' \'opencode/claude-3-5-sonnet\') to FLEET_MODELS. 3. Verify \'bash amase config --show\' and \'.amase/test-gate.sh\' pass. Commit with git.. When finished, commit changes with git.\ndiff --git a/amase b/amase\nindex 764bfe0..46080fa 100755\n--- a/amase\n+++ b/amase\n@@ -8,6 +8,11 @@\n # ==============================================================================\n set -euo pipefail\n \n+# Set TARGET_DIR early if not already set (for subcommands like \'config\')\n+if [[ -z "${TARGET_DIR:-}" ]]; then\n+  TARGET_DIR="$(pwd)"\n+fi\n+\n SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n \n if [[ "${1:-}" == "init" ]]; then\n@@ -28,7 +33,10 @@ fi\n \n if [[ "${1:-}" == "config" ]]; then\n   shift\n-  CONFIG_FILE="$SCRIPT_DIR/.amase/config.json"\n+  CONFIG_FILE="$TARGET_DIR/.amase/config.json"\n+  if [[ ! -f "$CONFIG_FILE" ]]; then\n+    CONFIG_FILE="$SCRIPT_DIR/.amase/config.json"\n+  fi\n   if [[ "${1:-}" == "--show" ]]; then\n     if [ -f "$CONFIG_FILE" ]; then\n       cat "$CONFIG_FILE"\n@@ -107,7 +115,10 @@ while true; do\n \n   # 2. Autonomous Backlog Lookahead (Top up if fewer than 3 tasks remain)\n   # Check config.json for mode and discovery settings\n-  CONFIG_FILE="$SCRIPT_DIR/../.amase/config.json"\n+  CONFIG_FILE="$TARGET_DIR/.amase/config.json"\n+  if [[ ! -f "$CONFIG_FILE" ]]; then\n+    CONFIG_FILE="$SCRIPT_DIR/.amase/config.json"\n+  fi\n   MODE=$(jq -r \'.mode // "manual"\' "$CONFIG_FILE" 2>/dev/null || echo "manual")\n   DISCOVERY_ENABLED=$(jq -r \'.discovery.enabled // false\' "$CONFIG_FILE" 2>/dev/null || echo "false")\n \ndiff --git a/scripts/dispatch-worker.sh b/scripts/dispatch-worker.sh\nindex 20d1ae5..4691c54 100755\n--- a/scripts/dispatch-worker.sh\n+++ b/scripts/dispatch-worker.sh\n@@ -29,6 +29,13 @@ if [ -f "$CONFIG_FILE" ]; then\n   BUILDER_VISIBLE_TAB=$(jq -r \'.ui.builder_visible_tab // true\' "$CONFIG_FILE" 2>/dev/null || echo "true")\n fi\n \n+# If builder visible tab is disabled, run headless\n+if [[ "$BUILDER_VISIBLE_TAB" == "false" ]]; then\n+  USE_GUI_TAB=0\n+else\n+  USE_GUI_TAB="${AMASE_GUI_TAB:-1}"\n+fi\n+\n # Ordered $0 Free Fleet (best performers first)\n FLEET_MODELS=(\n   "$REQUESTED_MODEL"\n@@ -39,6 +46,15 @@ FLEET_MODELS=(\n   "opencode/mimo-v2.6-flash-free"\n )\n \n+# If pro tier, prepend pro models\n+if [[ "$MODEL_TIER" == "pro" ]]; then\n+  FLEET_MODELS=(\n+    "opencode/gemini-2.5-pro"\n+    "opencode/claude-3-5-sonnet"\n+    "${FLEET_MODELS[@]}"\n+  )\n+fi\n\nFormat your response following the AUDIT.md contract:\n- [CRITICAL] / [HIGH] / [MEDIUM] / [LOW] / [INFO]\nIf clean, report \'Core invariants verified clean\'.\n']' timed out after 60 seconds
-Audit complete. AUDIT.md updated; commit `2e6e409`. No CRITICAL/HIGH findings; 3 LOW hygiene items.
+# AUDIT.md
+
+## Audit Target: scripts/scout.py (Commit: d88da0f)
+**Auditor:** Sentinel
+**Status:** **PASS** (Zero Critical / Zero High)
+
+| Severity | Category | Description | Recommendation |
+|---|---|---|---|
+| **[INFO]** | DOM Injection Risks | No DOM, `innerHTML`, `outerHTML`, or unescaped template injection in this diff. | Core invariants verified clean. |
+| **[INFO]** | Prototype Pollution | No prototype manipulation or unsafe native setter overrides. | Core invariants verified clean. |
+| **[INFO]** | Manifest V3 Permissions | No changes to `wxt.config.ts`, manifest, or host permissions. | Core invariants verified clean. |
+| **[INFO]** | Code Duplication (PONYTAIL Rung 2) | Diff only fixes indentation; no new helpers introduced. | Core invariants verified clean. |
+| **[INFO]** | Input Guards on Form Autofill | Diff unrelated to autofill logic. | Core invariants verified clean. |
+
+### 1. DOM Injection Risks
+- **Status:** Clean
+- **Analysis:** `scripts/scout.py` is a Python CLI utility. No DOM APIs or unescaped template injection are present.
+
+### 2. Prototype Pollution / Unsafe Setters
+- **Status:** Clean
+- **Analysis:** No `Object.defineProperty`, prototype mutation, or native setter override introduced.
+
+### 3. Manifest V3 Permission Escalation
+- **Status:** Clean
+- **Analysis:** No manifest or permission changes in this diff.
+
+### 4. Code Duplication (PONYTAIL Rung 2)
+- **Status:** Clean
+- **Analysis:** The change only indents `existing_ids = extract_task_ids(backlog_content)` inside the backlog existence check. No duplicated helper logic introduced.
+
+### 5. Input Guards on Form Autofill Fields
+- **Status:** Clean
+- **Analysis:** Diff is unrelated to form autofill. Verified `--sanitize` path now keeps `existing_ids = set()` when backlog is absent, avoiding `NameError`.
+
+## Verification
+- `.amase/test-gate.sh` exited 0.
+- `python3 scripts/scout.py --sanitize --backlog /tmp/nonexistent.md` exited 0.
+
+## Summary
+**Core invariants verified clean.**
+
+No `[CRITICAL]`, `[HIGH]`, `[MEDIUM]`, or `[LOW]` vulnerabilities identified. The change prevents referencing `backlog_content` when the backlog file does not exist.
+
+**[RESOLVED]**"
