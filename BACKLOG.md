@@ -107,3 +107,18 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** In `scripts/scout.py`, `scripts/sentinel.py`, `scripts/designer.py`, and `scripts/switch-model`, fix `ORCHESTRATOR_ROOT = os.path.dirname(SCRIPTS_DIR)` so it resolves to the repo root instead of parent directory.
   - **Files:** `scripts/scout.py`, `scripts/sentinel.py`, `scripts/designer.py`, `scripts/switch-model`.
   - **Criteria:** `python3 -c "import os, sys; sys.path.insert(0, 'scripts'); from scout import ORCHESTRATOR_ROOT; assert os.path.exists(os.path.join(ORCHESTRATOR_ROOT, 'personas', 'scout.md'))"` exits 0; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-21: Configurable Fleet Timeout and Svelte Pattern Guard in run-task.sh**
+  - **Goal:** Add `FLEET_TIMEOUT` env override (default 120s) to `scripts/fleet.py` to prevent premature aborts on free model queues, and include `*.svelte` in `scripts/run-task.sh` pre-commit pattern check.
+  - **Files:** `scripts/fleet.py`, `scripts/run-task.sh`.
+  - **Criteria:** `python3 -c "import sys; sys.path.insert(0, 'scripts'); import fleet; assert getattr(fleet, 'DEFAULT_TIMEOUT', 120) >= 120"` exits 0; `grep -q '\*\.svelte' scripts/run-task.sh` exits 0; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-22: Sentinel Automated Post-Commit Hook in Worktree**
+  - **Goal:** Add an optional post-commit advisory check to worktrees created by `scripts/run-task.sh` that runs static invariant validation and logs findings to `.amase-worker.log`.
+  - **Files:** `scripts/run-task.sh`.
+  - **Criteria:** `bash -n scripts/run-task.sh` exits 0; `scripts/test-wiring.sh` passes; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-23: Telemetry Summary CLI Filter in amase stats**
+  - **Goal:** Add `--task <ID>` and `--json` flags to `./amase stats` so individual task duration, timestamp, and token cost can be programmatically queried.
+  - **Files:** `amase`.
+  - **Criteria:** `./amase stats --task TASK-20` prints metrics for TASK-20 and exits 0; `bash -n amase` exits 0; `.amase/test-gate.sh` passes.
