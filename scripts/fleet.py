@@ -2,6 +2,7 @@
 """
 AMASE Free Fleet Invocation Helper
 Executes prompts against the $0 Free Model Fleet.
+Headless, fast, zero GUI tab popups.
 1. Checks local LiteLLM Proxy (:4000) if active.
 2. Gracefully falls back to headless OpenCode CLI (nemotron-3.5-lightning-free, etc.).
 """
@@ -15,9 +16,6 @@ OPENCODE_BIN = os.getenv("OPENCODE_BIN", "/home/joao/.bun/bin/opencode")
 LITELLM_URL = os.getenv("LITELLM_URL", "http://localhost:4000/v1/chat/completions")
 API_KEY = os.getenv("LITELLM_API_KEY", "sk-amase-master-key")
 
-PTYXIS_BIN = os.getenv("PTYXIS_BIN", "/usr/bin/ptyxis")
-HAS_DISPLAY = bool(os.getenv("DISPLAY") or os.getenv("WAYLAND_DISPLAY"))
-
 FREE_MODELS = [
     "opencode/nemotron-3.5-lightning-free",
     "opencode/beam-free",
@@ -26,62 +24,10 @@ FREE_MODELS = [
     "opencode/mimo-v2.6-flash-free",
 ]
 
-def _run_in_tab(cmd_prompt: str, model: str, title: str, timeout: int) -> str:
-    """Run model inside a dedicated visible Ptyxis terminal tab."""
-    import tempfile
-    import time
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as prompt_f:
-        prompt_f.write(cmd_prompt)
-        prompt_file = prompt_f.name
-
-    out_file = prompt_file + ".out"
-    done_file = prompt_file + ".done"
-    runner_file = prompt_file + ".sh"
-
-    script_content = f"""#!/usr/bin/env bash
-set -uo pipefail
-echo "=========================================================="
-echo "[+] AMASE Agent: {title}"
-echo "[+] Model:       {model}"
-echo "=========================================================="
-PROMPT=$(cat "{prompt_file}")
-"{OPENCODE_BIN}" run --model "{model}" "$PROMPT" 2>&1 | tee "{out_file}"
-touch "{done_file}"
-echo ""
-echo "[+] Task complete. Auto-closing tab in 2s..."
-sleep 2
-exit 0
-"""
-    with open(runner_file, "w") as rf:
-        rf.write(script_content)
-    os.chmod(runner_file, 0o755)
-
-    try:
-        subprocess.Popen([PTYXIS_BIN, "--tab", f"--title={title}", "--", runner_file])
-        start = time.time()
-        while time.time() - start < timeout:
-            if os.path.exists(done_file):
-                time.sleep(0.5)
-                if os.path.exists(out_file):
-                    with open(out_file, "r") as of:
-                        content = of.read().strip()
-                        if content:
-                            return content
-                break
-            time.sleep(1)
-    finally:
-        for f in (prompt_file, out_file, done_file, runner_file):
-            try:
-                if os.path.exists(f):
-                    os.unlink(f)
-            except Exception:
-                pass
-    return ""
-
-def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, title: str = "AMASE: Agent", timeout: int = 120) -> str:
+def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, title: str = "", timeout: int = 60) -> str:
     """
     Query the free model pool with automatic failover between LiteLLM and OpenCode CLI.
-    When a display is available, opens a visible tab in Ptyxis for user visibility.
+    Runs headlessly in the background with zero tab popups.
     """
     # 1. Try LiteLLM proxy if reachable
     try:
@@ -112,7 +58,7 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
     except Exception:
         pass  # Fall back to OpenCode CLI
 
-    # 2. OpenCode CLI fallback
+    # 2. OpenCode CLI fallback (pure headless)
     if os.path.exists(OPENCODE_BIN) and os.access(OPENCODE_BIN, os.X_OK):
         combined_prompt = prompt
         if system_prompt:
@@ -124,16 +70,10 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
 
         for m in candidate_models:
             try:
-                # If display is active, open in dedicated visible tab
-                if HAS_DISPLAY and os.path.exists(PTYXIS_BIN) and os.access(PTYXIS_BIN, os.X_OK):
-                    res_content = _run_in_tab(combined_prompt, m, title, timeout)
-                    if res_content:
-                        return res_content
-                else:
-                    cmd = [OPENCODE_BIN, "run", "--model", m, combined_prompt]
-                    res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-                    if res.returncode == 0 and res.stdout.strip():
-                        return res.stdout.strip()
+                cmd = [OPENCODE_BIN, "run", "--model", m, combined_prompt]
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+                if res.returncode == 0 and res.stdout.strip():
+                    return res.stdout.strip()
             except Exception as e:
                 sys.stderr.write(f"[-] Fleet model {m} failed: {e}\n")
                 continue
@@ -142,6 +82,5 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
     return ""
 
 if __name__ == "__main__":
-    test_prompt = "Propose 1 vertical slice task for a web extension."
-    print("Testing query_fleet...")
+    test_prompt = "Say hello in one word."
     print(query_fleet(test_prompt))

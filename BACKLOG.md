@@ -58,7 +58,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/outline-ast.py`, `scripts/generate-agent.sh`.
   - **Criteria:** Generates symbol skeleton; passes `.amase/test-gate.sh`.
 
-- [ ] **TASK-11: Automatic Sentinel Remediation Injection Hook**
+- [x] **TASK-11: Automatic Sentinel Remediation Injection Hook**
   - **Goal:** In `scripts/settle-task.sh`, integrate `scripts/sentinel.py` as an automatic post-merge security gate. If Sentinel reports `[CRITICAL]` or `[HIGH]` vulnerabilities, automatically prepend `TASK-SEC-01` to `BACKLOG.md`.
   - **Files:** `scripts/settle-task.sh`.
   - **Criteria:** Post-merge hook catches simulated vulnerability and writes task to backlog; passes test gate.

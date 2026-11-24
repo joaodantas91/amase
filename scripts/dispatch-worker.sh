@@ -103,13 +103,14 @@ echo "[+] Models:   ${UNIQUE_FLEET[*]}"
 echo "[+] Timestamp: $(date -Iseconds)"
 echo "========================================================"
 
-# Launch EXACTLY ONE tab in Ptyxis
-if [[ -x "$PTYXIS_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
+# Launch worker in clean headless background by default (prevents terminal tab clutter)
+USE_GUI_TAB="${AMASE_GUI_TAB:-0}"
+if [[ "$USE_GUI_TAB" == "1" && -x "$PTYXIS_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
   echo "[+] Opening single worker tab in Terminal (Ptyxis)..."
   "$PTYXIS_BIN" --tab --working-directory="$WORKTREE" --title="AMASE: $TASK_NAME" -- \
     "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "${UNIQUE_FLEET[@]}" &
 else
-  echo "[+] Running single worker in background (headless)..."
+  echo "[+] Running worker in clean headless background (zero tab popups)..."
   "$RUNNER_SCRIPT" "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "${UNIQUE_FLEET[@]}" > "$LOG_FILE" 2>&1 &
 fi
 
