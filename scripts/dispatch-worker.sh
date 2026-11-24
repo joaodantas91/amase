@@ -217,7 +217,9 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
   fi
 
   if [[ -f "$WORKTREE/.amase-failed" ]]; then
-    echo "[-] Worker reported all fleet models failed."
+    echo "[-] Worker reported all fleet models failed. Cleaning up worktree..."
+    PARENT_REPO="$(cd "$WORKTREE/../.." 2>/dev/null && pwd || true)"
+    "$ORCHESTRATOR_DIR/scripts/abort-task.sh" --repo "${PARENT_REPO:-$(pwd)}" --task "$TASK_NAME" 2>/dev/null || true
     exit 1
   fi
 

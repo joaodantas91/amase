@@ -173,7 +173,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/generate-agent.sh`.
   - **Criteria:** `scripts/generate-agent.sh` dry-run with a simulated `CONTEXT_BLOAT` retrospective injects the restricted scope guardrail; .amase/test-gate.sh passes.
 
-- [ ] **TASK-34: Automated Failure Cleanup & Worktree Pruning (amase abort)**
+- [x] **TASK-34: Automated Failure Cleanup & Worktree Pruning (amase abort)**
   - **Goal:** Add `amase abort [task-id]` and automatic teardown in `dispatch-worker.sh` when all fleet models fail, cleanly unmounting the worktree (`git worktree remove --force`), pruning the branch, and resetting task state to `[ ]` without leaving dangling worktrees.
   - **Files:** `amase`, `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`.
   - **Criteria:** `amase abort <task-id>` unmounts worktree and deletes branch; git status is 100% clean; .amase/test-gate.sh passes.
