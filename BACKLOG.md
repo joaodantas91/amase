@@ -233,6 +233,47 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/run-task.sh`, `scripts/settle-task.sh`.
   - **Criteria:** `amase parallel --dry-run` outputs non-conflicting task batches; .amase/test-gate.sh passes.
 
+- [ ] **TASK-46: Safe Parallel Execution Settings & Configuration (.amase/config.json & amase config)**
+  - **Goal:** In `.amase/config.json`, `amase config`, and `scripts/init-project.sh`, introduce concurrency configuration (`concurrency.mode`: `"sequential"` | `"auto_parallel"`, `concurrency.max_workers`: 2, `concurrency.provider_sharding`: true). Allow reading and toggling via `amase config --concurrency` and `amase config --set-concurrency <mode>`.
+  - **Files:** `amase`, `scripts/init-project.sh`.
+  - **Criteria:** `amase config --concurrency` displays current mode; `amase config --set-concurrency auto_parallel` updates config.json; .amase/test-gate.sh passes.
+
+- [ ] **TASK-47: Provider-Sharded Fleet Load Balancer for Parallel Workers (Anti-429)**
+  - **Goal:** In `scripts/parallel_dispatcher.py` and `scripts/fleet.py`, implement upstream provider sharding for concurrent workers. Assign distinct provider endpoints across workers in the same batch (e.g. Worker 1 -> Groq, Worker 2 -> NVIDIA NIM, Worker 3 -> GitHub Models / Ollama) so parallel workers never collide on provider rate limits or trigger 429 errors.
+  - **Files:** `scripts/parallel_dispatcher.py`, `scripts/fleet.py`.
+  - **Criteria:** `parallel_dispatcher.py` assigns unique provider targets per concurrent worker; .amase/test-gate.sh passes.
+
+- [ ] **TASK-48: Concurrent OpenCode SQLite Safety & Process Locking**
+  - **Goal:** In `scripts/dispatch-worker.sh` and `scripts/doctor.py`, ensure concurrent OpenCode invocations do not corrupt or block `~/.local/share/opencode/opencode.db`. Verify SQLite WAL mode in `amase doctor` and add a lightweight non-blocking advisory lock on worker startup to serialize database initialization.
+  - **Files:** `scripts/dispatch-worker.sh`, `scripts/doctor.py`.
+  - **Criteria:** `amase doctor` validates SQLite WAL mode for OpenCode DB; `dispatch-worker.sh` avoids SQLite collision; .amase/test-gate.sh passes.
+
+- [ ] **TASK-49: Autonomous Auto-Parallel Loop & Invariant Rule Integration**
+  - **Goal:** In `amase`, `scripts/run-task.sh`, and `.agents/skills/amase-invariants/SKILL.md`, integrate auto-parallel mode into the continuous orchestrator loop. When `concurrency.mode` is `auto_parallel` and multiple pending tasks have disjoint file targets, dispatch batch via `amase parallel`; otherwise fall back safely to sequential dispatch.
+  - **Files:** `amase`, `scripts/run-task.sh`, `.agents/skills/amase-invariants/SKILL.md`.
+  - **Criteria:** `amase` respects `auto_parallel` setting in loop; .amase/test-gate.sh passes.
+
+- [ ] **TASK-50: Deterministic Headless UI Layout & Collision Inspector (scripts/ui_heuristics.js)**
+  - **Goal:** Create `scripts/ui_heuristics.js`, an in-browser evaluation script executed via headless Playwright/Puppeteer. Deterministically detect horizontal viewport overflows (elements spilling out of 375px mobile or desktop viewports), bounding-box collisions/overlaps between interactive elements, and zero-size click targets without sending any images or DOM dumps to LLMs (0 tokens).
+  - **Files:** `scripts/ui_heuristics.js`.
+  - **Criteria:** Node evaluation test detects simulated element collisions and overflow; .amase/test-gate.sh passes.
+
+- [ ] **TASK-51: Asset & Console Failure Interceptor (scripts/ui_network_audit.py)**
+  - **Goal:** Create `scripts/ui_network_audit.py` to capture failed network requests (404/500), broken `<img>` assets (`naturalWidth === 0`), and unhandled browser console errors/warnings during headless page navigation, outputting structured JSON metrics at 0 LLM tokens.
+  - **Files:** `scripts/ui_network_audit.py`.
+  - **Criteria:** `python3 scripts/ui_network_audit.py --help` exits 0; captures mock network/console errors; .amase/test-gate.sh passes.
+
+- [ ] **TASK-52: Compact CHISLE UI Token Condenser & CLI (amase ui-check)**
+  - **Goal:** Create `scripts/ui_formatter.py` and CLI subcommand `amase ui-check <url>` integrating heuristics, network audit, and a strict <150-token markdown condenser. Formats layout overlaps and broken assets into concise, actionable selector coordinates for worker agents.
+  - **Files:** `scripts/ui_formatter.py`, `scripts/ui_validator.py`, `amase`.
+  - **Criteria:** `amase ui-check --help` exits 0; mock failure output is under 150 tokens; .amase/test-gate.sh passes.
+
+- [ ] **TASK-53: Universal UI Validation MCP Server (scripts/ui_mcp_server.py)**
+  - **Goal:** Create `scripts/ui_mcp_server.py` exposing a standard Model Context Protocol (MCP) tool (`validate_ui`) over stdio. Allows external AI orchestrators (Claude Code, Cursor, OpenCode, Windsurf, Antigravity) to inspect web pages and receive condensed CHISLE visual telemetry.
+  - **Files:** `scripts/ui_mcp_server.py`.
+  - **Criteria:** MCP server initializes and responds to `tools/list` and `tools/call` over stdio; .amase/test-gate.sh passes.
+
+
 
 
 
