@@ -92,3 +92,13 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Define `BACKLOG_FILE` and `AUDIT_FILE` before the invariant check so post-merge remediation runs without unset-variable failures and detects violations per changed file type.
   - **Files:** `scripts/settle-task.sh`.
   - **Criteria:** `bash -n scripts/settle-task.sh` exits 0 and `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-18: Scout Backlog-Safe Emission & Dedupe**
+  - **Goal:** Add a `--sanitize` stdin filter and `--emit-tasks` mode to `scripts/scout.py` that strips progress chatter, validates the markdown block, and appends only new `TASK-XX` entries to `BACKLOG.md`; update the `amase` loop to use it instead of a raw `>>` redirect that currently dumps status text into the backlog.
+  - **Files:** `scripts/scout.py`, `amase`.
+  - **Criteria:** `printf 'Scout: querying...\n- [ ] **TASK-99: Sample**\n  - **Goal:** g\n' | python3 scripts/scout.py --sanitize` prints only the task block and exits 0; re-emitting an existing `TASK-99` writes nothing (no duplicate); `bash -n amase` exits 0; `.amase/test-gate.sh` passes.
+
+- [ ] **TASK-19: Portable Orchestrator Root Resolution in Persona Runners**
+  - **Goal:** Replace hardcoded `/home/joao/dev/orchestrator/...` persona, skill, and Litellm paths in the persona runners and model switcher with a root derived from each script's own location so the orchestrator works from any checkout.
+  - **Files:** `scripts/scout.py`, `scripts/sentinel.py`, `scripts/designer.py`, `scripts/switch-model`.
+  - **Criteria:** `grep -rn '/home/joao/dev/orchestrator' scripts/*.py scripts/switch-model` returns no matches (exit 1); `bash -n scripts/switch-model` exits 0; `python3 -m py_compile scripts/scout.py scripts/sentinel.py scripts/designer.py` exits 0; `.amase/test-gate.sh` passes.
