@@ -169,6 +169,12 @@ for MODEL in "${MODELS[@]}"; do
     sleep $(( (RANDOM % 15) / 10 ))
   fi
 
+  GLOBAL_OP_LOG="$HOME/.local/share/opencode/log/opencode.log"
+  INIT_GLOBAL_OFFSET=0
+  if [[ -f "$GLOBAL_OP_LOG" ]]; then
+    INIT_GLOBAL_OFFSET=$(stat -c%s "$GLOBAL_OP_LOG" 2>/dev/null || echo 0)
+  fi
+
   if command -v stdbuf >/dev/null 2>&1; then
     timeout --kill-after=5s 120s stdbuf -oL -eL "$OPENCODE_BIN" run --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
   else
@@ -179,18 +185,40 @@ for MODEL in "${MODELS[@]}"; do
   # Sub-watchdog: checks every 1s for quota error (<1s) or timeout
   SUB_ELAPSED=0
   while kill -0 "$WORKER_PID" 2>/dev/null; do
-    if grep -q "Free usage limit reached" "$LOG_FILE" 2>/dev/null || \
-       ( [ -f ~/.local/share/opencode/log/opencode.log ] && tail -n 10 ~/.local/share/opencode/log/opencode.log | grep -q "Free usage limit reached" ); then
+    QUOTA_HIT=0
+    if grep -q "Free usage limit reached" "$LOG_FILE" 2>/dev/null; then
+      QUOTA_HIT=1
+    elif [[ -f "$GLOBAL_OP_LOG" ]]; then
+      CURR_OFFSET=$(stat -c%s "$GLOBAL_OP_LOG" 2>/dev/null || echo 0)
+      if [[ "$CURR_OFFSET" -gt "$INIT_GLOBAL_OFFSET" ]]; then
+        if tail -c +$((INIT_GLOBAL_OFFSET + 1)) "$GLOBAL_OP_LOG" 2>/dev/null | grep -q "Free usage limit reached"; then
+          QUOTA_HIT=1
+        fi
+      fi
+    fi
+
+    if [[ "$QUOTA_HIT" -eq 1 ]]; then
       echo ""
-      echo "[!] Free usage limit reached in provider log (<1s). Killing opencode immediately and failing over..."
+      echo "[!] Free usage limit reached in provider log for $MODEL. Failing over..."
       kill -9 "$WORKER_PID" 2>/dev/null || true
       OPENCODE_FREE_EXHAUSTED=1
       break
     fi
 
     # SQLite busy or locked detection: back off and retry
-    if grep -q "database is locked" "$LOG_FILE" 2>/dev/null || \
-       ( [ -f ~/.local/share/opencode/log/opencode.log ] && tail -n 10 ~/.local/share/opencode/log/opencode.log | grep -q "database is locked" ); then
+    SQLITE_BUSY=0
+    if grep -q "database is locked" "$LOG_FILE" 2>/dev/null; then
+      SQLITE_BUSY=1
+    elif [[ -f "$GLOBAL_OP_LOG" ]]; then
+      CURR_OFFSET=$(stat -c%s "$GLOBAL_OP_LOG" 2>/dev/null || echo 0)
+      if [[ "$CURR_OFFSET" -gt "$INIT_GLOBAL_OFFSET" ]]; then
+        if tail -c +$((INIT_GLOBAL_OFFSET + 1)) "$GLOBAL_OP_LOG" 2>/dev/null | grep -q "database is locked"; then
+          SQLITE_BUSY=1
+        fi
+      fi
+    fi
+
+    if [[ "$SQLITE_BUSY" -eq 1 ]]; then
       echo ""
       echo "[!] SQLite busy detected in provider log. Retrying with backoff..."
       kill -9 "$WORKER_PID" 2>/dev/null || true
@@ -327,16 +355,6 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
     echo "[-] Model stall detected (no output or progress for 90s). Forcing failover..."
     pkill -P $(pgrep -f "$WORKTREE/.amase-run.sh") opencode 2>/dev/null || true
     STALL_SECONDS=0
-  fi
-
-  # Real-time quota detection in outer watchdog
-  if grep -q "Free usage limit reached" "$LOG_FILE" 2>/dev/null || \
-     ( [ -f ~/.local/share/opencode/log/opencode.log ] && tail -n 10 ~/.local/share/opencode/log/opencode.log | grep -q "Free usage limit reached" ); then
-    if pgrep -f "$WORKTREE/.amase-run.sh" >/dev/null 2>&1; then
-      echo "[!] Free quota limit detected in provider log. Instant kill to force failover..."
-      pkill -P $(pgrep -f "$WORKTREE/.amase-run.sh") opencode 2>/dev/null || true
-      STALL_SECONDS=0
-    fi
   fi
 
   if [ $((ELAPSED % 15)) -eq 0 ]; then

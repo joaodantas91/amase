@@ -338,6 +338,11 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/dispatch-worker.sh`, `BACKLOG.md`.
   - **Criteria:** Watchdog stall threshold extended to 90s; multi-source log delta tracking; test gate passes.
 
+- [x] **TASK-67: Resolve WATCHDOG_STALE_LOG_QUOTA_LOOP and Scout NoneType Fix**
+  - **Goal:** In `scripts/dispatch-worker.sh`, track global `opencode.log` byte offset before model execution and eliminate un-offset tail greps that caused rapid-fire 5s kills and an infinite loop resetting `STALL_SECONDS=0`. Guard `scout.py` line 209 against `NoneType` roadmap path.
+  - **Files:** `scripts/dispatch-worker.sh`, `scripts/scout.py`, `BACKLOG.md`.
+  - **Criteria:** Global log checks use byte offset slices; outer rapid-fire watchdog quota kill removed; scout handles None roadmap cleanly.
+
 
 
 
