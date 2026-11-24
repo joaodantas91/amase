@@ -248,7 +248,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/dispatch-worker.sh`, `scripts/doctor.py`.
   - **Criteria:** `amase doctor` validates SQLite WAL mode for OpenCode DB; `dispatch-worker.sh` avoids SQLite collision; .amase/test-gate.sh passes.
 
-- [ ] **TASK-49: Parallel Concurrency Loop & Invariant Rule Integration**
+- [x] **TASK-49: Parallel Concurrency Loop & Invariant Rule Integration**
   - **Goal:** In `amase`, `scripts/run-task.sh`, and `.agents/skills/amase-invariants/SKILL.md`, integrate parallel concurrency into the continuous orchestrator loop. When `concurrency: "parallel"` is configured and multiple pending tasks have disjoint file targets, dispatch batch via `amase parallel`; otherwise fall back safely to standard sequential dispatch (`concurrency: "sequential"`).
   - **Files:** `amase`, `scripts/run-task.sh`, `.agents/skills/amase-invariants/SKILL.md`.
   - **Criteria:** `amase` respects `concurrency: parallel` setting in loop; .amase/test-gate.sh passes.
