@@ -1,3 +1,4 @@
+- [ ] **TASK-SEC-01: Remediate Sentinel Audit Findings**
 # AMASE Orchestrator Backlog
 
 Autonomous task queue for improving the orchestrator itself.
@@ -108,7 +109,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/scout.py`, `scripts/sentinel.py`, `scripts/designer.py`, `scripts/switch-model`.
   - **Criteria:** `python3 -c "import os, sys; sys.path.insert(0, 'scripts'); from scout import ORCHESTRATOR_ROOT; assert os.path.exists(os.path.join(ORCHESTRATOR_ROOT, 'personas', 'scout.md'))"` exits 0; `.amase/test-gate.sh` passes.
 
-- [ ] **TASK-21: Fix Sentinel Diff Retrieval & Add Deterministic Dry-Run**
+- [x] **TASK-21: Fix Sentinel Diff Retrieval & Add Deterministic Dry-Run**
   - **Goal:** Populate diff in scripts/sentinel.py by running git -C <target> diff <base_ref> and add a --dry-run flag that prints the assembled prompt and exits 0 without calling the fleet, so Sentinel stops crashing with NameError.
   - **Files:** scripts/sentinel.py.
   - **Criteria:** python3 scripts/sentinel.py . HEAD~1 --dry-run exits 0 and stdout contains 'DIFF TO AUDIT:' with no NameError; python3 -m py_compile scripts/sentinel.py exits 0; .amase/test-gate.sh passes.
