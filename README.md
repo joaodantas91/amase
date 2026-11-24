@@ -13,10 +13,15 @@ AMASE is an autonomous multi-agent swarm orchestrator that enables safe, isolate
 - **$0 free model fleet**: All worker tasks use free-tier models via LiteLLM proxy
 - **Token-diet governance**: Strict scope boundaries via `.amase/scope.md`
 - **Automatic settlement**: Test gate → diff audit → merge → backlog update → worktree prune
+- **Sleep & lid-close inhibition**: Automatically engages `systemd-inhibit` on Linux so laptops can be closed without interrupting autonomous swarm execution
 
 ---
 
 ## CLI Command Reference
+
+### `amase [--no-inhibit] [dir]`
+
+Runs the continuous autonomous orchestration loop on the target repository until `BACKLOG.md` is exhausted. On Linux, automatically prevents system sleep, idle timeout, and lid-close suspension via `systemd-inhibit` (pass `--no-inhibit` to disable).
 
 ### `amase init [dir]`
 

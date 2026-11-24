@@ -183,7 +183,22 @@ if [[ "${1:-}" == "task" ]]; then
 fi
 
 TARGET_DIR="${1:-$(pwd)}"
+if [[ "$TARGET_DIR" == "--no-inhibit" ]]; then
+  AMASE_INHIBITED=1
+  shift
+  TARGET_DIR="${1:-$(pwd)}"
+fi
 cd "$TARGET_DIR"
+
+# Sleep & Lid-Close Inhibition: prevent Linux laptop sleep/hibernation while autonomous loop is active
+if command -v systemd-inhibit >/dev/null 2>&1 && [[ -z "${AMASE_INHIBITED:-}" ]]; then
+  echo "[+] Requesting system sleep inhibition lock (preventing idle, sleep, and lid-close suspension)..."
+  exec systemd-inhibit \
+    --what=idle:sleep:handle-lid-switch \
+    --who=AMASE \
+    --why="AMASE autonomous loop active on $(basename "$TARGET_DIR")" \
+    env AMASE_INHIBITED=1 "$0" "$@"
+fi
 
 if [ ! -d ".git" ]; then
   echo "[-] Error: $TARGET_DIR is not a git repository."

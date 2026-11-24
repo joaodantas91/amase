@@ -71,6 +71,12 @@ def check_opencode_db():
 
 
 
+def check_systemd_inhibit():
+    if shutil.which("systemd-inhibit"):
+        return "PASS", "systemd-inhibit ready (prevents sleep & lid-close during auto mode)"
+    return "WARN", "systemd-inhibit not found (laptop may sleep if lid is closed)"
+
+
 def check_litellm():
     url = os.getenv("LITELLM_URL", "http://localhost:4000/health")
     try:
@@ -190,6 +196,7 @@ def main():
         ("Model Fleet API Keys", check_api_keys(orchestrator_dir)),
         ("GitHub Models Connector", check_github_models()),
         ("Local Ollama Engine", check_ollama()),
+        ("Sleep Inhibition (systemd)", check_systemd_inhibit()),
         ("Project Governance", check_governance(target_dir)),
     ]
 
