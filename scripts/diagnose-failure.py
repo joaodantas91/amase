@@ -48,11 +48,7 @@ def diagnose_log(log_path, repo_dir=None):
     if re.search(r'(Free usage limit reached|rate_limit_exceeded|429 Too Many Requests|TPM: Limit|quota exceeded)', all_logs, re.IGNORECASE):
         return "QUOTA_EXHAUSTED", "Provider rate limit or free tier quota exhausted.", metrics
 
-    # 2. Socket stall check
-    if "stall detected" in all_logs.lower() or (len(content.strip()) < 50 and not test_gate_error):
-        return "SOCKET_STALL", "Worker hung on network socket without emitting progress.", metrics
-
-    # 3. Compiler / Test Gate / Type Check errors
+    # 2. Compiler / Test Gate / Type Check errors (check before short-log socket stall)
     compiler_pattern = (
         r'(error TS[0-9]+|SyntaxError:|AssertionError|FAILED tests/|Command failed with exit code|'
         r'svelte-check found [1-9]|Type .* is not assignable|No index signature|'
@@ -61,6 +57,10 @@ def diagnose_log(log_path, repo_dir=None):
     )
     if re.search(compiler_pattern, all_logs, re.IGNORECASE):
         return "COMPILER_ERROR", "Worker code changes failed syntax, type check, or test gate.", metrics
+
+    # 3. Socket stall check
+    if "stall detected" in all_logs.lower() or (len(content.strip()) < 50 and not test_gate_error):
+        return "SOCKET_STALL", "Worker hung on network socket without emitting progress.", metrics
 
     # 4. Context bloat check
     if files_read >= 10:

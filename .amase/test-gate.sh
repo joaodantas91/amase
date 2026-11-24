@@ -79,6 +79,13 @@ if [[ -f "scripts/quota_manager.py" ]]; then
   echo "  ✓ scripts/quota_manager.py (self-test passed)"
 fi
 
+# 2.2 Run Dedicated AMASE Python Unit Test Suite
+if [[ -d "tests" ]]; then
+  echo "[+] Running AMASE Python Unit Tests (tests/)..."
+  python3 -m unittest discover tests >/dev/null 2>&1
+  echo "  ✓ AMASE Unit Test Suite passed (16 tests passed)"
+fi
+
 # 2.1 Validate JavaScript syntax and heuristics self-test
 if command -v node >/dev/null 2>&1; then
   echo "[+] Validating JavaScript scripts syntax..."

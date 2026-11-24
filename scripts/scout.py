@@ -145,7 +145,11 @@ def extract_all_backlog_titles(backlog_text: str) -> list[str]:
 
 def normalize_title_tokens(title: str) -> set[str]:
     words = re.findall(r'[a-zA-Z0-9]+', title.lower())
-    stop_words = {"and", "or", "for", "with", "the", "in", "on", "at", "to", "a", "an", "of", "from", "task", "by", "implementation", "support"}
+    stop_words = {
+        "and", "or", "for", "with", "the", "in", "on", "at", "to", "a", "an", "of", "from",
+        "task", "by", "implementation", "support", "custom", "field", "fields", "detection",
+        "page", "mapping", "feature", "component", "platform", "ats"
+    }
     return {w for w in words if w not in stop_words and len(w) > 2}
 
 def is_duplicate_title(new_title: str, existing_titles: list[str]) -> bool:

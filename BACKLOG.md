@@ -389,6 +389,16 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/dispatch-worker.sh`, `scripts/settle-task.sh`, `scripts/diagnose-failure.py`, `scripts/status.py`, `BACKLOG.md`.
   - **Criteria:** Test gate passes with exit code 0; amase status displays engine version and win rates; error handoff injected dynamically into next candidate model.
 
+- [x] **TASK-75: Dedicated Python Unit Test Suite (`tests/`) & Test Gate CI Integration**
+  - **Goal:** Implement a comprehensive unit test suite in `tests/` covering core AMASE Python modules using standard library `unittest` (zero `pip` dependencies):
+    1. `tests/test_quota_manager.py`: Provider normalization, TTL expiration, and cache clearing.
+    2. `tests/test_scout.py`: Markdown block parsing, task ID extraction, domain token filtering, and duplicate title detection.
+    3. `tests/test_diagnose.py`: Failure log regex classification (`COMPILER_ERROR`, `QUOTA_EXHAUSTED`, `SOCKET_STALL`, `MODEL_ABORT`).
+    4. `tests/test_status.py`: Project type detection (Node, Rust, Python, Go, Generic), backlog math, and retrospective win-rate statistics.
+    5. Wire `python3 -m unittest discover tests` into `.amase/test-gate.sh`.
+  - **Files:** `tests/__init__.py`, `tests/test_quota_manager.py`, `tests/test_scout.py`, `tests/test_diagnose.py`, `tests/test_status.py`, `scripts/scout.py`, `scripts/diagnose-failure.py`, `.amase/test-gate.sh`, `BACKLOG.md`.
+  - **Criteria:** 16 unit tests pass in ~1.1s; test gate passes cleanly with exit code 0.
+
 
 
 
