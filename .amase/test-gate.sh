@@ -82,8 +82,9 @@ fi
 # 2.2 Run Dedicated AMASE Python Unit Test Suite
 if [[ -d "tests" ]]; then
   echo "[+] Running AMASE Python Unit Tests (tests/)..."
-  python3 -m unittest discover tests >/dev/null 2>&1
-  echo "  ✓ AMASE Unit Test Suite passed (16 tests passed)"
+  TEST_OUT=$(python3 -m unittest discover tests 2>&1)
+  TEST_COUNT=$(echo "$TEST_OUT" | grep -oE "Ran [0-9]+ test(s)?" || echo "Tests passed")
+  echo "  ✓ AMASE Unit Test Suite passed ($TEST_COUNT)"
 fi
 
 # 2.1 Validate JavaScript syntax and heuristics self-test

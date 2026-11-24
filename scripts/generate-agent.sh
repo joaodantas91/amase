@@ -145,6 +145,33 @@ elif [[ -f "$REPO_PATH/go.mod" ]]; then
   MANIFEST_FILE="go.mod"
 fi
 
+# UI Design System & Token Context Injection for UI tasks
+UI_CONTEXT=""
+if [[ "$ROLE" == "builder" ]] && echo "$TASK_DESC" | grep -qiE "ui|ux|style|css|svelte|vue|component|button|form|input|popup|options|modal|bar|layout|theme|color"; then
+  TOKEN_FILE=""
+  for candidate in "$REPO_PATH/src/styles/tokens.css" "$REPO_PATH/styles/tokens.css" "$REPO_PATH/src/tokens.css" "$REPO_PATH/src/styles/variables.css" "$REPO_PATH/styles/variables.css"; do
+    if [[ -f "$candidate" ]]; then
+      TOKEN_FILE="$candidate"
+      break
+    fi
+  done
+
+  UI_CONTEXT="## DESIGN SYSTEM & UI INVARIANTS (MANDATORY):
+- ACTIVE UI TASK: You are modifying user interface elements.
+- ZERO RAW HEX COLORS: Never hardcode raw hex colors (#fff, #1e293b, etc.) or arbitrary pixel margins in markup.
+- MINIMUM CLICK TARGET: All interactive buttons and inputs must have at least 44x44px touch targets.
+- RESPONSIVE LAYOUT: Never introduce horizontal viewport overflows or overlapping controls."
+
+  if [[ -n "$TOKEN_FILE" ]]; then
+    TOKEN_EXCERPT=$(grep -E '^\s*--' "$TOKEN_FILE" 2>/dev/null | head -n 30 || true)
+    if [[ -n "$TOKEN_EXCERPT" ]]; then
+      UI_CONTEXT="${UI_CONTEXT}
+- STANDARD CSS VARIABLES (from $(basename "$TOKEN_FILE")):
+${TOKEN_EXCERPT}"
+    fi
+  fi
+fi
+
 if [[ "$ROLE" == "builder" ]]; then
   cat <<EOF
 ## BUILDER BOUNDARIES & FORBIDDEN ACTIONS:
@@ -153,6 +180,8 @@ if [[ "$ROLE" == "builder" ]]; then
 - FORBIDDEN: NEVER modify dependency manifests (${MANIFEST_FILE:-project dependencies}) or add unapproved external packages without instruction.
 - FORBIDDEN: NEVER touch .amase/scope.md.
 - EXIT GATE: All tests in .amase/test-gate.sh must pass with exit code 0 before committing.
+
+${UI_CONTEXT}
 
 ACTIVE TASK TO IMPLEMENT:
 $TASK_DESC

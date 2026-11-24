@@ -141,46 +141,69 @@ echo "[+] Merged $BRANCH_NAME into main."
 
 # --- Post-merge invariant violation check ---
 echo "[+] Running post-merge invariant violation check..."
-INV_DIFF=$(git -C "$TARGET_REPO" diff "main..$BRANCH_NAME" 2>/dev/null || true)
+INV_DIFF="$DIFF_CONTENT"
 
 INV_FOUND=0
 
-# Check for raw hex colors in .svelte/.vue files
-if echo "$INV_DIFF" | grep -qE '\.(svelte|vue)' && echo "$INV_DIFF" | grep -qE '#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?'; then
-  echo "[!] Invariant violation: raw hex color found in .svelte/.vue file"
+# Check for raw hex colors in .svelte/.vue/css files
+if echo "$CHANGED_FILES" | grep -qE '\.(svelte|vue|css|scss|html)' && echo "$INV_DIFF" | grep -E '^\+[^+]' | grep -qE '#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?'; then
+  echo "[!] Invariant violation: raw hex color found in added UI styles."
   INV_FOUND=1
 fi
 
 # Check for 'as any' or '@ts-ignore' in .ts/.tsx files
-if echo "$INV_DIFF" | grep -qE '\.(ts|tsx)' && echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
-  echo "[!] Invariant violation: 'as any' or '@ts-ignore' found in .ts/.tsx file"
+if echo "$CHANGED_FILES" | grep -qE '\.(ts|tsx)' && echo "$INV_DIFF" | grep -E '^\+[^+]' | grep -qE "as any|@ts-ignore"; then
+  echo "[!] Invariant violation: 'as any' or '@ts-ignore' found in added TypeScript code."
   INV_FOUND=1
+fi
+
+# Automated UI Validation Check when UI files are touched
+UI_TOUCHED=$(echo "$CHANGED_FILES" | grep -E '\.(svelte|vue|css|scss|html|jsx|tsx)$|entrypoints/' || true)
+if [[ -n "$UI_TOUCHED" ]]; then
+  CONFIG_FILE="$TARGET_REPO/.amase/config.json"
+  [[ ! -f "$CONFIG_FILE" ]] && CONFIG_FILE="$ORCHESTRATOR_DIR/.amase/config.json"
+  TARGET_URL=$(jq -r '.ui.target_url // empty' "$CONFIG_FILE" 2>/dev/null || true)
+
+  if [[ -z "$TARGET_URL" ]]; then
+    for static_html in "$TARGET_REPO/.output/chrome-mv3/popup.html" "$TARGET_REPO/.output/chrome-mv3/options.html" "$TARGET_REPO/dist/index.html" "$TARGET_REPO/build/index.html"; do
+      if [[ -f "$static_html" ]]; then
+        TARGET_URL="file://$static_html"
+        break
+      fi
+    done
+  fi
+
+  if [[ -n "$TARGET_URL" && -f "$ORCHESTRATOR_DIR/scripts/ui_validator.py" ]]; then
+    echo "[+] UI files modified ($UI_TOUCHED). Running automated UI validation audit on $TARGET_URL..."
+    UI_REPORT=$(python3 "$ORCHESTRATOR_DIR/scripts/ui_validator.py" "$TARGET_URL" 2>&1 || true)
+    echo "$UI_REPORT"
+    if echo "$UI_REPORT" | grep -q "\[UI FAIL\]"; then
+      echo "[!] UI Validator detected layout or runtime violations."
+      INV_FOUND=1
+      if [[ -f "$AUDIT_FILE" ]]; then
+        echo "---" >> "$AUDIT_FILE"
+        echo "UI Automation Audit Violations:" >> "$AUDIT_FILE"
+        echo "$UI_REPORT" >> "$AUDIT_FILE"
+      fi
+    fi
+  fi
 fi
 
 if [[ "$INV_FOUND" -eq 1 ]]; then
   echo "[+] Prepending TASK-INV-01 to BACKLOG.md for remediation..."
   if [[ -f "$BACKLOG_FILE" ]]; then
-    sed -i "1s/^/- [ ] **TASK-INV-01: Remediate invariant violations**\n/" "$BACKLOG_FILE"
+    sed -i "1s/^/- [ ] **TASK-INV-01: Remediate invariant and UI violations**\n/" "$BACKLOG_FILE"
   fi
   # Write findings to AUDIT.md
   if [[ -f "$AUDIT_FILE" ]]; then
     echo "[+] Appending invariant violations to AUDIT.md..."
     echo "---" >> "$AUDIT_FILE"
     echo "Invariant violations detected post-merge:" >> "$AUDIT_FILE"
-    if echo "$INV_DIFF" | grep -qE '\.(svelte|vue)'; then
-      echo "- Raw hex color found in .svelte/.vue file" >> "$AUDIT_FILE"
+    if echo "$CHANGED_FILES" | grep -qE '\.(svelte|vue|css|scss|html)'; then
+      echo "- Raw hex color found in UI styles." >> "$AUDIT_FILE"
     fi
-    if echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
-      echo "- 'as any' or '@ts-ignore' found in .ts/.tsx file" >> "$AUDIT_FILE"
-    fi
-  else
-    echo "---" > "$AUDIT_FILE"
-    echo "Invariant violations detected post-merge:" >> "$AUDIT_FILE"
-    if echo "$INV_DIFF" | grep -qE '\.(svelte|vue)'; then
-      echo "- Raw hex color found in .svelte/.vue file" >> "$AUDIT_FILE"
-    fi
-    if echo "$INV_DIFF" | grep -qE "as any|@ts-ignore"; then
-      echo "- 'as any' or '@ts-ignore' found in .ts/.tsx file" >> "$AUDIT_FILE"
+    if echo "$CHANGED_FILES" | grep -qE '\.(ts|tsx)'; then
+      echo "- 'as any' or '@ts-ignore' found in TypeScript code." >> "$AUDIT_FILE"
     fi
   fi
 else
