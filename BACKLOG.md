@@ -93,7 +93,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/settle-task.sh`.
   - **Criteria:** `bash -n scripts/settle-task.sh` exits 0 and `.amase/test-gate.sh` passes.
 
-- [ ] **TASK-18: Scout Backlog-Safe Emission & Dedupe**
+- [x] **TASK-18: Scout Backlog-Safe Emission & Dedupe**
   - **Goal:** Add a `--sanitize` stdin filter and `--emit-tasks` mode to `scripts/scout.py` that strips progress chatter, validates the markdown block, and appends only new `TASK-XX` entries to `BACKLOG.md`; update the `amase` loop to use it instead of a raw `>>` redirect that currently dumps status text into the backlog.
   - **Files:** `scripts/scout.py`, `amase`.
   - **Criteria:** `printf 'Scout: querying...\n- [ ] **TASK-99: Sample**\n  - **Goal:** g\n' | python3 scripts/scout.py --sanitize` prints only the task block and exits 0; re-emitting an existing `TASK-99` writes nothing (no duplicate); `bash -n amase` exits 0; `.amase/test-gate.sh` passes.
