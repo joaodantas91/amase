@@ -17,7 +17,7 @@ if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
 from fleet import query_fleet
 
-MODEL = os.getenv("SENTINEL_MODEL", "opencode/nemotron-3.5-lightning-free")
+MODEL = os.getenv("SENTINEL_MODEL", "sentinel-fleet")
 
 def run_audit(target_dir, base_ref="HEAD~1"):
     try:

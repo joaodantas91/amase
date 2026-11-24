@@ -152,3 +152,8 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Codify the persona-model routing matrix in `.amase/config.json` (`persona_routing`), update `litellm-config.yaml` to route Sentinel to NVIDIA NIM (128k context) and Scout to Groq (0.1s latency), configure `dispatch-worker.sh` to read `.persona_routing.builder`, and add the quota fence rule to `.agents/skills/amase-invariants/SKILL.md`.
   - **Files:** `.amase/config.json`, `config/litellm-config.yaml`, `scripts/dispatch-worker.sh`, `.agents/skills/amase-invariants/SKILL.md`.
   - **Criteria:** `jq -e '.persona_routing.builder' .amase/config.json` exits 0; `bash -n scripts/dispatch-worker.sh` exits 0; `.amase/test-gate.sh` passes.
+
+- [x] **TASK-30: Default Persona Model Fallbacks to Dedicated Fleet Aliases**
+  - **Goal:** Update default fallback models in `scripts/sentinel.py` to `sentinel-fleet`, `scripts/scout.py` to `scout-fleet`, and `scripts/dispatch-worker.sh` to `nvidia/nvidia/nemotron-3.5-lightning-30b-a3b`, completely eliminating hardcoded dependencies on exhausted community pools.
+  - **Files:** `scripts/sentinel.py`, `scripts/scout.py`, `scripts/dispatch-worker.sh`.
+  - **Criteria:** `python3 scripts/sentinel.py --dry-run . HEAD~1` exits 0; `python3 scripts/scout.py --objective "Test" --dry-run` exits 0; `bash -n scripts/dispatch-worker.sh` exits 0; `.amase/test-gate.sh` passes.

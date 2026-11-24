@@ -10,7 +10,7 @@ set -euo pipefail
 
 WORKTREE="${1:-}"
 TASK_PROMPT="${2:-}"
-REQUESTED_MODEL="${3:-opencode/nemotron-3.5-lightning-free}"
+REQUESTED_MODEL="${3:-nvidia/nvidia/nemotron-3.5-lightning-30b-a3b}"
 
 if [[ -z "$WORKTREE" || -z "$TASK_PROMPT" ]]; then
   echo "Usage: $0 <worktree-path> <prompt> [model]"

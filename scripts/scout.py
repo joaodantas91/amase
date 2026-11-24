@@ -16,7 +16,7 @@ if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
 from fleet import query_fleet
 
-MODEL = os.getenv("SCOUT_MODEL", "opencode/nemotron-3.5-lightning-free")
+MODEL = os.getenv("SCOUT_MODEL", "scout-fleet")
 
 def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope_path=""):
     with open(os.path.join(ORCHESTRATOR_ROOT, "personas", "scout.md"), "r") as f:
