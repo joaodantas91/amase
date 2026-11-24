@@ -119,6 +119,6 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Criteria:**  prints valid JSON; when  is manual, [-] Error: /home/joao is not a git repository. exits 0 on empty queue without invoking Scout;  exits 0;  passes.
 
 - [ ] **TASK-23: User-Directed Task Planner (amase task objective)**
-  - **Goal:** Add  and  to decompose a user prompt into 1-2 atomic vertical slice  blocks in  without running unprompted auto-discovery loops.
-  - **Files:** [-] Error: /home/joao is not a git repository., .
-  - **Criteria:**  outputs formatted task block to stdout and exits 0;  exits 0;  passes.
+  - **Goal:** Add 'amase task <objective>' subcommand and 'scripts/scout.py --objective <objective>' to decompose a user prompt into 1-2 atomic vertical slice TASK-XX blocks and append them to BACKLOG.md without unprompted auto-discovery loops.
+  - **Files:** amase, scripts/scout.py.
+  - **Criteria:** python3 scripts/scout.py --objective "Add metrics endpoint" --dry-run outputs formatted task block to stdout and exits 0; bash -n amase exits 0; .amase/test-gate.sh passes.
