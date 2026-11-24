@@ -326,6 +326,8 @@ def main(argv=None):
                         help="Output only function signatures and interface contracts (minified skeleton)")
     parser.add_argument("--target-files", default=None,
                         help="Comma-separated glob patterns to filter which files to index (e.g. 'scripts/*.py,*.sh')")
+    parser.add_argument("--filter", default=None,
+                        help="Case-insensitive substring filter for file paths or symbol names (e.g. 'stats')")
     args = parser.parse_args(argv)
 
     if args.target_files:
@@ -335,6 +337,7 @@ def main(argv=None):
         sys.stderr.write(f"outline-ast: no such file or directory: {args.target}\n")
         return 1
 
+    filter_term = args.filter.lower() if args.filter else None
     files = 0
     symbols = 0
     for path in iter_files(args.target, args.max_depth, args.target_files):
@@ -344,6 +347,11 @@ def main(argv=None):
                 print(f"{os.path.relpath(path)}: (no symbols)")
             continue
         rel, nlines, syms = result
+        if filter_term:
+            if filter_term not in rel.lower():
+                syms = [s for s in syms if filter_term in s.lower()]
+                if not syms:
+                    continue
         files += 1
         symbols += len(syms)
         if args.include_symbols_only:

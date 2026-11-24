@@ -89,10 +89,20 @@ fi
 # Inject AST symbol outline into the agent prompt
 AST_SCRIPT="$ORCHESTRATOR_DIR/scripts/outline-ast.py"
 if [[ -f "$AST_SCRIPT" ]]; then
+  FILTER_ARGS=()
+  if [[ -n "$TASK_DESC" ]]; then
+    for word in stats telemetry sentinel scout settle abort dispatch; do
+      if echo "$TASK_DESC" | grep -qi "$word"; then
+        FILTER_ARGS=("--filter" "$word")
+        break
+      fi
+    done
+  fi
+
   if [[ -f "$RETRO_FILE" ]] && grep -q '"CONTEXT_BLOAT"' "$RETRO_FILE" 2>/dev/null; then
-    AST_OUTPUT=$(python3 "$AST_SCRIPT" "$REPO_PATH" --include-symbols-only 2>/dev/null | head -n 50) || true
+    AST_OUTPUT=$(python3 "$AST_SCRIPT" "$REPO_PATH" --include-symbols-only "${FILTER_ARGS[@]}" 2>/dev/null | head -n 50) || true
   else
-    AST_OUTPUT=$(python3 "$AST_SCRIPT" "$REPO_PATH" --include-symbols-only 2>/dev/null) || true
+    AST_OUTPUT=$(python3 "$AST_SCRIPT" "$REPO_PATH" --include-symbols-only "${FILTER_ARGS[@]}" 2>/dev/null) || true
   fi
   if [[ -n "$AST_OUTPUT" ]]; then
     echo ""

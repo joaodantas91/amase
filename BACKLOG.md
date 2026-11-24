@@ -183,7 +183,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/settle-task.sh`, `.amase/test-gate.sh`.
   - **Criteria:** `bash .amase/test-gate.sh --diff-only` exits 0; bash -n scripts/settle-task.sh exits 0; .amase/test-gate.sh passes.
 
-- [ ] **TASK-36: AST Symbol Pre-Filter by Task Context Pattern**
+- [x] **TASK-36: AST Symbol Pre-Filter by Task Context Pattern**
   - **Goal:** In `scripts/generate-agent.sh` and `scripts/outline-ast.py`, parse file paths and symbol keywords from the task prompt and automatically filter the generated AST map so large codebases only inject symbols relevant to the active slice.
   - **Files:** `scripts/outline-ast.py`, `scripts/generate-agent.sh`.
   - **Criteria:** `python3 scripts/outline-ast.py . --filter "stats"` emits only symbols from stats-related files; .amase/test-gate.sh passes.
