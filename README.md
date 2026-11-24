@@ -71,11 +71,42 @@ amase task --dry-run "Fix auth middleware bug"
 
 ### `amase stats [dir]`
 
-Displays the telemetry ledger showing task timestamps, model usage, durations, commit hashes, and $0 cost.
+Displays the telemetry ledger showing task timestamps, persona roles (Builder, Sentinel, Scout), model usage, exact token counts (input/output), durations, commit hashes, and $0 cost.
 
 ```bash
 amase stats                    # Stats for current directory
 amase stats ./my-project     # Stats for ./my-project
+```
+
+---
+
+### `amase doctor [dir]`
+
+Performs comprehensive diagnostic health checks across environment prerequisites (Git worktree support, Python 3.10+, Bun/Node runtime, LiteLLM daemon on :4000, OpenCode CLI, Ptyxis terminal, and API keys) with actionable recovery suggestions.
+
+```bash
+amase doctor
+```
+
+---
+
+### `amase abort <task_id>`
+
+Safely aborts a stalled or failed task, cleanly unmounting the ephemeral Git worktree (`git worktree remove --force`), pruning the branch, and resetting task state in `BACKLOG.md`.
+
+```bash
+amase abort TASK-12
+```
+
+---
+
+### `amase incidents [--list|--status|--resolve]`
+
+Inspects the global engine incident registry (`~/.amase/engine_issues.jsonl`) recording tool limitations or runtime crashes logged across any project.
+
+```bash
+amase incidents                # List pending engine incidents
+amase incidents --status all   # List all incidents
 ```
 
 ---
@@ -170,3 +201,25 @@ amase task "Implement settings page with toggle"
 # 5. Run the autonomous loop
 amase ./my-project
 ```
+
+---
+
+## Token Efficiency & Mechanical Offloading
+
+AMASE minimizes token consumption by offloading mechanical software engineering operations to deterministic host scripts rather than prompting an LLM:
+
+- **0-Token Operations**: Git worktree branching, environment setup, test gate verification (`test-gate.sh`), forbidden file auditing, and settlement merges run as native host processes (0 tokens consumed). The LLM is invoked only for the pure creative delta: editing code.
+- **Local AST Symbol Extraction**: Rather than dumping full source files into the context window, `scripts/outline-ast.py` parses symbols locally and injects only relevant function/class signatures.
+- **AST Pre-Filtering**: When tasks target specific modules, `--filter "<keyword>"` restricts the AST symbol map to only those files, eliminating context bloat.
+- **Context Hygiene (CHISLE)**: Backlog analysis uses compact slices, and adaptive guardrails restrict file traversal if context bloat was detected in past runs.
+
+---
+
+## Self-Improvement & Engine Feedback Loop
+
+AMASE improves itself cleanly through a two-sided feedback architecture that keeps target projects unpolluted:
+
+1. **Passive Logging in Target Projects**: When executing in an external project (e.g., `kandidat`), AMASE never modifies or edits the orchestrator. If any tool limitation or script error occurs, `scripts/engine_incident.py` registers the incident to `~/.amase/engine_issues.jsonl`.
+2. **Orchestrator Ingestion**: When running AMASE within the orchestrator repository itself (`/home/joao/dev/orchestrator`), `scripts/scout.py` reads pending engine incidents and generates `TASK-ENG-XX` backlog tasks.
+3. **Deterministic Repair**: The Builder resolves the engine issue, runs the self-test gate, and merges the fix to `main`, instantly updating the tool for all projects.
+4. **Dogfooding**: Every feature of AMASE (Tasks 01 through 41) has been developed, gated, audited by Sentinel, and settled using AMASE itself.
