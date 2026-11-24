@@ -79,6 +79,16 @@ git -C "$TARGET_REPO" branch -D "$BRANCH_NAME" 2>/dev/null || true
 mkdir -p "$(dirname "$WORKTREE_PATH")"
 git -C "$TARGET_REPO" worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"
 
+# 3b. Safe Environment Inheritance (.env replication with strict .gitignore exclusion)
+if [[ -f "$TARGET_REPO/.env" ]]; then
+  echo "[+] Parent repository .env detected. Replicating safely to worktree..."
+  cp -n "$TARGET_REPO/.env" "$WORKTREE_PATH/.env" 2>/dev/null || true
+  if ! grep -qE "^\.env" "$WORKTREE_PATH/.gitignore" 2>/dev/null; then
+    echo -e "\n.env\n.env.*\n" >> "$WORKTREE_PATH/.gitignore"
+    echo "[+] Ensured .env is excluded in $WORKTREE_PATH/.gitignore"
+  fi
+fi
+
 # Ensure Orca knows this repo and exposes its worktrees
 ORCA_SHIM="/home/joao/.config/orca/linux-orca-cli-shim/orca"
 if [[ -x "$ORCA_SHIM" ]] && "$ORCA_SHIM" status >/dev/null 2>&1; then

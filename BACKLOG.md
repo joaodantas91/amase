@@ -193,7 +193,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/doctor.py`.
   - **Criteria:** `amase doctor` outputs formatted health check report and exits 0; python3 -m py_compile scripts/doctor.py exits 0; .amase/test-gate.sh passes.
 
-- [ ] **TASK-38: Safe Worktree Environment & Secret Isolation**
+- [x] **TASK-38: Safe Worktree Environment & Secret Isolation**
   - **Goal:** In `scripts/run-task.sh` and `scripts/dispatch-worker.sh`, safely symlink or replicate parent `.env` into child worker worktrees if present, while verifying `.gitignore` strictly prevents committing `.env` or leaking secrets to git history.
   - **Files:** `scripts/run-task.sh`, `scripts/dispatch-worker.sh`.
   - **Criteria:** Child worktree has access to parent environment variables without git tracking .env; bash -n scripts/run-task.sh exits 0; .amase/test-gate.sh passes.

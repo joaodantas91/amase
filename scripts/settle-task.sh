@@ -111,6 +111,11 @@ if echo "$CHANGED_FILES" | grep -qE '^\.amase/scope\.md$'; then
   exit 1
 fi
 
+if echo "$CHANGED_FILES" | grep -qE '^\.env'; then
+  echo "[-] Forbidden file changed: .env cannot be committed to git."
+  exit 1
+fi
+
 echo "[+] Diff audit clean ($CHANGED_FILES)."
 
 # 3. Merge feature/<task_id> into main.

@@ -84,6 +84,15 @@ LOG_FILE="$WORKTREE/.amase-worker.log"
 RUNNER_SCRIPT="$WORKTREE/.amase-run.sh"
 DONE_FILE="$WORKTREE/.amase-done"
 
+# Safe Environment Inheritance from parent repo if not already present
+PARENT_REPO="$(cd "$WORKTREE/../.." 2>/dev/null && pwd || true)"
+if [[ -n "$PARENT_REPO" && -f "$PARENT_REPO/.env" && ! -f "$WORKTREE/.env" ]]; then
+  cp -n "$PARENT_REPO/.env" "$WORKTREE/.env" 2>/dev/null || true
+  if ! grep -qE "^\.env" "$WORKTREE/.gitignore" 2>/dev/null; then
+    echo -e "\n.env\n.env.*\n" >> "$WORKTREE/.gitignore"
+  fi
+fi
+
 rm -f "$LOG_FILE" "$DONE_FILE"
 
 INITIAL_COMMIT_TIME=$(git -C "$WORKTREE" log -1 --format="%ct" 2>/dev/null || echo 0)
