@@ -119,14 +119,24 @@ if [[ "${#ADAPTIVE_GUARDRAILS[@]}" -gt 0 ]]; then
   done
 fi
 
+MANIFEST_FILE=""
+if [[ -f "$REPO_PATH/package.json" ]]; then
+  MANIFEST_FILE="package.json"
+elif [[ -f "$REPO_PATH/Cargo.toml" ]]; then
+  MANIFEST_FILE="Cargo.toml"
+elif [[ -f "$REPO_PATH/pyproject.toml" ]]; then
+  MANIFEST_FILE="pyproject.toml"
+elif [[ -f "$REPO_PATH/requirements.txt" ]]; then
+  MANIFEST_FILE="requirements.txt"
+elif [[ -f "$REPO_PATH/go.mod" ]]; then
+  MANIFEST_FILE="go.mod"
+fi
+
 if [[ "$ROLE" == "builder" ]]; then
   cat <<EOF
 ## BUILDER BOUNDARIES & FORBIDDEN ACTIONS:
-- ALLOWED: Edit files in src/ and tests/ relevant to the task.
-- FORBIDDEN: NEVER modify package.json or install new npm packages.
-- FORBIDDEN: NEVER modify wxt.config.ts manifest permissions without instruction.
-- FORBIDDEN: NEVER use raw hex colors in <style> blocks (use tokens.css / components.css).
-- FORBIDDEN: NEVER use 'as any' or '@ts-ignore'.
+- ALLOWED: Edit source and test files relevant to the active task.
+- FORBIDDEN: NEVER modify dependency manifests (${MANIFEST_FILE:-project dependencies}) or add unapproved external packages without instruction.
 - FORBIDDEN: NEVER touch .amase/scope.md.
 - EXIT GATE: All tests in .amase/test-gate.sh must pass with exit code 0 before committing.
 

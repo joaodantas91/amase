@@ -130,29 +130,44 @@ if [[ -f "$MAIN_HOOK" ]]; then
   echo "[+] Backed up existing pre-commit hook."
 fi
 
-cat > "$MAIN_HOOK" << 'HOOK'
+# Detect manifest file dynamically for pre-commit protection
+MANIFEST_FILE=""
+if [[ -f "$WORKTREE_PATH/package.json" ]]; then
+  MANIFEST_FILE="package.json"
+elif [[ -f "$WORKTREE_PATH/Cargo.toml" ]]; then
+  MANIFEST_FILE="Cargo.toml"
+elif [[ -f "$WORKTREE_PATH/pyproject.toml" ]]; then
+  MANIFEST_FILE="pyproject.toml"
+elif [[ -f "$WORKTREE_PATH/requirements.txt" ]]; then
+  MANIFEST_FILE="requirements.txt"
+elif [[ -f "$WORKTREE_PATH/go.mod" ]]; then
+  MANIFEST_FILE="go.mod"
+fi
+
+cat > "$MAIN_HOOK" << HOOK
 #!/usr/bin/env bash
 set -euo pipefail
-FORBIDDEN_FILES="package.json .amase/scope.md"
+FORBIDDEN_FILES="${MANIFEST_FILE:+$MANIFEST_FILE }.amase/scope.md"
 FORBIDDEN_PATTERNS=("as any" "@ts-ignore")
-STAGED_FILES=$(git diff --cached --name-only 2>/dev/null || true)
-if [[ -n "$STAGED_FILES" ]]; then
-  for f in $FORBIDDEN_FILES; do
-    if echo "$STAGED_FILES" | grep -qx "$f"; then
-      echo "[-] BLOCKED: Forbidden file '$f' is staged for commit." >&2
+STAGED_FILES=\$(git diff --cached --name-only 2>/dev/null || true)
+if [[ -n "\$STAGED_FILES" ]]; then
+  for f in \$FORBIDDEN_FILES; do
+    if echo "\$STAGED_FILES" | grep -qx "\$f"; then
+      echo "[-] BLOCKED: Forbidden file '\$f' is staged for commit." >&2
       exit 1
     fi
   done
-  TS_DIFF=$(git diff --cached -- '*.ts' '*.tsx' '*.js' '*.jsx' 2>/dev/null || true)
-  if [[ -n "$TS_DIFF" ]]; then
-    for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
-      if echo "$TS_DIFF" | grep -qE "$pattern"; then
-        echo "[-] BLOCKED: Forbidden pattern '$pattern' found in staged changes." >&2
+  TS_DIFF=\$(git diff --cached -- '*.ts' '*.tsx' '*.js' '*.jsx' 2>/dev/null || true)
+  if [[ -n "\$TS_DIFF" ]]; then
+    for pattern in "\${FORBIDDEN_PATTERNS[@]}"; do
+      if echo "\$TS_DIFF" | grep -qE "\$pattern"; then
+        echo "[-] BLOCKED: Forbidden pattern '\$pattern' found in staged changes." >&2
         exit 1
       fi
     done
   fi
 fi
+HOOK
 exit 0
 HOOK
 

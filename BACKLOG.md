@@ -298,6 +298,12 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/diagnose-failure.py`, `scripts/dispatch-worker.sh`, `amase`, `BACKLOG.md`.
   - **Criteria:** `diagnose-failure.py` accurately identifies compile/gate errors; `opencode models` lists `ollama/qwen2.5-coder:14b`; test-gate passes.
 
+- [x] **TASK-59: Decouple Language Dependencies & Universal Manifest Detection**
+  - **Goal:** Remove hardcoded Node/WXT assumptions from `generate-agent.sh`, `run-task.sh`, and `test-wiring.sh`. Dynamically resolve project manifest (`Cargo.toml`, `pyproject.toml`, `go.mod`, `package.json`) to protect against unauthorized dependency modifications in pre-commit hooks and worker prompts.
+  - **Files:** `scripts/generate-agent.sh`, `scripts/run-task.sh`, `scripts/test-wiring.sh`, `BACKLOG.md`.
+  - **Criteria:** Script syntax passes; prompt generation is language-agnostic; test-gate passes.
+
+
 
 
 
