@@ -217,11 +217,12 @@ if [[ ! -f "$AGENTS_FILE" ]]; then
 When an AI assistant or coordinator is opened in this repository:
 
 1. **NEVER modify or write code directly in the assistant/coordinator session.**
+   AMASE is an external CLI binary (`amase` or `~/.local/bin/amase`). Always invoke it via `run_command` in the terminal and do not emulate workers or edit files yourself.
    All implementation, refactoring, testing, and debugging are executed exclusively by child worker personas via the $0 Free Fleet in isolated git worktrees.
 
 2. **One-Command Autonomous Execution:**
    - **Inspect Status:** Run `amase status` for an instant unified status overview.
-   - **Execute Tasks:** Run `amase` in the terminal.
+   - **Execute Tasks:** Run `amase` (or `amase run`) in the terminal.
    - **DO NOT** read internal orchestrator scripts (`run-task.sh`, `settle-task.sh`, `amase` source) or manually commit files. AMASE handles governance auto-healing, git auto-syncing, worker dispatching ($0 models), deterministic test gates, and git settlement autonomously.
 
 3. **Invariants:**
@@ -235,8 +236,8 @@ elif ! grep -q "amase status" "$AGENTS_FILE" 2>/dev/null; then
 # AMASE Coordinator Protocol
 When an AI assistant or coordinator is opened in this repository:
 - Run `amase status` to inspect project and backlog state.
-- Run `amase` in the terminal to execute backlog tasks autonomously.
-- NEVER modify or write code directly in the assistant session; child workers execute tasks in isolated worktrees via the $0 Free Fleet.
+- Run `amase` (or `amase run`) in the terminal to execute backlog tasks autonomously.
+- NEVER modify or write code directly in the assistant session; AMASE is an external CLI binary (`amase`). Child workers execute tasks in isolated worktrees via the $0 Free Fleet.
 
 AGENTS
   cat "$AGENTS_FILE" >> "$TMP_AGENTS"

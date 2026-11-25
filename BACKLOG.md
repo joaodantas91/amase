@@ -457,6 +457,14 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/dispatch-worker.sh`, `BACKLOG.md`.
   - **Criteria:** `amase run -h` and `amase run --headless -v` exit 0; test gate passes cleanly.
 
+- [x] **TASK-87: Harden Post-Settle Counters, Single-Task (--once) Execution & AGENTS.md Protocol**
+  - **Goal:**
+    1. In `amase`, eliminate latent `grep -c || echo "$DONE_TASKS"` bug on line 480 and harden all task/pending counters against non-zero exit codes.
+    2. Add `--once` / `-1` / `step` CLI flag to `amase` for single-step deterministic execution in agent tool calls.
+    3. In `scripts/init-project.sh` and `AGENTS.md`, explicitly declare `amase` as an external CLI binary to prevent LLM tool emulation and enforce `run_command` invocation.
+  - **Files:** `amase`, `scripts/init-project.sh`, `AGENTS.md`, `BACKLOG.md`.
+  - **Criteria:** `amase --once -h` exits 0; `init-project.sh` dry-run produces updated protocol; test gate passes cleanly.
+
 
 
 

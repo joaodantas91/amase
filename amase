@@ -45,6 +45,7 @@ OPTIONS:
   -h, --help                      Display this help menu
   -v, --version                   Display AMASE version
   --headless, --no-gui            Run workers in background without opening terminal tabs
+  --once, -1, step                Execute a single task and exit cleanly
   --no-inhibit                    Bypass systemd-inhibit sleep inhibition lock
 
 EXAMPLES:
@@ -61,7 +62,7 @@ DOCUMENTATION:
 EOF
 }
 
-# Support 'amase run' subcommand alias and global headless flags
+# Support 'amase run' subcommand alias and global headless/once flags
 while [[ $# -gt 0 ]]; do
   case "$1" in
     run)
@@ -69,6 +70,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --headless|--no-gui)
       export AMASE_GUI_TAB=0
+      shift
+      ;;
+    --once|-1|--single|step)
+      export AMASE_ONCE=1
       shift
       ;;
     *)
@@ -311,6 +316,10 @@ while [[ $# -gt 0 ]]; do
       export AMASE_GUI_TAB=0
       shift
       ;;
+    --once|-1|--single|step)
+      export AMASE_ONCE=1
+      shift
+      ;;
     --no-inhibit)
       AMASE_INHIBITED=1
       shift
@@ -387,7 +396,8 @@ while true; do
   MODE=$(jq -r '.mode // "manual"' "$CONFIG_FILE" 2>/dev/null || echo "manual")
   DISCOVERY_ENABLED=$(jq -r '.discovery.enabled // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
 
-  PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
+  PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" 2>/dev/null || true)
+  PENDING_COUNT=${PENDING_COUNT:-0}
   if [ "$PENDING_COUNT" -lt 3 ]; then
     if [[ "$MODE" == "manual" || "$DISCOVERY_ENABLED" == "false" ]]; then
       echo "[!] Backlog running low ($PENDING_COUNT pending). Scout disabled (mode=manual or discovery.enabled=false)."
@@ -395,7 +405,8 @@ while true; do
       echo "[!] Backlog running low ($PENDING_COUNT pending). Triggering Scout expansion..."
       "$SCRIPT_DIR/scripts/scout.py" --backlog "$BACKLOG_FILE" | python3 "$SCRIPT_DIR/scripts/scout.py" --sanitize --backlog "$BACKLOG_FILE" >> "$BACKLOG_FILE" || true
     fi
-    PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" || true)
+    PENDING_COUNT=$(grep -cE "^- \[ \]" "$BACKLOG_FILE" 2>/dev/null || true)
+    PENDING_COUNT=${PENDING_COUNT:-0}
   fi
 
   # 3. Check Concurrency Mode (sequential vs parallel)
@@ -477,8 +488,10 @@ except Exception:
       if "$SCRIPT_DIR/scripts/settle-task.sh" --repo "$TARGET_DIR" --task "$TASK_ID"; then
         TASK_SUCCESS=true
 
-        UPDATED_DONE=$(grep -cE "^- \[x\]" "$BACKLOG_FILE" || echo "$DONE_TASKS")
+        UPDATED_DONE=$(grep -cE "^- \[x\]" "$BACKLOG_FILE" 2>/dev/null || true)
+        UPDATED_DONE=${UPDATED_DONE:-$DONE_TASKS}
         UPDATED_REMAINING=$((TOTAL_TASKS - UPDATED_DONE))
+        [[ "$UPDATED_REMAINING" -lt 0 ]] && UPDATED_REMAINING=0
         UPDATED_PCT=0
         if [[ "$TOTAL_TASKS" -gt 0 ]]; then
           UPDATED_PCT=$(( (UPDATED_DONE * 100) / TOTAL_TASKS ))
@@ -524,5 +537,10 @@ except Exception:
   if [[ "$TASK_SUCCESS" == "false" ]]; then
     echo "[-] Worker failed all $MAX_RETRIES retries on $TASK_ID. Worktree cleanly pruned. Halting autonomous loop for inspection."
     exit 1
+  fi
+
+  if [[ "${AMASE_ONCE:-0}" == "1" ]]; then
+    echo "[+] Single-task execution complete (--once). Exiting."
+    exit 0
   fi
 done
