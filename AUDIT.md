@@ -1,8 +1,8 @@
-- `[INFO]` **DOM Injection Risks:** None in visible diff (`.amase/config.json`, `AUDIT.md`, `amase` bash script only). No `innerHTML`, `outerHTML`, or unescaped templates.
-- `[INFO]` **Prototype Pollution / Unsafe Setter Overrides:** None in visible diff. No JavaScript/TypeScript or prototype/setter code.
-- `[INFO]` **Manifest V3 Permission Escalation:** None in visible diff. No manifest or `<all_urls>` host patterns.
-- `[INFO]` **Code Duplication (PONYTAIL Rung 2):** None in visible diff. No `src/core/` files or new helper utilities present.
-- `[INFO]` **Missing Input Guards on Form Autofill Fields:** None in visible diff. No form autofill code touched.
-- `[INFO]` **Scope Note:** `amase` diff is truncated at `python3 "$SCRIPT_DIR/scripts/p`; `scripts/pm.py` is not present in the diff.
+- `[INFO]` **DOM Injection Risks:** None in diff. No web, HTML, template, or DOM manipulation code touched (`dispatch-worker.sh`, `fleet.py`, `AUDIT.md` only).
+- `[INFO]` **Prototype Pollution / Unsafe Setter Overrides:** None in diff. No JavaScript/TypeScript or prototype modifications present.
+- `[INFO]` **Manifest V3 Permission Escalation:** None in diff. No Chrome/extension manifest files or host patterns (`<all_urls>`) present.
+- `[INFO]` **Code Duplication (PONYTAIL Rung 2):** None in diff. Changes pertain to worker orchestration scripts and stream filtering, not application logic or `src/core/`.
+- `[INFO]` **Missing Input Guards on Form Autofill Fields:** None in diff. No form inputs or autofill handlers touched.
+- `[INFO]` **Operational Security & Process Boundaries:** Worker command execution in `scripts/dispatch-worker.sh` uses structured bash arrays (`"${AGY_RUN[@]}"`, `"${AGY_ARGS[@]}"`) and pipes output directly to Python stream filter without shell string interpolation/eval vulnerabilities.
 
 Core invariants verified clean.
