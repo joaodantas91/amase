@@ -84,8 +84,8 @@ fi
 if [[ "$MODEL_TIER" == "pro" ]]; then
   if [[ -x "$AGY_BIN" ]]; then
     FLEET_MODELS=(
-      "agy/gemini-4-hydrogen-high"
-      "agy/claude-sonnet-4-6"
+      "agy/gemini-3.8-flash-medium"
+      "agy/gemini-3.8-flash-high"
       "agy/gemini-4-hydrogen-medium"
       "${FLEET_MODELS[@]}"
     )
@@ -235,10 +235,16 @@ for MODEL in "${MODELS[@]}"; do
   if [[ "$MODEL" == agy/* ]]; then
     AGY_MODEL="${MODEL#agy/}"
     AGY_CMD="${AGY_BIN:-/home/joao/.local/bin/agy}"
+    AGY_ARGS=(-p "$PROMPT" --model "$AGY_MODEL" --mode auto --dangerously-skip-permissions --disable-slash-commands --output-format stream-json --add-dir "$WORKTREE")
     if command -v stdbuf >/dev/null 2>&1; then
-      timeout --kill-after=5s 240s stdbuf -oL -eL "$AGY_CMD" -p "$PROMPT" --model "$AGY_MODEL" --mode auto --dangerously-skip-permissions --disable-slash-commands --output-format stream-json --add-dir "$WORKTREE" 2>&1 | tee "$LOG_FILE" &
+      AGY_RUN=(timeout --kill-after=5s 240s stdbuf -oL -eL "$AGY_CMD" "${AGY_ARGS[@]}")
     else
-      timeout --kill-after=5s 240s "$AGY_CMD" -p "$PROMPT" --model "$AGY_MODEL" --mode auto --dangerously-skip-permissions --disable-slash-commands --output-format stream-json --add-dir "$WORKTREE" 2>&1 | tee "$LOG_FILE" &
+      AGY_RUN=(timeout --kill-after=5s 240s "$AGY_CMD" "${AGY_ARGS[@]}")
+    fi
+    if [[ -f "$ORCHESTRATOR_DIR/scripts/stream_filter.py" ]]; then
+      "${AGY_RUN[@]}" 2>&1 | python3 -u "$ORCHESTRATOR_DIR/scripts/stream_filter.py" "$LOG_FILE" &
+    else
+      "${AGY_RUN[@]}" 2>&1 | tee "$LOG_FILE" &
     fi
   elif command -v stdbuf >/dev/null 2>&1; then
     timeout --kill-after=5s 120s stdbuf -oL -eL "$OPENCODE_BIN" run --log-level WARN --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
@@ -529,7 +535,12 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
   if [ $((ELAPSED % 15)) -eq 0 ]; then
     LAST_LINE="..."
     if [[ -f "$LOG_FILE" ]]; then
-      LAST_LINE=$(grep -v "^$" "$LOG_FILE" 2>/dev/null | tail -n 1 | head -c 80 || echo "...")
+      if [[ -f "$ORCHESTRATOR_DIR/scripts/stream_filter.py" ]]; then
+        LAST_LINE=$(python3 "$ORCHESTRATOR_DIR/scripts/stream_filter.py" --last-activity "$LOG_FILE" 2>/dev/null | head -c 80 || true)
+      else
+        LAST_LINE=$(grep -v "^$" "$LOG_FILE" 2>/dev/null | grep -v '^[[:space:]]*{' | tail -n 1 | head -c 80 || true)
+      fi
+      [[ -z "$LAST_LINE" ]] && LAST_LINE="..."
     fi
     echo "[Heartbeat] ${ELAPSED}s elapsed (${CURRENT_META_MODEL:-worker}) | Activity: $LAST_LINE"
   fi

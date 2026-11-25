@@ -225,7 +225,7 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
     if use_pro:
         agy_bin = os.getenv("AGY_BIN", "/home/joao/.local/bin/agy")
         if os.path.exists(agy_bin) and os.access(agy_bin, os.X_OK):
-            pro_model = model_hint[4:] if (model_hint and model_hint.startswith("agy/")) else "gemini-4-hydrogen-medium"
+            pro_model = model_hint[4:] if (model_hint and model_hint.startswith("agy/")) else "gemini-3.8-flash-low"
             combined_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
             try:
                 res = subprocess.run(
