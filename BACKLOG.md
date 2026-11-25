@@ -525,3 +525,23 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Create `scripts/task_banner.py` (Python stdlib) to render compact, structured status cards at task start and task completion/failure (Task ID, Title, Model, Worktree/Branch, Files Modified, Duration, and Progress `done/total (pct%) | pending`), wire it into `amase` at task dispatch and settlement, and add unit tests in `tests/test_task_banner.py`.
   - **Files:** `scripts/task_banner.py`, `amase`, `tests/test_task_banner.py`.
   - **Criteria:** `python3 scripts/task_banner.py --help` exits 0; `python3 -m unittest tests/test_task_banner.py` passes; `.amase/test-gate.sh` passes with exit code 0.
+
+- [ ] **TASK-100: Fix Dispatch Quota False Positives, Raise Timeout to 800s & Prevent Stream Filter Stall Alerts**
+  - **Goal:** Disambiguate quota detection in `scripts/dispatch-worker.sh` to prevent false positive aborts when reading code files containing quota terms, raise execution timeout to 800s, and tune `scripts/stream_filter.py` activity heartbeats to suppress false 90-second stall warnings during sustained generation.
+  - **Files:** `scripts/dispatch-worker.sh`, `scripts/stream_filter.py`, `tests/test_stream_filter.py`
+  - **Criteria:** `python3 -m unittest tests/test_stream_filter.py` passes && `bash -n scripts/dispatch-worker.sh` exits 0 && `grep -q "800" scripts/dispatch-worker.sh` exits 0
+
+- [ ] **TASK-101: Read-Only Researcher Workflow (`researcher.md`, `research.py`, `amase research`)**
+  - **Goal:** Implement the `researcher` persona and execution script to run read-only codebase and dependency investigations producing a dense `<2KB` brief before task decomposition, and wire `amase research` into the CLI.
+  - **Files:** `personas/researcher.md`, `scripts/research.py`, `amase`, `tests/test_research.py`
+  - **Criteria:** `python3 -m unittest tests/test_research.py` passes && `python3 scripts/research.py --help` exits 0 && `bash -n amase` exits 0
+
+- [ ] **TASK-102: Backlog Archival and Prompt Token Audit Tooling**
+  - **Goal:** Add `scripts/archive_backlog.py` to archive completed tasks to `BACKLOG_ARCHIVE.md` while keeping active tasks in `BACKLOG.md`, and `scripts/token_audit.py` to audit prompt token bloat across `personas/` and `prompts/`.
+  - **Files:** `scripts/archive_backlog.py`, `scripts/token_audit.py`, `tests/test_token_hygiene.py`
+  - **Criteria:** `python3 -m unittest tests/test_token_hygiene.py` passes && `python3 scripts/archive_backlog.py --help` exits 0 && `python3 scripts/token_audit.py --help` exits 0
+
+- [ ] **TASK-103: Strip Deprecated MV3 and DOM Strings from Sentinel Persona and Tests**
+  - **Goal:** Cleanse domain-specific Chrome MV3 and browser DOM residual strings from `scripts/sentinel.py` and its test suite to decouple Sentinel as a generic static analysis heuristic engine.
+  - **Files:** `scripts/sentinel.py`, `tests/test_sentinel.py`
+  - **Criteria:** `python3 -m unittest tests/test_sentinel.py` passes && `! grep -Ei "chrome\.|manifest\.json|document\.getElementById" scripts/sentinel.py` exits 0
