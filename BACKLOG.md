@@ -501,7 +501,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `personas/builder.md`, `personas/sentinel.md`, `personas/designer.md`, `personas/reviewer.md`.
   - **Criteria:** `! grep -rniE "kandidat|svelte|wxt|manifest v3|orca|greenhouse|workday|ashby|chrome web store|simplify|teal|applyall" personas/builder.md personas/sentinel.md personas/designer.md personas/reviewer.md` exits 0; `.amase/test-gate.sh` passes with exit code 0.
 
-- [ ] **TASK-90: Decouple Scout Persona & `scripts/scout.py` from Project-Specific Domain**
+- [x] **TASK-90: Decouple Scout Persona & `scripts/scout.py` from Project-Specific Domain**
   - **Goal:** Rewrite `personas/scout.md` as a generic Autonomous Discovery & Gap Analysis persona (using `.amase/scope.md`, `.amase/discovery.md`, recent commits, and test gaps instead of browser extension/ATS intelligence), and update `scripts/scout.py` `git ls-files` discovery to inspect real repo source files generically without hardcoding `entrypoints/` (keep `tests/test_scout.py` passing).
   - **Files:** `personas/scout.md`, `scripts/scout.py`, `tests/test_scout.py`.
   - **Criteria:** `! grep -rniE "manifest v3|browser extension|entrypoints|greenhouse|workday|ashby|kandidat" personas/scout.md scripts/scout.py` exits 0; `python3 -m unittest discover tests` and `.amase/test-gate.sh` pass with exit code 0.
