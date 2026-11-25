@@ -34,7 +34,7 @@ CORE COMMANDS:
   amase doctor [dir] [--heal]     Verify environment, models, and project governance
   amase parallel [dir] [opts]     Dispatch non-conflicting tasks concurrently in parallel worktrees
   amase abort <task_id> [dir]     Safely unmount worktree and prune task branch
-  amase task [--dry-run] <goal>   Scout a single task objective and append to BACKLOG.md
+  amase task [--dry-run] <goal>   Decompose objective via Project Manager and append to BACKLOG.md
   amase config [options]          View or modify .amase/config.json settings
   amase stats [dir]               Show telemetry, token usage, cost ($0), and model stats
   amase incidents [options]       List recorded engine incidents and failure retrospectives
@@ -312,18 +312,55 @@ fi
 if [[ "${1:-}" == "task" ]]; then
   DRY_RUN=false
   TARGET_DIR="${TARGET_DIR:-$(pwd)}"
-  BACKLOG_FILE="$TARGET_DIR/BACKLOG.md"
   shift
-  if [[ "${1:-}" == "--dry-run" ]]; then
-    DRY_RUN=true
-    shift
+  OBJECTIVE_PARTS=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dry-run)
+        DRY_RUN=true
+        shift
+        ;;
+      --repo)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: --repo requires a directory argument" >&2
+          exit 1
+        fi
+        TARGET_DIR="$2"
+        shift 2
+        ;;
+      *)
+        OBJECTIVE_PARTS+=("$1")
+        shift
+        ;;
+    esac
+  done
+  TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
+  BACKLOG_FILE="$TARGET_DIR/BACKLOG.md"
+  SCOPE_FILE="$TARGET_DIR/.amase/scope.md"
+  OBJECTIVE="${OBJECTIVE_PARTS[*]:-}"
+
+  STATUS_SUMMARY=""
+  if [[ -f "$SCRIPT_DIR/scripts/status.py" ]]; then
+    STATUS_SUMMARY=$(python3 "$SCRIPT_DIR/scripts/status.py" "$TARGET_DIR" 2>/dev/null | sed $'s/\033\\[[0-9;]*m//g' || true)
   fi
-  OBJECTIVE="$*"
-  RESULT=$("$SCRIPT_DIR/scripts/scout.py" --objective "$OBJECTIVE" 2>/dev/null)
-  if [ "$DRY_RUN" = true ]; then
-    echo "$RESULT"
+
+  PM_ARGS=(
+    --repo "$TARGET_DIR"
+    --backlog "$BACKLOG_FILE"
+    --scope "$SCOPE_FILE"
+  )
+  if [[ -n "$OBJECTIVE" ]]; then
+    PM_ARGS+=(--objective "$OBJECTIVE")
+  fi
+  if [[ -n "$STATUS_SUMMARY" ]]; then
+    PM_ARGS+=(--status "$STATUS_SUMMARY")
+  fi
+  if [[ "$DRY_RUN" == true ]]; then
+    PM_ARGS+=(--dry-run)
+    python3 "$SCRIPT_DIR/scripts/pm.py" "${PM_ARGS[@]}"
   else
-    echo "$RESULT" >> "$BACKLOG_FILE"
+    PM_ARGS+=(--append)
+    python3 "$SCRIPT_DIR/scripts/pm.py" "${PM_ARGS[@]}"
     echo "[+] Appended task to $BACKLOG_FILE"
   fi
   exit 0

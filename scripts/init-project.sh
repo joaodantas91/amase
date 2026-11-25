@@ -54,6 +54,29 @@ defaults = {
     'discovery': {
         'enabled': True,
         'max_slices': 2
+    },
+    'persona_routing': {
+        'builder': [
+            'nvidia/nvidia/nemotron-3.5-lightning-30b-a3b',
+            'nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b',
+            'openrouter/openrouter/free'
+        ],
+        'pm': [
+            'groq/openai/gpt-oss-120b',
+            'nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b'
+        ],
+        'scout': [
+            'groq/openai/gpt-oss-120b',
+            'nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b'
+        ],
+        'sentinel': [
+            'nvidia/nvidia/nemotron-3.5-lightning-30b-a3b',
+            'groq/qwen/qwen3.8-27b'
+        ],
+        'designer': [
+            'groq/openai/gpt-oss-120b',
+            'nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b'
+        ]
     }
 }
 

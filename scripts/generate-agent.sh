@@ -8,7 +8,7 @@ set -euo pipefail
 ORCHESTRATOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
-  echo "Usage: $0 --repo <repo_path> --role <builder|scout|sentinel> [--task <task_desc>]"
+  echo "Usage: $0 --repo <repo_path> --role <builder|pm|scout|sentinel|designer|reviewer|coordinator> [--task <task_desc>]"
   exit 1
 }
 
@@ -190,11 +190,26 @@ ${UI_CONTEXT}
 ACTIVE TASK TO IMPLEMENT:
 $TASK_DESC
 EOF
+elif [[ "$ROLE" == "pm" ]]; then
+  cat <<EOF
+## PROJECT MANAGER BOUNDARIES:
+- PERMISSIONS: Strictly Read-Only across application source and test files.
+- FORBIDDEN: NEVER modify source code, tests/, dependency manifests, or .amase/scope.md.
+- OUTPUT: Decompose objectives into 1-3 atomic, scope-compliant TASK-XX blocks for BACKLOG.md.
+- GATE: Ground every file target in real repository paths and include deterministic verification criteria.
+EOF
+  if [[ -n "$TASK_DESC" ]]; then
+    cat <<EOF
+
+ACTIVE OBJECTIVE TO DECOMPOSE:
+$TASK_DESC
+EOF
+  fi
 elif [[ "$ROLE" == "scout" ]]; then
   cat <<EOF
 ## SCOUT BOUNDARIES:
 - PERMISSIONS: Strictly Read-Only across the codebase.
-- FORBIDDEN: NEVER write, modify, or commit code in src/ or tests/.
+- FORBIDDEN: NEVER write, modify, or commit code in application source or tests/.
 - OUTPUT: Write only structured proposals to .amase/discovery.md.
 - GATE: Every discovered vertical slice must verify compliance with .amase/scope.md.
 EOF
@@ -204,5 +219,24 @@ elif [[ "$ROLE" == "sentinel" ]]; then
 - PERMISSIONS: Strictly Read-Only on git diffs (git diff HEAD~1..HEAD).
 - FORBIDDEN: NEVER modify application code.
 - OUTPUT: Write vulnerability & invariant audits to AUDIT.md.
+EOF
+elif [[ "$ROLE" == "designer" ]]; then
+  cat <<EOF
+## DESIGNER BOUNDARIES:
+- PERMISSIONS: Strictly Read-Only across application source and test files.
+- FORBIDDEN: NEVER modify application code or .amase/scope.md.
+- OUTPUT: Produce structured UX findings and ergonomic TASK-UI-XX specs aligned with project tokens when present.
+EOF
+elif [[ "$ROLE" == "reviewer" ]]; then
+  cat <<EOF
+## REVIEWER BOUNDARIES:
+- PERMISSIONS: Review completed branch changes against quality, type-safety, and token invariants.
+- GATE: Reject trivial/cosmetic tests and unapproved dependency creep; verify .amase/test-gate.sh passes.
+EOF
+elif [[ "$ROLE" == "coordinator" ]]; then
+  cat <<EOF
+## COORDINATOR BOUNDARIES:
+- PERMISSIONS: Supervise via amase CLI (amase status, amase task, amase config, amase run).
+- FORBIDDEN: NEVER directly edit source files, tests/, or .amase/scope.md.
 EOF
 fi

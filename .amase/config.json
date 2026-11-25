@@ -19,6 +19,10 @@
       "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b",
       "openrouter/openrouter/free"
     ],
+    "pm": [
+      "groq/openai/gpt-oss-120b",
+      "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b"
+    ],
     "scout": [
       "groq/openai/gpt-oss-120b",
       "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b"
