@@ -449,6 +449,14 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/scout.py`, `BACKLOG.md`.
   - **Criteria:** `scout.py` safely handles null roadmap without throwing TypeError; passes `.amase/test-gate.sh`.
 
+- [x] **TASK-86: Support `amase run` Alias, `--headless` Flags & Non-Interactive TTY Auto-Detection**
+  - **Goal:**
+    1. In `amase`, handle `run` subcommand alias and `--headless` / `--no-gui` flags so automated agent sessions do not treat `run` as a target directory path.
+    2. In `scripts/dispatch-worker.sh`, auto-detect non-interactive terminals (`[ ! -t 1 ]`) or headless flags and default `USE_GUI_TAB=0` to prevent Ptyxis tab stalls in agent subshells.
+    3. Fix `0\n0` arithmetic error in task counter and `jq` boolean parsing for `builder_visible_tab`.
+  - **Files:** `amase`, `scripts/dispatch-worker.sh`, `BACKLOG.md`.
+  - **Criteria:** `amase run -h` and `amase run --headless -v` exit 0; test gate passes cleanly.
+
 
 
 

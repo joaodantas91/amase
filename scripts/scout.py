@@ -272,7 +272,10 @@ if __name__ == "__main__":
             designer_text = args.designer_review
 
     print(f"Scout: Querying free model fleet for project '{os.path.basename(os.getcwd())}'...")
-    print(f"  Roadmap: {roadmap_file if (roadmap_file and os.path.exists(roadmap_file)) else 'None (auto-inferring)'}")
+    if roadmap_file and os.path.exists(roadmap_file):
+        print(f"  Roadmap: {roadmap_file}")
+    else:
+        print("  No roadmap provided – proceeding with default discovery.")
     print(f"  Scope:   {args.scope if (args.scope and os.path.exists(args.scope)) else 'None'}")
     print(f"  Backlog: {args.backlog}")
 

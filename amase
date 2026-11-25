@@ -23,10 +23,12 @@ Continuous unattended execution of software backlogs using $0 free fleet.
 
 USAGE:
   amase [OPTIONS] [DIRECTORY]
+  amase run [OPTIONS] [DIRECTORY]
   amase <SUBCOMMAND> [ARGS...]
 
 CORE COMMANDS:
   amase [dir]                     Run continuous autonomous loop on target repository
+  amase run [dir]                 Run continuous autonomous loop (alias)
   amase status [dir]              Show unified project, backlog, worktree, and fleet status
   amase init [dir]                Initialize project with .amase governance files
   amase doctor [dir] [--heal]     Verify environment, models, and project governance
@@ -42,6 +44,7 @@ CORE COMMANDS:
 OPTIONS:
   -h, --help                      Display this help menu
   -v, --version                   Display AMASE version
+  --headless, --no-gui            Run workers in background without opening terminal tabs
   --no-inhibit                    Bypass systemd-inhibit sleep inhibition lock
 
 EXAMPLES:
@@ -57,6 +60,22 @@ DOCUMENTATION:
   Governance: <project>/.amase/config.json, scope.md, discovery.md, test-gate.sh
 EOF
 }
+
+# Support 'amase run' subcommand alias and global headless flags
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    run)
+      shift
+      ;;
+    --headless|--no-gui)
+      export AMASE_GUI_TAB=0
+      shift
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
   show_help
@@ -282,6 +301,26 @@ if [[ "${1:-}" == "task" ]]; then
   exit 0
 fi
 
+# Parse optional run alias and flags
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    run)
+      shift
+      ;;
+    --headless|--no-gui)
+      export AMASE_GUI_TAB=0
+      shift
+      ;;
+    --no-inhibit)
+      AMASE_INHIBITED=1
+      shift
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
 TARGET_DIR="${1:-$(pwd)}"
 if [[ "$TARGET_DIR" == "--no-inhibit" ]]; then
   AMASE_INHIBITED=1
@@ -399,8 +438,11 @@ except Exception:
     TASK_ID=$(echo "$TASK_DESC" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | cut -c1-20)
   fi
 
-  TOTAL_TASKS=$(grep -cE "^- \[[ x]\]" "$BACKLOG_FILE" || echo 1)
-  DONE_TASKS=$(grep -cE "^- \[x\]" "$BACKLOG_FILE" || echo 0)
+  TOTAL_TASKS=$(grep -cE "^- \[[ x]\]" "$BACKLOG_FILE" 2>/dev/null || true)
+  TOTAL_TASKS=${TOTAL_TASKS:-1}
+  [[ "$TOTAL_TASKS" -eq 0 ]] && TOTAL_TASKS=1
+  DONE_TASKS=$(grep -cE "^- \[x\]" "$BACKLOG_FILE" 2>/dev/null || true)
+  DONE_TASKS=${DONE_TASKS:-0}
   PROGRESS_PCT=0
   if [[ "$TOTAL_TASKS" -gt 0 ]]; then
     PROGRESS_PCT=$(( (DONE_TASKS * 100) / TOTAL_TASKS ))

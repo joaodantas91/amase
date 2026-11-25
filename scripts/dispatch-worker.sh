@@ -42,14 +42,14 @@ BUILDER_VISIBLE_TAB=true
 CONFIGURED_BUILDER_MODELS=()
 if [ -f "$CONFIG_FILE" ]; then
   MODEL_TIER=$(jq -r '.model_tier // "free"' "$CONFIG_FILE" 2>/dev/null || echo "free")
-  BUILDER_VISIBLE_TAB=$(jq -r '.ui.builder_visible_tab // true' "$CONFIG_FILE" 2>/dev/null || echo "true")
+  BUILDER_VISIBLE_TAB=$(jq -r 'if .ui.builder_visible_tab != null then .ui.builder_visible_tab else true end' "$CONFIG_FILE" 2>/dev/null || echo "true")
   while IFS= read -r line; do
     [[ -n "$line" ]] && CONFIGURED_BUILDER_MODELS+=("$line")
   done < <(jq -r '.persona_routing.builder[]?' "$CONFIG_FILE" 2>/dev/null || true)
 fi
 
-# If builder visible tab is disabled, run headless
-if [[ "$BUILDER_VISIBLE_TAB" == "false" ]]; then
+# If builder visible tab is disabled, non-interactive, or headless flag set, run headless
+if [[ "$BUILDER_VISIBLE_TAB" == "false" || "${AMASE_GUI_TAB:-}" == "0" || ! -t 1 ]]; then
   USE_GUI_TAB=0
 else
   USE_GUI_TAB="${AMASE_GUI_TAB:-1}"
@@ -411,6 +411,9 @@ launch_worker_ui() {
 
 # Launch worker in dedicated visible terminal window/tab by default
 : "${USE_GUI_TAB:=${AMASE_GUI_TAB:-1}}"
+if [[ ! -t 1 || "${AMASE_GUI_TAB:-}" == "0" ]]; then
+  USE_GUI_TAB=0
+fi
 if [[ "$USE_GUI_TAB" == "1" && -n "$TERMINAL_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
   echo "[+] Opening visible worker tab/window in $(basename "$TERMINAL_BIN")..."
   launch_worker_ui "$WORKTREE" "$OPENCODE_BIN" "$LOG_FILE" "$DONE_FILE" "$INITIAL_COMMIT_TIME" "$ORCHESTRATOR_DIR" "${UNIQUE_FLEET[@]}"
