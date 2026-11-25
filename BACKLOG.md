@@ -490,3 +490,28 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** After a worker finishes its task, display the git commit message and list of changed files, then auto‑close the tab after a 3‑second countdown.
   - **Files:** `scripts/dispatch-worker.sh`, `BACKLOG.md`
   - **Criteria:**  
+
+- [ ] **TASK-88: Rewrite `personas/coordinator.md` as Universal AMASE Supervisor Maestro**
+  - **Goal:** Replace obsolete Orca references in `personas/coordinator.md` with the modern AMASE Supervisor Maestro persona defining clear routing between User, Project Manager (`pm`), Builder (`amase`), Scout, and Sentinel, strict state-machine transitions (`amase status`, `BACKLOG.md`), context shaping, and zero direct code edits (keep under 3KB).
+  - **Files:** `personas/coordinator.md`.
+  - **Criteria:** `! grep -qi "orca" personas/coordinator.md` exits 0; file size <= 3072 bytes; `.amase/test-gate.sh` passes with exit code 0.
+
+- [ ] **TASK-89: Decouple Core Personas (`builder.md`, `sentinel.md`, `designer.md`, `reviewer.md`) from Specific Projects**
+  - **Goal:** Remove hardcoded references to Kandidat, Svelte, WXT, Manifest V3, Chrome Web Store, and ATS platforms from `personas/builder.md`, `personas/sentinel.md`, `personas/designer.md`, and `personas/reviewer.md`, replacing them with universal software engineering invariants (Ponytail/YAGNI, standard library first, `.amase/test-gate.sh`, design token compliance when present, strict language type safety, <3KB each).
+  - **Files:** `personas/builder.md`, `personas/sentinel.md`, `personas/designer.md`, `personas/reviewer.md`.
+  - **Criteria:** `! grep -rniE "kandidat|svelte|wxt|manifest v3|orca|greenhouse|workday|ashby|chrome web store|simplify|teal|applyall" personas/builder.md personas/sentinel.md personas/designer.md personas/reviewer.md` exits 0; `.amase/test-gate.sh` passes with exit code 0.
+
+- [ ] **TASK-90: Decouple Scout Persona & `scripts/scout.py` from Project-Specific Domain**
+  - **Goal:** Rewrite `personas/scout.md` as a generic Autonomous Discovery & Gap Analysis persona (using `.amase/scope.md`, `.amase/discovery.md`, recent commits, and test gaps instead of browser extension/ATS intelligence), and update `scripts/scout.py` `git ls-files` discovery to inspect real repo source files generically without hardcoding `entrypoints/` (keep `tests/test_scout.py` passing).
+  - **Files:** `personas/scout.md`, `scripts/scout.py`, `tests/test_scout.py`.
+  - **Criteria:** `! grep -rniE "manifest v3|browser extension|entrypoints|greenhouse|workday|ashby|kandidat" personas/scout.md scripts/scout.py` exits 0; `python3 -m unittest discover tests` and `.amase/test-gate.sh` pass with exit code 0.
+
+- [ ] **TASK-91: Implement Project Manager (`pm`) Persona & `scripts/pm.py` Requirement Decomposer**
+  - **Goal:** Create `personas/pm.md` (Project Manager persona dedicated to translating user requests and current project status into 1-3 minimal, atomic, verifiable vertical-slice tasks) and `scripts/pm.py` (CLI accepting `--objective`, `--backlog`, `--scope`, `--status`, `--dry-run`, reusing `scripts/fleet.py` and `scripts/scout.py` deduplication/formatting and real `git ls-files`), plus unit tests in `tests/test_pm.py`.
+  - **Files:** `personas/pm.md`, `scripts/pm.py`, `tests/test_pm.py`.
+  - **Criteria:** `python3 scripts/pm.py --help` exits 0; `python3 -m unittest tests/test_pm.py` passes; `.amase/test-gate.sh` passes with exit code 0.
+
+- [ ] **TASK-92: Wire Project Manager (`amase task`) & Config Routing into CLI and `generate-agent.sh`**
+  - **Goal:** Update `amase` so `amase task "<goal>"` invokes `scripts/pm.py` (passing current status/scope/backlog) instead of `scout.py`, register `pm` routing in `.amase/config.json` and `scripts/init-project.sh`, and ensure `scripts/generate-agent.sh` stays compatible with decoupled personas.
+  - **Files:** `amase`, `scripts/init-project.sh`, `scripts/generate-agent.sh`, `.amase/config.json`.
+  - **Criteria:** `amase --help` documents `task` powered by Project Manager; `.amase/test-gate.sh` passes with exit code 0.
