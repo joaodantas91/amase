@@ -521,7 +521,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/stream_filter.py`, `scripts/dispatch-worker.sh`, `scripts/fleet.py`, `tests/test_stream_filter.py`.
   - **Criteria:** `python3 -m unittest tests/test_stream_filter.py` passes; `grep -q "gemini-3.8-flash-medium" scripts/dispatch-worker.sh` exits 0; `.amase/test-gate.sh` passes with exit code 0.
 
-- [ ] **TASK-94: Structured Task Milestone Banner Script (`scripts/task_banner.py`)**
+- [x] **TASK-94: Structured Task Milestone Banner Script (`scripts/task_banner.py`)**
   - **Goal:** Create `scripts/task_banner.py` (Python stdlib) to render compact, structured status cards at task start and task completion/failure (Task ID, Title, Model, Worktree/Branch, Files Modified, Duration, and Progress `done/total (pct%) | pending`), wire it into `amase` at task dispatch and settlement, and add unit tests in `tests/test_task_banner.py`.
   - **Files:** `scripts/task_banner.py`, `amase`, `tests/test_task_banner.py`.
   - **Criteria:** `python3 scripts/task_banner.py --help` exits 0; `python3 -m unittest tests/test_task_banner.py` passes; `.amase/test-gate.sh` passes with exit code 0.
