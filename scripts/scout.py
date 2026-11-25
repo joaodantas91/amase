@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
 Scout Persona Runner
-Queries LiteLLM free model fleet ($0 Groq / Gemini pool) to discover new features
-and generate next vertical slices for BACKLOG.md.
+Queries LiteLLM free model fleet ($0 pool) to perform generic gap analysis
+and propose next vertical slices for BACKLOG.md.
 """
+import importlib.util
 import os
-import sys
-import json
 import re
+import subprocess
+import sys
 import time
-import urllib.request
 
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 ORCHESTRATOR_ROOT = os.path.dirname(SCRIPTS_DIR)
@@ -20,40 +20,148 @@ from telemetry import record as record_telemetry
 
 MODEL = os.getenv("SCOUT_MODEL", "scout-fleet")
 
-def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope_path=""):
-    with open(os.path.join(ORCHESTRATOR_ROOT, "personas", "scout.md"), "r") as f:
-        scout_prompt = f.read()
+_CODE_EXTS = {
+    ".py", ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx",
+    ".go", ".rs", ".java", ".kt", ".rb", ".php", ".sh",
+}
+_EXTRA_SKIP_EXTS = {".yaml", ".yml", ".csv", ".toml"}
 
-    roadmap = ""
-    if project_roadmap_path and os.path.exists(project_roadmap_path):
-        with open(project_roadmap_path, "r") as f:
-            roadmap = f.read()
 
-    backlog = ""
-    if os.path.exists(backlog_path):
-        with open(backlog_path, "r") as f:
-            backlog = f.read()
+def _load_outline_filters() -> tuple[set[str], set[str]]:
+    """Reuse SKIP_DIRS and SKIP_EXTS from outline-ast.py when available."""
+    outline_path = os.path.join(SCRIPTS_DIR, "outline-ast.py")
+    try:
+        spec = importlib.util.spec_from_file_location("outline_ast", outline_path)
+        if spec and spec.loader:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return set(getattr(mod, "SKIP_DIRS", ())), set(getattr(mod, "SKIP_EXTS", ()))
+    except Exception:
+        pass
+    return {".git", "node_modules", ".worktrees", "skills", ".agents"}, {".png", ".svg", ".ico", ".lock"}
 
-    scope = ""
-    if scope_path and os.path.exists(scope_path):
-        with open(scope_path, "r") as f:
-            scope = f.read()
 
-    designer_section = ""
-    if designer_review:
-        designer_section = f"\nDESIGNER UX/UI AUDIT FINDINGS:\n{designer_review}\n"
+def _read_slice(path: str, max_chars: int = 1200, tail: bool = False) -> str:
+    """Safely read a compact slice of a text file."""
+    if not path or not os.path.exists(path):
+        return ""
+    try:
+        with open(path, "r", errors="ignore") as f:
+            content = f.read().strip()
+        if len(content) <= max_chars:
+            return content
+        return content[-max_chars:] if tail else content[:max_chars]
+    except Exception:
+        return ""
 
-    scope_section = ""
-    if scope:
-        scope_section = f"\nPROJECT SCOPE BOUNDARIES (STRICTLY ENFORCE - REJECT FORBIDDEN AREAS):\n{scope}\n"
+
+def list_repo_files(repo_dir: str = ".", limit: int = 40) -> list[str]:
+    """List tracked repository files generically via git ls-files, excluding assets and vendor/skill dirs."""
+    skip_dirs, skip_exts = _load_outline_filters()
+    skip_exts = skip_exts | _EXTRA_SKIP_EXTS
+    try:
+        proc = subprocess.run(
+            ["git", "-C", repo_dir, "ls-files"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if proc.returncode != 0 or not proc.stdout.strip():
+            return []
+        files = []
+        for path in proc.stdout.strip().splitlines():
+            parts = path.split("/")
+            if any(part in skip_dirs for part in parts[:-1]):
+                continue
+            ext = os.path.splitext(path)[1].lower()
+            if ext in skip_exts or path.endswith(".min.js") or path.endswith(".min.css"):
+                continue
+            files.append(path)
+            if len(files) >= limit:
+                break
+        return files
+    except Exception:
+        return []
+
+
+def get_recent_commits(repo_dir: str = ".", limit: int = 8) -> list[str]:
+    """Return compact recent git commit summaries."""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", repo_dir, "log", f"-n{limit}", "--oneline"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return [line.strip() for line in proc.stdout.strip().splitlines() if line.strip()]
+    except Exception:
+        pass
+    return []
+
+
+def find_test_gaps(files: list[str], limit: int = 12) -> list[str]:
+    """Identify source files that lack a corresponding test file by module stem."""
+    test_names = []
+    source_files = []
+    for path in files:
+        lower = path.lower()
+        base = os.path.basename(lower)
+        is_test = (
+            "/tests/" in f"/{lower}"
+            or "/test/" in f"/{lower}"
+            or "__tests__" in lower
+            or base.startswith("test_")
+            or ".test." in base
+            or ".spec." in base
+            or "_test." in base
+        )
+        if is_test:
+            test_names.append(lower)
+        elif os.path.splitext(lower)[1] in _CODE_EXTS and not base.startswith("."):
+            source_files.append(path)
+
+    gaps = []
+    for src in source_files:
+        stem = os.path.splitext(os.path.basename(src).lower())[0].replace("-", "_")
+        if stem in ("__init__", "main", "index", "cli"):
+            continue
+        if not any(stem in t.replace("-", "_") for t in test_names):
+            gaps.append(src)
+            if len(gaps) >= limit:
+                break
+    return gaps
+
+
+def build_discovery_prompt(
+    project_roadmap_path,
+    backlog_path,
+    designer_review: str = "",
+    scope_path: str = "",
+    discovery_path: str = "",
+    repo_dir: str = ".",
+) -> tuple[str, str]:
+    """Assemble compact system and user prompts grounded in scope, discovery notes, commits, and test gaps."""
+    roadmap = _read_slice(project_roadmap_path, max_chars=1000)
+    backlog = _read_slice(backlog_path, max_chars=4000, tail=True)
+    scope = _read_slice(scope_path, max_chars=1500)
+    discovery = _read_slice(discovery_path, max_chars=1200)
+
+    designer_section = f"\nDESIGNER UX/UI AUDIT FINDINGS:\n{designer_review}\n" if designer_review else ""
+    roadmap_section = f"\nPROJECT ROADMAP:\n{roadmap}\n" if roadmap else ""
+    scope_section = (
+        f"\nPROJECT SCOPE BOUNDARIES (STRICTLY ENFORCE - REJECT FORBIDDEN AREAS):\n{scope}\n"
+        if scope else ""
+    )
+    discovery_section = f"\nSTAGED DISCOVERY PROPOSALS (.amase/discovery.md):\n{discovery}\n" if discovery else ""
 
     # Check for pending global engine incidents if scouting the orchestrator itself
     engine_tasks = ""
     is_orchestrator = False
     try:
-        is_orchestrator = os.path.samefile(os.getcwd(), ORCHESTRATOR_ROOT) or os.path.basename(os.getcwd()) in ("orchestrator", "amase")
+        is_orchestrator = os.path.samefile(repo_dir, ORCHESTRATOR_ROOT) or os.path.basename(os.path.abspath(repo_dir)) in ("orchestrator", "amase")
     except Exception:
-        is_orchestrator = os.path.basename(os.getcwd()) in ("orchestrator", "amase")
+        is_orchestrator = os.path.basename(os.path.abspath(repo_dir)) in ("orchestrator", "amase")
 
     if is_orchestrator:
         try:
@@ -62,14 +170,17 @@ def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope
         except Exception:
             pass
 
-    engine_section = ""
-    if engine_tasks:
-        engine_section = f"\nPENDING ORCHESTRATOR TOOL INCIDENTS REPORTED BY PROJECTS:\n{engine_tasks}\nPrioritize addressing these real engine bugs.\n"
+    engine_section = (
+        f"\nPENDING ORCHESTRATOR TOOL INCIDENTS REPORTED BY PROJECTS:\n{engine_tasks}\n"
+        "Prioritize addressing these real engine bugs.\n"
+        if engine_tasks else ""
+    )
 
     # Extract completed tasks for strict duplicate prevention
+    full_backlog = _read_slice(backlog_path, max_chars=200000)
     completed_titles = []
-    if backlog:
-        for line in backlog.splitlines():
+    if full_backlog:
+        for line in full_backlog.splitlines():
             m = re.match(r'^- \[[xX]\] \*\*TASK-[0-9A-Z-]+:?\s*(.*?)\*\*', line)
             if m:
                 completed_titles.append(m.group(1).strip())
@@ -77,31 +188,43 @@ def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope
     completed_section = ""
     if completed_titles:
         recent_completed = completed_titles[-25:]
-        completed_section = "\nALREADY COMPLETED FEATURES (STRICTLY FORBIDDEN TO RE-PROPOSE OR DUPLICATE):\n" + "\n".join(f"- {t}" for t in recent_completed) + "\n"
+        completed_section = (
+            "\nALREADY COMPLETED FEATURES (STRICTLY FORBIDDEN TO RE-PROPOSE OR DUPLICATE):\n"
+            + "\n".join(f"- {t}" for t in recent_completed)
+            + "\n"
+        )
 
-    # Ground proposed files in reality: pass compact list of existing source files
+    files = list_repo_files(repo_dir=repo_dir, limit=60)
     repo_files = ""
-    try:
-        proc = subprocess.run(["git", "ls-files", "src/", "lib/", "entrypoints/"], capture_output=True, text=True, timeout=5)
-        if proc.returncode == 0 and proc.stdout.strip():
-            files = [f for f in proc.stdout.strip().splitlines() if not f.endswith(('.png', '.svg', '.ico', '.lock', '.yaml', '.yml'))][:40]
-            if files:
-                repo_files = "\nEXISTING REPOSITORY FILES (Reference these exact file paths for - **Files:**):\n" + "\n".join(f"- {f}" for f in files) + "\n"
-    except Exception:
-        pass
+    if files:
+        repo_files = (
+            "\nEXISTING REPOSITORY FILES (Reference these exact file paths for - **Files:**):\n"
+            + "\n".join(f"- {f}" for f in files[:40])
+            + "\n"
+        )
 
-    # CHISLE: send compact slice of recent backlog
+    gaps = find_test_gaps(files)
+    test_gaps_section = ""
+    if gaps:
+        test_gaps_section = (
+            "\nPOTENTIAL TEST COVERAGE GAPS (Source modules without matching test files):\n"
+            + "\n".join(f"- {g}" for g in gaps)
+            + "\n"
+        )
+
+    commits = get_recent_commits(repo_dir=repo_dir, limit=8)
+    commits_section = ""
+    if commits:
+        commits_section = "\nRECENT COMMITS:\n" + "\n".join(f"- {c}" for c in commits) + "\n"
+
     backlog_slice = backlog[-1200:] if len(backlog) > 1200 else backlog
 
-    user_prompt = f"""You are the Scout persona. Analyze this project's scope boundaries and recent backlog.
+    user_prompt = f"""You are the Scout persona. Analyze this project's scope boundaries, discovery notes, recent commits, source files, test gaps, and recent backlog.
 Discover the next 2 logical, minimal vertical slice tasks needed for this repository to advance.
 Tasks MUST strictly adhere to the ALLOWED areas in the project scope boundaries and MUST NOT violate any FORBIDDEN rules.
 Keep tasks minimal, atomic, and deterministic.
 
-{scope_section}
-{engine_section}
-{completed_section}
-{repo_files}
+{scope_section}{roadmap_section}{discovery_section}{designer_section}{engine_section}{commits_section}{test_gaps_section}{completed_section}{repo_files}
 RECENT BACKLOG:
 {backlog_slice}
 
@@ -111,6 +234,21 @@ Respond ONLY with the markdown tasks ready for backlog triage, following the exa
   - **Files:** <Target files>
   - **Criteria:** <Deterministic verification test or command>
 """
+    return user_prompt, engine_tasks
+
+
+def discover_tasks(project_roadmap_path, backlog_path, designer_review="", scope_path="", discovery_path=""):
+    with open(os.path.join(ORCHESTRATOR_ROOT, "personas", "scout.md"), "r") as f:
+        scout_prompt = f.read()
+
+    user_prompt, engine_tasks = build_discovery_prompt(
+        project_roadmap_path,
+        backlog_path,
+        designer_review=designer_review,
+        scope_path=scope_path,
+        discovery_path=discovery_path,
+        repo_dir=os.getcwd(),
+    )
 
     t0 = time.time()
     try:
@@ -126,7 +264,7 @@ Respond ONLY with the markdown tasks ready for backlog triage, following the exa
                 duration_seconds=duration,
                 tokens_in=usage.get("tokens_in", 0),
                 tokens_out=usage.get("tokens_out", 0),
-                status="planned"
+                status="planned",
             )
         except Exception:
             pass
@@ -139,12 +277,14 @@ Respond ONLY with the markdown tasks ready for backlog triage, following the exa
         sys.stderr.write(f"Scout discovery failed: {e}\n")
         return engine_tasks.strip() if engine_tasks else None
 
+
 def extract_task_ids(backlog_text):
     """Extract existing TASK-XX IDs from backlog text for deduplication."""
     ids = set()
     for match in re.finditer(r'TASK-([0-9A-Z-]+):', backlog_text):
         ids.add(f"TASK-{match.group(1)}")
     return ids
+
 
 def extract_all_backlog_titles(backlog_text: str) -> list[str]:
     """Extract titles of all completed and pending tasks in the backlog."""
@@ -155,6 +295,7 @@ def extract_all_backlog_titles(backlog_text: str) -> list[str]:
             titles.append(m.group(1).strip())
     return titles
 
+
 def normalize_title_tokens(title: str) -> set[str]:
     words = re.findall(r'[a-zA-Z0-9]+', title.lower())
     stop_words = {
@@ -163,6 +304,7 @@ def normalize_title_tokens(title: str) -> set[str]:
         "page", "mapping", "feature", "component", "platform", "ats"
     }
     return {w for w in words if w not in stop_words and len(w) > 2}
+
 
 def is_duplicate_title(new_title: str, existing_titles: list[str]) -> bool:
     new_tokens = normalize_title_tokens(new_title)
@@ -182,6 +324,7 @@ def is_duplicate_title(new_title: str, existing_titles: list[str]) -> bool:
             return True
     return False
 
+
 def extract_task_blocks(text):
     """Extract TASK-XX markdown blocks from text. Returns list of {id, title, text} dicts."""
     blocks = []
@@ -195,7 +338,6 @@ def extract_task_blocks(text):
             raw_title = match.group(2).strip()
             block_lines = [line]
             i += 1
-            # Collect continuation lines (indented with "  - **...**:")
             while i < len(lines):
                 next_line = lines[i]
                 if re.match(r'^\s{2}- \*\*', next_line):
@@ -212,9 +354,9 @@ def extract_task_blocks(text):
             i += 1
     return blocks
 
+
 if __name__ == "__main__":
     import argparse
-    import sys
 
     parser = argparse.ArgumentParser(description="Scout Persona Discovery")
     parser.add_argument("--roadmap", help="Path to project roadmap document")
@@ -228,12 +370,13 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true", help="Print formatted sample TASK-XX block and exit 0")
     args = parser.parse_args()
 
-    if args.objective:
+    if args.objective or args.dry_run:
+        obj = args.objective or "Sample vertical slice task"
         task_id = "TASK-99"
-        print(f"- [ ] **{task_id}: {args.objective}**")
-        print(f"  - **Goal:** {args.objective}")
+        print(f"- [ ] **{task_id}: {obj}**")
+        print(f"  - **Goal:** {obj}")
         print(f"  - **Files:** scripts/scout.py, amase")
-        print(f"  - **Criteria:** python3 scripts/scout.py --objective \"{args.objective}\" --dry-run exits 0")
+        print(f"  - **Criteria:** python3 scripts/scout.py --objective \"{obj}\" --dry-run exits 0")
         sys.exit(0)
 
     if args.sanitize:
@@ -254,7 +397,6 @@ if __name__ == "__main__":
 
     roadmap_file = args.roadmap
     if not roadmap_file:
-        # Check SCOUT_ROADMAP_DIR env var first
         scout_roadmap = os.getenv("SCOUT_ROADMAP_DIR")
         if scout_roadmap and os.path.exists(scout_roadmap):
             roadmap_file = scout_roadmap
@@ -279,7 +421,7 @@ if __name__ == "__main__":
     print(f"  Scope:   {args.scope if (args.scope and os.path.exists(args.scope)) else 'None'}")
     print(f"  Backlog: {args.backlog}")
 
-    tasks = discover_tasks(roadmap_file, args.backlog, designer_text, args.scope)
+    tasks = discover_tasks(roadmap_file, args.backlog, designer_text, args.scope, args.discovery)
     if tasks:
         print("\nDiscovered Tasks from Free Fleet:")
         print(tasks)
