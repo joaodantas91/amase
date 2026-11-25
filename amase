@@ -45,6 +45,7 @@ OPTIONS:
   -h, --help                      Display this help menu
   -v, --version                   Display AMASE version
   --headless, --no-gui            Run workers in background without opening terminal tabs
+  --pro                           Force Pro AI model tier (`agy` Pro models)
   --once, -1, step                Execute a single task and exit cleanly
   --no-inhibit                    Bypass systemd-inhibit sleep inhibition lock
 
@@ -70,6 +71,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --headless|--no-gui)
       export AMASE_GUI_TAB=0
+      shift
+      ;;
+    --pro)
+      export AMASE_MODEL_TIER=pro
       shift
       ;;
     --once|-1|--single|step)
@@ -274,6 +279,24 @@ with open('$CONFIG_FILE', 'w') as f:
     echo "[+] Mode set to: $NEW_MODE"
     exit 0
   fi
+  if [[ "${1:-}" == "--set-tier" ]]; then
+    shift
+    NEW_TIER="${1:-}"
+    if [[ "$NEW_TIER" != "free" && "$NEW_TIER" != "pro" ]]; then
+      echo "Error: tier must be 'free' or 'pro'" >&2
+      exit 1
+    fi
+    python3 -c "
+import json
+with open('$CONFIG_FILE', 'r') as f:
+    data = json.load(f)
+data['model_tier'] = '$NEW_TIER'
+with open('$CONFIG_FILE', 'w') as f:
+    json.dump(data, f, indent=2)
+"
+    echo "[+] Model tier set to: $NEW_TIER"
+    exit 0
+  fi
   if [[ "${1:-}" == "--discovery" ]]; then
     if [ -f "$CONFIG_FILE" ]; then
       jq -r '.discovery.enabled // false' "$CONFIG_FILE" 2>/dev/null || echo "false"
@@ -314,6 +337,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --headless|--no-gui)
       export AMASE_GUI_TAB=0
+      shift
+      ;;
+    --pro)
+      export AMASE_MODEL_TIER=pro
       shift
       ;;
     --once|-1|--single|step)

@@ -18,6 +18,7 @@ if [[ -z "$WORKTREE" || -z "$TASK_PROMPT" ]]; then
 fi
 
 OPENCODE_BIN="/home/joao/.bun/bin/opencode"
+AGY_BIN="$(command -v agy || echo "/home/joao/.local/bin/agy")"
 ORCHESTRATOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Universal Terminal Discovery (supports any Linux desktop environment)
@@ -48,12 +49,14 @@ if [ -f "$CONFIG_FILE" ]; then
   done < <(jq -r '.persona_routing.builder[]?' "$CONFIG_FILE" 2>/dev/null || true)
 fi
 
-# If builder visible tab is disabled, non-interactive, or headless flag set, run headless
-if [[ "$BUILDER_VISIBLE_TAB" == "false" || "${AMASE_GUI_TAB:-}" == "0" || ! -t 1 ]]; then
+# If builder visible tab is disabled or headless flag set, run headless
+# NOTE: When DISPLAY/WAYLAND_DISPLAY is active, open GUI tab even when invoked from agent subshells unless --headless is requested.
+if [[ "$BUILDER_VISIBLE_TAB" == "false" || "${AMASE_GUI_TAB:-}" == "0" ]]; then
   USE_GUI_TAB=0
 else
   USE_GUI_TAB="${AMASE_GUI_TAB:-1}"
 fi
+[[ -n "${AMASE_MODEL_TIER:-}" ]] && MODEL_TIER="$AMASE_MODEL_TIER"
 
 # Ordered $0 Free Fleet (best performers first)
 if [ "${#CONFIGURED_BUILDER_MODELS[@]}" -gt 0 ]; then
@@ -77,13 +80,22 @@ else
   )
 fi
 
-# If pro tier, prepend pro models
+# If pro tier, prepend authenticated Pro models (agy Pro CLI models before free fallbacks)
 if [[ "$MODEL_TIER" == "pro" ]]; then
-  FLEET_MODELS=(
-    "opencode/gemini-2.5-pro"
-    "opencode/claude-3-5-sonnet"
-    "${FLEET_MODELS[@]}"
-  )
+  if [[ -x "$AGY_BIN" ]]; then
+    FLEET_MODELS=(
+      "agy/gemini-4-hydrogen-high"
+      "agy/claude-sonnet-4-6"
+      "agy/gemini-4-hydrogen-medium"
+      "${FLEET_MODELS[@]}"
+    )
+  else
+    FLEET_MODELS=(
+      "openrouter/google/gemini-3.1-pro-preview"
+      "openrouter/anthropic/claude-sonnet-4.6"
+      "${FLEET_MODELS[@]}"
+    )
+  fi
 fi
 
 # Add active local Ollama models to worker candidate fleet only if explicitly enabled
@@ -220,7 +232,15 @@ for MODEL in "${MODELS[@]}"; do
     INIT_GLOBAL_OFFSET=$(stat -c%s "$GLOBAL_OP_LOG" 2>/dev/null || echo 0)
   fi
 
-  if command -v stdbuf >/dev/null 2>&1; then
+  if [[ "$MODEL" == agy/* ]]; then
+    AGY_MODEL="${MODEL#agy/}"
+    AGY_CMD="${AGY_BIN:-/home/joao/.local/bin/agy}"
+    if command -v stdbuf >/dev/null 2>&1; then
+      timeout --kill-after=5s 240s stdbuf -oL -eL "$AGY_CMD" -p "$PROMPT" --model "$AGY_MODEL" --mode auto --dangerously-skip-permissions --disable-slash-commands --output-format stream-json --add-dir "$WORKTREE" 2>&1 | tee "$LOG_FILE" &
+    else
+      timeout --kill-after=5s 240s "$AGY_CMD" -p "$PROMPT" --model "$AGY_MODEL" --mode auto --dangerously-skip-permissions --disable-slash-commands --output-format stream-json --add-dir "$WORKTREE" 2>&1 | tee "$LOG_FILE" &
+    fi
+  elif command -v stdbuf >/dev/null 2>&1; then
     timeout --kill-after=5s 120s stdbuf -oL -eL "$OPENCODE_BIN" run --log-level WARN --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
   else
     timeout --kill-after=5s 120s "$OPENCODE_BIN" run --log-level WARN --print-logs --model "$MODEL" --auto "$PROMPT" 2>&1 | tee "$LOG_FILE" &
@@ -365,7 +385,8 @@ exit 0
 EOF
 
 chmod +x "$RUNNER_SCRIPT"
-echo "$TASK_PROMPT. When finished, commit changes with git." > "$WORKTREE/.amase-task-prompt.txt"
+export AGY_BIN
+echo "$TASK_PROMPT. CRITICAL: Work strictly inside current directory ($WORKTREE). NEVER edit or git commit in the parent repo ($ORCHESTRATOR_DIR). When finished, commit changes with git." > "$WORKTREE/.amase-task-prompt.txt"
 
 echo "========================================================"
 echo "[+] AMASE Worker Dispatch (Single Tab Mode)"
@@ -409,9 +430,9 @@ launch_worker_ui() {
   esac
 }
 
-# Launch worker in dedicated visible terminal window/tab by default
+# Launch worker in dedicated visible terminal window/tab by default when display server is available
 : "${USE_GUI_TAB:=${AMASE_GUI_TAB:-1}}"
-if [[ ! -t 1 || "${AMASE_GUI_TAB:-}" == "0" ]]; then
+if [[ "${AMASE_GUI_TAB:-}" == "0" ]]; then
   USE_GUI_TAB=0
 fi
 if [[ "$USE_GUI_TAB" == "1" && -n "$TERMINAL_BIN" && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then

@@ -211,6 +211,33 @@ def query_fleet(prompt: str, system_prompt: str = "", model_hint: str = None, ti
     Local Ollama, GitHub Models, and direct Groq API.
     Runs headlessly in the background with zero tab popups.
     """
+    # 0. Pro Tier via Antigravity CLI ('agy') when model_tier == 'pro' or model_hint starts with 'agy/'
+    use_pro = os.getenv("AMASE_MODEL_TIER", "").lower() == "pro" or (model_hint and model_hint.startswith("agy/"))
+    if not use_pro:
+        cfg_path = os.path.join(os.getcwd(), ".amase", "config.json")
+        if os.path.exists(cfg_path):
+            try:
+                with open(cfg_path) as cf:
+                    if json.load(cf).get("model_tier") == "pro":
+                        use_pro = True
+            except Exception:
+                pass
+    if use_pro:
+        agy_bin = os.getenv("AGY_BIN", "/home/joao/.local/bin/agy")
+        if os.path.exists(agy_bin) and os.access(agy_bin, os.X_OK):
+            pro_model = model_hint[4:] if (model_hint and model_hint.startswith("agy/")) else "gemini-4-hydrogen-medium"
+            combined_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+            try:
+                res = subprocess.run(
+                    [agy_bin, "-p", combined_prompt, "--model", pro_model, "--mode", "plan", "--disable-slash-commands"],
+                    capture_output=True, text=True, timeout=min(timeout, 45)
+                )
+                if res.returncode == 0 and res.stdout.strip():
+                    LAST_USAGE["model"] = f"agy/{pro_model}"
+                    return res.stdout.strip()
+            except Exception as e:
+                sys.stderr.write(f"[-] Agy Pro query failed: {e}\n")
+
     # 1. Try LiteLLM proxy if reachable
     try:
         model = model_hint or "scout-fleet"
