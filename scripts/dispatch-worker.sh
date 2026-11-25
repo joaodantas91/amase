@@ -253,17 +253,23 @@ for MODEL in "${MODELS[@]}"; do
   fi
   WORKER_PID=$!
 
-  # Sub-watchdog: checks every 1s for quota error (<1s) or timeout
+  # Sub-watchdog: checks every 1s for real provider quota errors (ignoring file-read payloads)
   SUB_ELAPSED=0
   while kill -0 "$WORKER_PID" 2>/dev/null; do
     QUOTA_HIT=0
-    if grep -q "Free usage limit reached" "$LOG_FILE" 2>/dev/null; then
-      QUOTA_HIT=1
-    elif [[ -f "$GLOBAL_OP_LOG" ]]; then
-      CURR_OFFSET=$(stat -c%s "$GLOBAL_OP_LOG" 2>/dev/null || echo 0)
-      if [[ "$CURR_OFFSET" -gt "$INIT_GLOBAL_OFFSET" ]]; then
-        if tail -c +$((INIT_GLOBAL_OFFSET + 1)) "$GLOBAL_OP_LOG" 2>/dev/null | grep -q "Free usage limit reached"; then
-          QUOTA_HIT=1
+    if [[ "$MODEL" == agy/* ]]; then
+      if grep -qE '"event":"error"|"status":"error".*(quota|rate_limit_exceeded|insufficient_quota)' "$LOG_FILE" 2>/dev/null; then
+        QUOTA_HIT=1
+      fi
+    else
+      if grep -qE '^(Error:|.*level=ERROR|.*AI_APICallError).*Free usage limit reached' "$LOG_FILE" 2>/dev/null; then
+        QUOTA_HIT=1
+      elif [[ -f "$GLOBAL_OP_LOG" ]]; then
+        CURR_OFFSET=$(stat -c%s "$GLOBAL_OP_LOG" 2>/dev/null || echo 0)
+        if [[ "$CURR_OFFSET" -gt "$INIT_GLOBAL_OFFSET" ]]; then
+          if tail -c +$((INIT_GLOBAL_OFFSET + 1)) "$GLOBAL_OP_LOG" 2>/dev/null | grep -q "Free usage limit reached"; then
+            QUOTA_HIT=1
+          fi
         fi
       fi
     fi
@@ -370,7 +376,13 @@ for MODEL in "${MODELS[@]}"; do
     fi
   fi
 
-  if grep -qi "Free usage limit reached\|rate_limit_exceeded\|insufficient_quota\|exceeded your current quota" "$LOG_FILE" 2>/dev/null; then
+  if [[ "$MODEL" == agy/* ]]; then
+    if grep -qiE '"event":"error".*(rate_limit_exceeded|insufficient_quota|exceeded your current quota)' "$LOG_FILE" 2>/dev/null; then
+      if [[ -f "$ORCHESTRATOR_DIR/scripts/quota_manager.py" ]]; then
+        python3 "$ORCHESTRATOR_DIR/scripts/quota_manager.py" --record "$MODEL" --reason "rate_limit_exceeded" 2>/dev/null || true
+      fi
+    fi
+  elif grep -qiE '^(Error:|.*level=ERROR|.*AI_APICallError).*(Free usage limit reached|rate_limit_exceeded|insufficient_quota|exceeded your current quota)' "$LOG_FILE" 2>/dev/null; then
     if [[ -f "$ORCHESTRATOR_DIR/scripts/quota_manager.py" ]]; then
       python3 "$ORCHESTRATOR_DIR/scripts/quota_manager.py" --record "$MODEL" --reason "rate_limit_exceeded" 2>/dev/null || true
     fi
@@ -450,7 +462,7 @@ else
 fi
 
 # Watchdog in coordinator session
-MAX_SECONDS=600
+MAX_SECONDS=800
 ELAPSED=0
 LAST_LOG_SIZE=0
 STALL_SECONDS=0
@@ -516,9 +528,13 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
     STALL_SECONDS=0
   fi
 
-  if [ "$STALL_SECONDS" -ge 90 ]; then
-    echo "[-] Model stall detected (no output or progress for 90s). Forcing failover..."
-    pkill -P $(pgrep -f "$WORKTREE/.amase-run.sh") opencode 2>/dev/null || true
+  if [ "$STALL_SECONDS" -ge 150 ]; then
+    echo "[-] Model stall detected (no output or progress for 150s). Forcing failover..."
+    RUNNER_PID=$(pgrep -f "$WORKTREE/.amase-run.sh" | head -n 1 || true)
+    if [[ -n "$RUNNER_PID" ]]; then
+      pkill -P "$RUNNER_PID" opencode 2>/dev/null || true
+      pkill -P "$RUNNER_PID" agy 2>/dev/null || true
+    fi
     STALL_SECONDS=0
   fi
 
@@ -546,7 +562,7 @@ while [ $ELAPSED -lt $MAX_SECONDS ]; do
   fi
 done
 
-echo "[-] Dispatcher timeout (600s reached). Cleaning up worktree..."
+echo "[-] Dispatcher timeout (800s reached). Cleaning up worktree..."
 PARENT_REPO="$(cd "$WORKTREE/../.." 2>/dev/null && pwd || true)"
 "$ORCHESTRATOR_DIR/scripts/abort-task.sh" --repo "${PARENT_REPO:-$(pwd)}" --task "$TASK_NAME" 2>/dev/null || true
 exit 1

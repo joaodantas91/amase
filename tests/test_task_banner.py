@@ -1,11 +1,12 @@
 """Unit tests for Structured Task Milestone Banner Script."""
 
+import os
 import subprocess
 import sys
 import unittest
 
-SCRIPT_DIR = "/home/joao/dev/amase/.worktrees/TASK-94/scripts"
-TASK_BANNER = f"{SCRIPT_DIR}/task_banner.py"
+SCRIPT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts")
+TASK_BANNER = os.path.join(SCRIPT_DIR, "task_banner.py")
 
 
 def _run_banner(*args):
