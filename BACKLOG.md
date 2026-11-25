@@ -470,7 +470,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Fix engine limitation (FLEET_EXHAUSTED) observed in project 'TASK-85': All worker fleet models failed without producing a valid git commit for TASK-85
   - **Files:** scripts/dispatch-worker.sh
   - **Criteria:** python3 -m py_compile scripts/dispatch-worker.sh 2>/dev/null || bash -n scripts/dispatch-worker.sh; .amase/test-gate.sh passes.
-- [ ] **TASK-UI-01: Show commit summary & 3‑second countdown in visible worker tabs**
+- [x] **TASK-UI-01: Show commit summary & 3‑second countdown in visible worker tabs**
   - **Goal:** After a worker finishes its task, display the git commit message and list of changed files, then auto‑close the tab after a 3‑second countdown.
   - **Files:** `scripts/dispatch-worker.sh`, `BACKLOG.md`
   - **Criteria:**  
