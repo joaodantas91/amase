@@ -290,7 +290,10 @@ for MODEL in "${MODELS[@]}"; do
     echo "=========================================================="
     touch "$DONE_FILE"
     echo "[+] Auto-closing worker tab in 3s..."
-    sleep 3
+    for i in 3 2 1; do
+      echo "  $i..."
+      sleep 1
+    done
     exit 0
   fi
 
@@ -311,7 +314,10 @@ for MODEL in "${MODELS[@]}"; do
       echo "=========================================================="
       touch "$DONE_FILE"
       echo "[+] Auto-closing worker tab in 3s..."
-      sleep 3
+      for i in 3 2 1; do
+        echo "  $i..."
+        sleep 1
+      done
       exit 0
     fi
   fi
@@ -351,7 +357,10 @@ python3 "$ORCHESTRATOR_DIR/scripts/diagnose-failure.py" "$WORKTREE" "$(basename 
 python3 "$ORCHESTRATOR_DIR/scripts/engine_incident.py" --record --script "scripts/dispatch-worker.sh" --signature "FLEET_EXHAUSTED" --message "All worker fleet models failed without producing a valid git commit for $(basename "$WORKTREE")" --project "$WORKTREE" 2>/dev/null || true
 touch "$WORKTREE/.amase-failed"
 echo "[-] Auto-closing failed worker tab in 2s..."
-sleep 2
+for i in 2 1; do
+  echo "  $i..."
+  sleep 1
+done
 exit 0
 EOF
 
