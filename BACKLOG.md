@@ -516,7 +516,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `amase`, `scripts/init-project.sh`, `scripts/generate-agent.sh`, `.amase/config.json`.
   - **Criteria:** `amase --help` documents `task` powered by Project Manager; `.amase/test-gate.sh` passes with exit code 0.
 
-- [ ] **TASK-93: Clean Worker Terminal Stream Filter & Gemini 3.8 Flash Tier**
+- [x] **TASK-93: Clean Worker Terminal Stream Filter & Gemini 3.8 Flash Tier**
   - **Goal:** Create `scripts/stream_filter.py` (Python stdlib) to write raw `agy` NDJSON events to a log file while printing only concise human-readable actions to the terminal (`[tool] <name> -> <target>`, `[agent] <summary>`, `[done] <status> (<duration>s)`), update `[Heartbeat]` in `scripts/dispatch-worker.sh` to avoid raw JSON fragments, and switch default Pro tier primary to `agy/gemini-3.8-flash-medium` (fallback `agy/gemini-3.8-flash-high`, `agy/gemini-4-hydrogen-medium`) in `scripts/dispatch-worker.sh` and `gemini-3.8-flash-low` in `scripts/fleet.py`, with unit tests in `tests/test_stream_filter.py`.
   - **Files:** `scripts/stream_filter.py`, `scripts/dispatch-worker.sh`, `scripts/fleet.py`, `tests/test_stream_filter.py`.
   - **Criteria:** `python3 -m unittest tests/test_stream_filter.py` passes; `grep -q "gemini-3.8-flash-medium" scripts/dispatch-worker.sh` exits 0; `.amase/test-gate.sh` passes with exit code 0.
