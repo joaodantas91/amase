@@ -181,14 +181,9 @@ MODELS=("$@")
 cd "$WORKTREE"
 tty > "$WORKTREE/.amase-tty" 2>/dev/null || true
 
-OPENCODE_FREE_EXHAUSTED=0
 PREV_FAIL_ERROR=""
 
 for MODEL in "${MODELS[@]}"; do
-  if [[ "$MODEL" == opencode/*-free && "$OPENCODE_FREE_EXHAUSTED" -eq 1 ]]; then
-    echo "[-] Skipping $MODEL (OpenCode free pool quota exhausted)"
-    continue
-  fi
 
   # Check cross-worker persistent quota cooldown cache
   if [[ -f "$ORCHESTRATOR_DIR/scripts/quota_manager.py" ]]; then
@@ -254,7 +249,6 @@ for MODEL in "${MODELS[@]}"; do
         python3 "$ORCHESTRATOR_DIR/scripts/quota_manager.py" --record "$MODEL" --reason "Free usage limit reached" 2>/dev/null || true
       fi
       kill -9 "$WORKER_PID" 2>/dev/null || true
-      OPENCODE_FREE_EXHAUSTED=1
       break
     fi
 
