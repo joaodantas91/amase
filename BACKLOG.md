@@ -496,7 +496,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `personas/coordinator.md`.
   - **Criteria:** `! grep -qi "orca" personas/coordinator.md` exits 0; file size <= 3072 bytes; `.amase/test-gate.sh` passes with exit code 0.
 
-- [ ] **TASK-89: Decouple Core Personas (`builder.md`, `sentinel.md`, `designer.md`, `reviewer.md`) from Specific Projects**
+- [x] **TASK-89: Decouple Core Personas (`builder.md`, `sentinel.md`, `designer.md`, `reviewer.md`) from Specific Projects**
   - **Goal:** Remove hardcoded references to Kandidat, Svelte, WXT, Manifest V3, Chrome Web Store, and ATS platforms from `personas/builder.md`, `personas/sentinel.md`, `personas/designer.md`, and `personas/reviewer.md`, replacing them with universal software engineering invariants (Ponytail/YAGNI, standard library first, `.amase/test-gate.sh`, design token compliance when present, strict language type safety, <3KB each).
   - **Files:** `personas/builder.md`, `personas/sentinel.md`, `personas/designer.md`, `personas/reviewer.md`.
   - **Criteria:** `! grep -rniE "kandidat|svelte|wxt|manifest v3|orca|greenhouse|workday|ashby|chrome web store|simplify|teal|applyall" personas/builder.md personas/sentinel.md personas/designer.md personas/reviewer.md` exits 0; `.amase/test-gate.sh` passes with exit code 0.
