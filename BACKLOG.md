@@ -506,7 +506,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `personas/scout.md`, `scripts/scout.py`, `tests/test_scout.py`.
   - **Criteria:** `! grep -rniE "manifest v3|browser extension|entrypoints|greenhouse|workday|ashby|kandidat" personas/scout.md scripts/scout.py` exits 0; `python3 -m unittest discover tests` and `.amase/test-gate.sh` pass with exit code 0.
 
-- [ ] **TASK-91: Implement Project Manager (`pm`) Persona & `scripts/pm.py` Requirement Decomposer**
+- [x] **TASK-91: Implement Project Manager (`pm`) Persona & `scripts/pm.py` Requirement Decomposer**
   - **Goal:** Create `personas/pm.md` (Project Manager persona dedicated to translating user requests and current project status into 1-3 minimal, atomic, verifiable vertical-slice tasks) and `scripts/pm.py` (CLI accepting `--objective`, `--backlog`, `--scope`, `--status`, `--dry-run`, reusing `scripts/fleet.py` and `scripts/scout.py` deduplication/formatting and real `git ls-files`), plus unit tests in `tests/test_pm.py`.
   - **Files:** `personas/pm.md`, `scripts/pm.py`, `tests/test_pm.py`.
   - **Criteria:** `python3 scripts/pm.py --help` exits 0; `python3 -m unittest tests/test_pm.py` passes; `.amase/test-gate.sh` passes with exit code 0.
@@ -515,3 +515,13 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Goal:** Update `amase` so `amase task "<goal>"` invokes `scripts/pm.py` (passing current status/scope/backlog) instead of `scout.py`, register `pm` routing in `.amase/config.json` and `scripts/init-project.sh`, and ensure `scripts/generate-agent.sh` stays compatible with decoupled personas.
   - **Files:** `amase`, `scripts/init-project.sh`, `scripts/generate-agent.sh`, `.amase/config.json`.
   - **Criteria:** `amase --help` documents `task` powered by Project Manager; `.amase/test-gate.sh` passes with exit code 0.
+
+- [ ] **TASK-93: Clean Worker Terminal Stream Filter & Gemini 3.8 Flash Tier**
+  - **Goal:** Create `scripts/stream_filter.py` (Python stdlib) to write raw `agy` NDJSON events to a log file while printing only concise human-readable actions to the terminal (`[tool] <name> -> <target>`, `[agent] <summary>`, `[done] <status> (<duration>s)`), update `[Heartbeat]` in `scripts/dispatch-worker.sh` to avoid raw JSON fragments, and switch default Pro tier primary to `agy/gemini-3.8-flash-medium` (fallback `agy/gemini-3.8-flash-high`, `agy/gemini-4-hydrogen-medium`) in `scripts/dispatch-worker.sh` and `gemini-3.8-flash-low` in `scripts/fleet.py`, with unit tests in `tests/test_stream_filter.py`.
+  - **Files:** `scripts/stream_filter.py`, `scripts/dispatch-worker.sh`, `scripts/fleet.py`, `tests/test_stream_filter.py`.
+  - **Criteria:** `python3 -m unittest tests/test_stream_filter.py` passes; `grep -q "gemini-3.8-flash-medium" scripts/dispatch-worker.sh` exits 0; `.amase/test-gate.sh` passes with exit code 0.
+
+- [ ] **TASK-94: Structured Task Milestone Banner Script (`scripts/task_banner.py`)**
+  - **Goal:** Create `scripts/task_banner.py` (Python stdlib) to render compact, structured status cards at task start and task completion/failure (Task ID, Title, Model, Worktree/Branch, Files Modified, Duration, and Progress `done/total (pct%) | pending`), wire it into `amase` at task dispatch and settlement, and add unit tests in `tests/test_task_banner.py`.
+  - **Files:** `scripts/task_banner.py`, `amase`, `tests/test_task_banner.py`.
+  - **Criteria:** `python3 scripts/task_banner.py --help` exits 0; `python3 -m unittest tests/test_task_banner.py` passes; `.amase/test-gate.sh` passes with exit code 0.
