@@ -466,7 +466,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
 
 
 
-- [ ] **TASK-ENG-01: Resolve FLEET_EXHAUSTED in dispatch-worker.sh**
+- [x] **TASK-ENG-01: Resolve FLEET_EXHAUSTED in dispatch-worker.sh**
   - **Goal:** Fix engine limitation (FLEET_EXHAUSTED) observed in project 'TASK-85': All worker fleet models failed without producing a valid git commit for TASK-85
   - **Files:** scripts/dispatch-worker.sh
   - **Criteria:** python3 -m py_compile scripts/dispatch-worker.sh 2>/dev/null || bash -n scripts/dispatch-worker.sh; .amase/test-gate.sh passes.
