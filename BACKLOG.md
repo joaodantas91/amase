@@ -491,7 +491,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `scripts/dispatch-worker.sh`, `BACKLOG.md`
   - **Criteria:**  
 
-- [ ] **TASK-88: Rewrite `personas/coordinator.md` as Universal AMASE Supervisor Maestro**
+- [x] **TASK-88: Rewrite `personas/coordinator.md` as Universal AMASE Supervisor Maestro**
   - **Goal:** Replace obsolete Orca references in `personas/coordinator.md` with the modern AMASE Supervisor Maestro persona defining clear routing between User, Project Manager (`pm`), Builder (`amase`), Scout, and Sentinel, strict state-machine transitions (`amase status`, `BACKLOG.md`), context shaping, and zero direct code edits (keep under 3KB).
   - **Files:** `personas/coordinator.md`.
   - **Criteria:** `! grep -qi "orca" personas/coordinator.md` exits 0; file size <= 3072 bytes; `.amase/test-gate.sh` passes with exit code 0.
