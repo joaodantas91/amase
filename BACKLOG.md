@@ -511,7 +511,7 @@ The builder implements the first uncompleted task `[ ]`, verifies that `.amase/t
   - **Files:** `personas/pm.md`, `scripts/pm.py`, `tests/test_pm.py`.
   - **Criteria:** `python3 scripts/pm.py --help` exits 0; `python3 -m unittest tests/test_pm.py` passes; `.amase/test-gate.sh` passes with exit code 0.
 
-- [ ] **TASK-92: Wire Project Manager (`amase task`) & Config Routing into CLI and `generate-agent.sh`**
+- [x] **TASK-92: Wire Project Manager (`amase task`) & Config Routing into CLI and `generate-agent.sh`**
   - **Goal:** Update `amase` so `amase task "<goal>"` invokes `scripts/pm.py` (passing current status/scope/backlog) instead of `scout.py`, register `pm` routing in `.amase/config.json` and `scripts/init-project.sh`, and ensure `scripts/generate-agent.sh` stays compatible with decoupled personas.
   - **Files:** `amase`, `scripts/init-project.sh`, `scripts/generate-agent.sh`, `.amase/config.json`.
   - **Criteria:** `amase --help` documents `task` powered by Project Manager; `.amase/test-gate.sh` passes with exit code 0.
